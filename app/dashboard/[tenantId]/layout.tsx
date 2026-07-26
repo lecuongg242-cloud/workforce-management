@@ -8,22 +8,23 @@ export default async function TenantLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: { tenantId: string };
+  params: Promise<{ tenantId: string }>;
 }) {
+  const { tenantId } = await params;
   const user = await getCurrentUser();
   if (!user) {
     redirect('/auth/login');
   }
 
-  const tenant = await getTenantById(params.tenantId);
-  const userRole = await getUserRoleInTenant(params.tenantId);
+  const tenant = await getTenantById(tenantId);
+  const userRole = await getUserRoleInTenant(tenantId);
 
   if (!tenant || !userRole) {
     redirect('/dashboard');
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-canvas-soft">
       <TenantNav tenant={tenant} userRole={userRole} />
       {children}
     </div>

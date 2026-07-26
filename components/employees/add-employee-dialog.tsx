@@ -53,7 +53,10 @@ export function AddEmployeeDialog({
     setLoading(true);
     setError(null);
 
-    const result = await createEmployee(tenantId, formData);
+    const result = await createEmployee(tenantId, {
+      ...formData,
+      status: (formData.status as 'active' | 'inactive' | 'on_leave'),
+    });
 
     if (!result.success) {
       setError(result.error || 'Failed to create employee');

@@ -101,7 +101,7 @@ export async function getSession() {
 }
 
 export async function getCurrentUser() {
-  const supabase = await createServerClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

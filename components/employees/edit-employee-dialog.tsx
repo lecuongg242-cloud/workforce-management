@@ -55,7 +55,10 @@ export function EditEmployeeDialog({
     setLoading(true);
     setError(null);
 
-    const result = await updateEmployee(tenantId, employee.id, formData);
+    const result = await updateEmployee(tenantId, employee.id, {
+      ...formData,
+      status: (formData.status as 'active' | 'inactive' | 'on_leave'),
+    });
 
     if (!result.success) {
       setError(result.error || 'Failed to update employee');

@@ -48,22 +48,22 @@ export function CreateTenantDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" gap="2">
+        <Button size="sm" className="gap-md flex items-center">
           <Plus className="h-4 w-4" />
           Create Organization
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create Organization</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-heading-lg">Create Organization</DialogTitle>
+          <DialogDescription className="text-body-md">
             Create a new organization to manage your employees
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Organization Name</label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-lg">
+          <div className="flex flex-col gap-sm">
+            <label className="text-body-md font-medium text-ink">Organization Name</label>
             <Input
               placeholder="Acme Corporation"
               value={formData.name}
@@ -78,20 +78,20 @@ export function CreateTenantDialog() {
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Slug</label>
+          <div className="flex flex-col gap-sm">
+            <label className="text-body-md font-medium text-ink">Slug</label>
             <Input
               placeholder="acme-corporation"
               value={formData.slug}
               onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
             />
-            <p className="text-xs text-foreground/60">
+            <p className="text-caption text-ink-mute">
               URL-friendly unique identifier
             </p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Description (Optional)</label>
+          <div className="flex flex-col gap-sm">
+            <label className="text-body-md font-medium text-ink">Description (Optional)</label>
             <Input
               placeholder="Brief description of your organization"
               value={formData.description}

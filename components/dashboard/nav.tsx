@@ -28,30 +28,30 @@ export function DashboardNav() {
   }
 
   return (
-    <nav className="border-b bg-background sticky top-0 z-40">
-      <div className="flex items-center justify-between h-16 px-4 md:px-6">
-        <div className="flex items-center gap-4">
+    <nav className="border-b border-hairline bg-canvas sticky top-0 z-40 shadow-stripi-sm">
+      <div className="flex items-center justify-between h-16 px-lg md:px-xl">
+        <div className="flex items-center gap-lg">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 hover:bg-accent rounded-lg"
+            className="md:hidden p-sm hover:bg-canvas-soft rounded-sm transition-colors"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-5 w-5 text-ink" />
           </button>
-          <Link href="/dashboard" className="font-semibold">
+          <Link href="/dashboard" className="text-heading-md font-light text-ink">
             Workforce
           </Link>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-sm">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-2">
+              <Button variant="ghost" size="sm" className="gap-md text-ink">
                 <User className="h-4 w-4" />
-                <span className="hidden sm:inline">{user?.email}</span>
+                <span className="hidden sm:inline text-body-md">{user?.email}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleSignOut} className="gap-2 cursor-pointer">
+              <DropdownMenuItem onClick={handleSignOut} className="gap-md cursor-pointer text-ink">
                 <LogOut className="h-4 w-4" />
                 Sign Out
               </DropdownMenuItem>

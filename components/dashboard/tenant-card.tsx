@@ -13,21 +13,23 @@ interface TenantCardProps {
 export function TenantCard({ tenant }: TenantCardProps) {
   return (
     <Link href={`/dashboard/${tenant.id}/employees`}>
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+      <Card className="hover:shadow-stripi-md transition-shadow cursor-pointer h-full border-hairline">
         <CardHeader>
-          <div className="flex items-start justify-between">
-            <CardTitle className="line-clamp-1">{tenant.name}</CardTitle>
-            <Badge variant="secondary">{tenant.role}</Badge>
+          <div className="flex items-start justify-between gap-md">
+            <CardTitle className="line-clamp-1 text-heading-md">{tenant.name}</CardTitle>
+            <Badge variant="secondary" className="text-micro-cap font-medium bg-primary-bg-subdued-hover text-primary-deep whitespace-nowrap">
+              {tenant.role}
+            </Badge>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="flex flex-col gap-lg">
           {tenant.description && (
-            <p className="text-sm text-foreground/60 line-clamp-2">
+            <p className="text-body-md text-ink-mute line-clamp-2">
               {tenant.description}
             </p>
           )}
 
-          <div className="flex items-center justify-between text-xs text-foreground/40">
+          <div className="flex items-center justify-between text-caption text-ink-mute">
             <span>{tenant.slug}</span>
             <ArrowRight className="h-4 w-4" />
           </div>

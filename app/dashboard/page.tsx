@@ -12,17 +12,17 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-foreground/60">Manage your organizations and team</p>
+    <div className="p-xl space-y-xl">
+      <div className="flex flex-col gap-sm">
+        <h1 className="text-display-lg font-light text-ink">Dashboard</h1>
+        <p className="text-body-md text-ink-mute">Manage your organizations and team</p>
       </div>
 
       {tenants.length === 0 ? (
-        <Card>
+        <Card className="border-hairline">
           <CardHeader>
-            <CardTitle>Welcome!</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-heading-lg">Welcome!</CardTitle>
+            <CardDescription className="text-body-md">
               Create your first organization to get started
             </CardDescription>
           </CardHeader>
@@ -31,13 +31,13 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-lg">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Your Organizations</h2>
+            <h2 className="text-heading-lg font-light text-ink">Your Organizations</h2>
             <CreateTenantDialog />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-lg">
             {tenants.map((tenant) => (
               <TenantCard key={tenant.id} tenant={tenant} />
             ))}
