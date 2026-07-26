@@ -29,22 +29,22 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center p-lg">
-      <Card className="w-full max-w-md border-hairline">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-heading-lg">Sign In</CardTitle>
-          <CardDescription className="text-body-md text-ink-mute">Welcome back to your workforce management platform</CardDescription>
+          <CardTitle>Sign In</CardTitle>
+          <CardDescription>Welcome back to your workforce management platform</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-lg">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="text-body-md text-ruby bg-red-50 p-md rounded-sm border border-ruby/20">
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
                 {error}
               </div>
             )}
 
-            <div className="flex flex-col gap-sm">
-              <label className="text-body-md font-medium text-ink">Email</label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-900">Email</label>
               <Input
                 type="email"
                 placeholder="john@example.com"
@@ -54,8 +54,8 @@ export default function SignInPage() {
               />
             </div>
 
-            <div className="flex flex-col gap-sm">
-              <label className="text-body-md font-medium text-ink">Password</label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-900">Password</label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -69,9 +69,9 @@ export default function SignInPage() {
               {loading ? 'Signing In...' : 'Sign In'}
             </Button>
 
-            <p className="text-center text-body-md text-ink-mute">
+            <p className="text-center text-sm text-slate-600">
               Don&apos;t have an account?{' '}
-              <Link href="/auth/sign-up" className="text-primary font-medium hover:text-primary-deep transition-colors">
+              <Link href="/auth/sign-up" className="font-medium text-blue-600 hover:text-blue-700">
                 Sign Up
               </Link>
             </p>
