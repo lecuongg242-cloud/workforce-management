@@ -4,16 +4,16 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center whitespace-nowrap font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:ring-offset-slate-950 dark:focus-visible:ring-blue-400',
   {
     variants: {
       variant: {
-        default: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 rounded-lg',
-        secondary: 'bg-white text-blue-600 border border-blue-600 hover:bg-blue-50 rounded-lg',
-        destructive: 'bg-red-600 text-white hover:bg-red-700 rounded-lg',
-        outline: 'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 rounded-lg',
-        ghost: 'text-slate-900 hover:bg-slate-100 rounded-lg',
-        link: 'text-blue-600 underline-offset-4 hover:underline h-auto px-0 py-0',
+        default: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 rounded-lg dark:bg-blue-700 dark:hover:bg-blue-600 dark:active:bg-blue-800',
+        secondary: 'bg-white text-blue-600 border border-blue-600 hover:bg-blue-50 rounded-lg dark:bg-slate-800 dark:text-blue-400 dark:border-blue-400 dark:hover:bg-slate-700',
+        destructive: 'bg-red-600 text-white hover:bg-red-700 rounded-lg dark:bg-red-700 dark:hover:bg-red-600',
+        outline: 'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 rounded-lg dark:border-slate-600 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-700',
+        ghost: 'text-slate-900 hover:bg-slate-100 rounded-lg dark:text-slate-50 dark:hover:bg-slate-800',
+        link: 'text-blue-600 underline-offset-4 hover:underline h-auto px-0 py-0 dark:text-blue-400',
       },
       size: {
         default: 'h-10 px-4 py-2 text-sm',

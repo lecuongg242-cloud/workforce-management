@@ -29,7 +29,7 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Sign In</CardTitle>
@@ -38,13 +38,13 @@ export default function SignInPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+              <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-900">
                 {error}
               </div>
             )}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900">Email</label>
+              <label className="text-sm font-medium text-slate-900 dark:text-slate-50">Email</label>
               <Input
                 type="email"
                 placeholder="john@example.com"
@@ -55,7 +55,7 @@ export default function SignInPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-900">Password</label>
+              <label className="text-sm font-medium text-slate-900 dark:text-slate-50">Password</label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -69,9 +69,9 @@ export default function SignInPage() {
               {loading ? 'Signing In...' : 'Sign In'}
             </Button>
 
-            <p className="text-center text-sm text-slate-600">
+            <p className="text-center text-sm text-slate-600 dark:text-slate-400">
               Don&apos;t have an account?{' '}
-              <Link href="/auth/sign-up" className="font-medium text-blue-600 hover:text-blue-700">
+              <Link href="/auth/sign-up" className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
                 Sign Up
               </Link>
             </p>
