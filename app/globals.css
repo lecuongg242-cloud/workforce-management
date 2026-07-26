@@ -5,103 +5,30 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* Stripi Color System */
-    --primary: 245 97% 51%;
-    --primary-deep: 254 63% 50%;
-    --primary-press: 253 78% 35%;
-    --primary-soft: 253 100% 54%;
-    
-    --brand-dark-900: 228 30% 22%;
-    --ink: 211 67% 19%;
-    --ink-secondary: 211 48% 23%;
-    --ink-mute: 215 16% 47%;
-    
-    --canvas: 0 0% 100%;
-    --canvas-soft: 207 23% 97%;
-    --canvas-cream: 35 100% 90%;
-    
-    --hairline: 214 19% 93%;
-    --hairline-input: 210 45% 81%;
-    
-    --ruby: 340 85% 60%;
-    --magenta: 336 95% 64%;
-    
-    --on-primary: 0 0% 100%;
-    --foreground: 211 67% 19%;
-    
-    /* Legacy tokens for compatibility */
-    --background: 0 0% 100%;
-    --card: 0 0% 100%;
-    --card-foreground: 211 67% 19%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 211 67% 19%;
-    --muted: 207 23% 97%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 245 97% 51%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 340 85% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 19% 93%;
-    --input: 210 45% 81%;
-    --secondary: 228 30% 22%;
-    --secondary-foreground: 0 0% 100%;
-    --ring: 245 97% 51%;
-  }
-
-  .dark {
-    --background: 228 30% 14%;
-    --foreground: 0 0% 98%;
-    --card: 228 30% 18%;
-    --card-foreground: 0 0% 98%;
-    --popover: 228 30% 18%;
-    --popover-foreground: 0 0% 98%;
-    --muted: 228 30% 24%;
-    --muted-foreground: 215 16% 65%;
-    --accent: 245 97% 51%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 340 85% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 228 30% 24%;
-    --input: 228 30% 24%;
-    --primary: 245 97% 51%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 98%;
-    --secondary-foreground: 228 30% 14%;
-    --ring: 245 97% 51%;
-  }
-}
-
-@layer base {
   * {
-    @apply border-border;
+    @apply border-slate-200;
+  }
+  
+  html {
+    @apply bg-white text-slate-900;
   }
   
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white text-slate-900;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-feature-settings: 'ss01';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   
-  h1, h2, h3, h4, h5, h6 {
-    font-weight: 300;
-    letter-spacing: -0.02em;
-  }
-  
   h1 {
-    @apply text-4xl md:text-5xl;
-    letter-spacing: -0.04em;
+    @apply text-4xl md:text-5xl font-semibold;
   }
   
   h2 {
-    @apply text-3xl md:text-4xl;
-    letter-spacing: -0.03em;
+    @apply text-3xl md:text-4xl font-semibold;
   }
   
   h3 {
-    @apply text-2xl;
-    letter-spacing: -0.02em;
+    @apply text-2xl font-semibold;
   }
 }
