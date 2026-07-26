@@ -6,15 +6,15 @@
 
 @layer base {
   * {
-    @apply border-slate-200 dark:border-slate-700;
+    @apply border-slate-200;
   }
   
   html {
-    @apply bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-50;
+    @apply bg-white text-slate-900;
   }
   
   body {
-    @apply bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-50;
+    @apply bg-white text-slate-900;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
