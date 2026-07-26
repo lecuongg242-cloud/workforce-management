@@ -1,0 +1,180 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary: #533afd;
+    --primary-deep: #4434d4;
+    --primary-pressed: #2e2b8c;
+    --primary-soft: #665efd;
+    --primary-subdued: #b9b9f9;
+
+    --brand-dark: #1c1e54;
+
+    --ink: #0d253d;
+    --ink-secondary: #273951;
+    --ink-muted: #64748d;
+
+    --canvas: #ffffff;
+    --canvas-soft: #f6f9fc;
+    --canvas-cream: #f5e9d4;
+
+    --border: #e3e8ee;
+    --input-border: #a8c3de;
+
+    --ruby: #ea2261;
+    --magenta: #f96bee;
+    --lemon: #9b6829;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-canvas text-ink;
+  }
+
+  button {
+    @apply font-medium;
+  }
+
+  input,
+  textarea {
+    @apply bg-canvas text-ink;
+  }
+}
+
+@layer utilities {
+  .text-tabular {
+    @apply font-variant-numeric;
+    font-feature-settings: "tnum";
+  }
+
+  .text-display-xxl {
+    @apply text-5xl font-light leading-tight;
+    letter-spacing: -1.4px;
+  }
+
+  .text-display-xl {
+    @apply text-4xl font-light leading-snug;
+    letter-spacing: -0.96px;
+  }
+
+  .text-display-lg {
+    @apply text-3xl font-light leading-snug;
+    letter-spacing: -0.64px;
+  }
+
+  .text-display-md {
+    @apply text-2xl font-light leading-tight;
+    letter-spacing: -0.26px;
+  }
+
+  .text-heading-lg {
+    @apply text-xl font-light leading-snug;
+    letter-spacing: -0.22px;
+  }
+
+  .text-heading-md {
+    @apply text-lg font-light leading-relaxed;
+    letter-spacing: -0.2px;
+  }
+
+  .text-heading-sm {
+    @apply text-base font-light leading-relaxed;
+  }
+
+  .text-body-lg {
+    @apply text-base font-light leading-relaxed;
+  }
+
+  .text-body-md {
+    @apply text-sm font-light leading-relaxed;
+  }
+
+  .text-button-md {
+    @apply text-base font-medium leading-tight;
+  }
+
+  .text-button-sm {
+    @apply text-sm font-medium leading-tight;
+  }
+
+  .text-caption {
+    @apply text-xs font-medium leading-relaxed;
+  }
+
+  .text-micro {
+    @apply text-xs font-light leading-relaxed;
+  }
+
+  .pill-button {
+    @apply rounded-full px-4 py-2 text-button-md transition-colors;
+  }
+
+  .pill-button-primary {
+    @apply pill-button bg-primary text-white hover:bg-primary-deep active:bg-primary-pressed;
+  }
+
+  .pill-button-secondary {
+    @apply pill-button border border-primary bg-canvas text-primary hover:bg-canvas-soft active:bg-canvas-soft;
+  }
+
+  .pill-button-dark {
+    @apply pill-button bg-brand-dark text-white hover:bg-brand-dark/90 active:bg-brand-dark/80;
+  }
+
+  .gradient-mesh {
+    @apply relative;
+    background: linear-gradient(
+      135deg,
+      #f5e9d4 0%,
+      #fdb45c 20%,
+      #e6d5f5 40%,
+      #533afd 60%,
+      #f96bee 100%
+    );
+  }
+
+  .card-base {
+    @apply rounded-lg border border-border bg-canvas;
+  }
+
+  .card-feature {
+    @apply card-base p-8 shadow-sm;
+  }
+
+  .input-base {
+    @apply rounded-md border border-input-border bg-canvas px-3 py-2 text-body-md text-ink transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium;
+  }
+
+  .status-on-time {
+    @apply bg-green-50 text-green-700;
+  }
+
+  .status-late {
+    @apply bg-amber-50 text-amber-700;
+  }
+
+  .status-absent {
+    @apply bg-red-50 text-red-700;
+  }
+
+  .status-pending {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .status-approved {
+    @apply bg-green-50 text-green-700;
+  }
+
+  .status-rejected {
+    @apply bg-red-50 text-red-700;
+  }
+}
