@@ -11,3 +11,4 @@
 \ir 02_time_overnight.sql
 \ir 03_isolation_core.sql
 \ir 04_isolation_v2.sql
+\ir 05_seed_fixture.sql
