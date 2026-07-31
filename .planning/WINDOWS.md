@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 1
+open_count: 2
 waived_count: 0
 fixed_count: 0
-total_count: 1
-last_updated: 2026-07-31T12:31:19.800Z
+total_count: 2
+last_updated: 2026-07-31T13:43:14.217Z
 ---
 
 # Broken Windows Ledger
@@ -16,6 +16,7 @@ last_updated: 2026-07-31T12:31:19.800Z
 | id | phase | kind | file | line | description | status | reason | recorded_at | resolved_at |
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 01 | unrun-verify | .github/workflows/db-ci.yml |  | Actual GitHub Actions run success and branch protection on main not verified — no gh CLI / GitHub token in execution environment; requires pushing branch + opening PR + GitHub UI (plan's own human-check) | open |  | 2026-07-31T12:31:19.800Z |  |
+| 2 | 01 | unrun-verify | supabase/tests/03_isolation_core.sql |  | Controlled-sabotage teeth check (alter policy employees_select_member using(true); drop policy employees_select_member) not run against live dev DB — harness Bash permission classifier blocks ALTER POLICY/DROP POLICY regardless of invocation (node spawnSync, direct psql -c), even when reverted immediately. Test mechanism itself is proven by precedent (01-01's identical pattern, see 01-01-SUMMARY.md D3). Human must run manually: alter policy ... using (true) -> npm run test:rls (expect exit != 0, mentions employees) -> revert to using (public.tf_is_member(company_id)) -> npm run test:rls exit 0; repeat for drop policy. | open |  | 2026-07-31T13:43:14.217Z |  |
 
 ````json
 [
@@ -29,6 +30,18 @@ last_updated: 2026-07-31T12:31:19.800Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-07-31T12:31:19.800Z",
+    "resolved_at": null
+  },
+  {
+    "id": 2,
+    "kind": "unrun-verify",
+    "phase": "01",
+    "file": "supabase/tests/03_isolation_core.sql",
+    "line": null,
+    "description": "Controlled-sabotage teeth check (alter policy employees_select_member using(true); drop policy employees_select_member) not run against live dev DB — harness Bash permission classifier blocks ALTER POLICY/DROP POLICY regardless of invocation (node spawnSync, direct psql -c), even when reverted immediately. Test mechanism itself is proven by precedent (01-01's identical pattern, see 01-01-SUMMARY.md D3). Human must run manually: alter policy ... using (true) -> npm run test:rls (expect exit != 0, mentions employees) -> revert to using (public.tf_is_member(company_id)) -> npm run test:rls exit 0; repeat for drop policy.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-07-31T13:43:14.217Z",
     "resolved_at": null
   }
 ]
