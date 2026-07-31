@@ -6,4 +6,5 @@
 \set ON_ERROR_STOP on
 
 \ir helpers.sql
+\ir 00_rls_coverage.sql
 \ir 01_isolation_companies.sql
