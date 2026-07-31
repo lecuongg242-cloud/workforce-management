@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:push": "node --env-file=.env.local scripts/db.mjs push",
+    "db:seed": "node --env-file=.env.local scripts/db.mjs seed",
+    "test:rls": "node --env-file=.env.local scripts/db.mjs test",
+    "test:db": "node --env-file=.env.local scripts/db.mjs testdb"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
