@@ -73,17 +73,45 @@ Plans:
 **Plans:** 11 plans
 
 Plans:
+**Wave 1**
 
 - [ ] 02-01-PLAN.md — Hạ tầng: hai gói Supabase ghim phiên bản, Vitest (bộ chạy test JS đầu tiên), hợp đồng biến môi trường
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 02-02-PLAN.md — Vai trò nền tảng `platform_admins`, tách fixture khỏi seed, cổng đếm assertion, đẩy schema
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 02-03-PLAN.md — 10 credential thật qua Admin API, 30 nhân viên không tài khoản, tắt đăng ký công khai
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 02-04-PLAN.md — Lát cắt xuyên suốt: phiên cookie thật, cổng `middleware.ts`, Route Handler đọc và Server Action ghi đầu tiên
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 02-05-PLAN.md — Lát cắt phòng ban + đường đọc nhân viên
 - [ ] 02-06-PLAN.md — Lát cắt ca làm việc (giờ, mảng ngày, cột sinh)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 02-07-PLAN.md — Lát cắt nhân viên: đọc hồ sơ, ba đường ghi, năm màn hình
+
+**Wave 7** *(blocked on Wave 6 completion)*
+
 - [ ] 02-08-PLAN.md — Chấm công theo giờ server, bảng điều khiển từ dữ liệu thật, "hôm nay" do server cấp
+
+**Wave 8** *(blocked on Wave 7 completion)*
+
 - [ ] 02-09-PLAN.md — Lát cắt yêu cầu và trang chi tiết nhân viên — hai màn hình cuối rời tầng giả lập
+
+**Wave 9** *(blocked on Wave 8 completion)*
+
 - [ ] 02-10-PLAN.md — AUTH-04: quản trị tạo tài khoản kèm mật khẩu tạm, cổng buộc đổi mật khẩu lần đầu
+
+**Wave 10** *(blocked on Wave 9 completion)*
+
 - [ ] 02-11-PLAN.md — Rule ESLint cưỡng chế quy ước thời gian, xóa tầng dữ liệu giả, nghiệm thu toàn phase
 
 ### Phase 3: Chấm công có bằng chứng

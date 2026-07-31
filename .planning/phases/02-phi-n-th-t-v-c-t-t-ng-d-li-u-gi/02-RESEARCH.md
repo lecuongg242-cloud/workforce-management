@@ -696,17 +696,27 @@ src/lib/mock/service.ts                           (thay thân hàm, DATA-05)
 
 ## Open Questions
 
-1. **Project Supabase thật đang dùng khóa JWT loại nào (đối xứng hay bất đối xứng)?**
+> **Cập nhật 2026-07-31 (plan-phase orchestrator).** Cả ba câu hỏi bên dưới đã được phân giải
+> trước khi planner chạy. Giữ lại nguyên văn phần nghiên cứu để truy vết, nhưng **phần
+> "Recommendation" của câu 1 và câu 3 đã lỗi thời — không làm theo**. Trạng thái thật:
+>
+> | # | Trạng thái | Phân giải |
+> |---|---|---|
+> | 1 | ✅ **RESOLVED** | Đã đo trực tiếp và ghi ở `.planning/PROJECT.md:149-150` từ 2026-07-31: *"Ký JWT bất đối xứng đã bật: endpoint JWKS trả về một khóa `EC/ES256`. Do đó `getClaims()` dùng được ngay, không phải làm bước chuyển khóa ký trước."* **Không tạo checkpoint hỏi Dashboard cho việc này.** Plan `02-04` dùng `getClaims()` và có source assert cấm `getSession()`. |
+> | 2 | ✅ **RESOLVED bằng checkpoint** | Đây là câu hỏi thật và đã có chỗ xử lý: `02-03` Task 2 là `checkpoint:human-action` tắt signup trên Dashboard, Task 3 chứng minh bằng probe `/auth/v1/signup` (`scripts/check-signup-disabled.mjs`) chứ không tin `config.toml`. |
+> | 3 | ✅ **RESOLVED** | Planner đã quyết định trong `02-04-PLAN.md` §Quyết định kiến trúc: **`src/lib/types/domain.ts` không bị sửa.** Một type server-only `SessionContext` mang dữ kiện xác thực; `getClientSession()` trả `null` trừ khi người dùng phân giải được về **cả** một membership `active` **lẫn** một dòng `employees` — nhờ đó `AppUser.employeeId: string` vẫn trung thực và không view nào phải sửa. |
+
+1. **Project Supabase thật đang dùng khóa JWT loại nào (đối xứng hay bất đối xứng)?** — ✅ RESOLVED, xem bảng trên
    - What we know: mặc định hiện tại của Supabase cho project mới là bất đối xứng; project TimeFlow đã tồn tại từ Phase 1 (đã có `docs/env` với `SUPABASE_SERVICE_ROLE_KEY`).
    - What's unclear: ngày tạo project thật và cấu hình JWT hiện tại — không truy cập được Dashboard trong phiên nghiên cứu.
-   - Recommendation: Task đầu tiên của plan nên là "kiểm tra Dashboard → Settings → API → JWT Keys, ghi kết quả vào SUMMARY", quyết định `getClaims()` hay `getUser()` dựa trên kết quả đó, không giả định trước.
+   - ~~Recommendation: Task đầu tiên của plan nên là "kiểm tra Dashboard → Settings → API → JWT Keys"~~ — **lỗi thời**: PROJECT.md đã có số đo, không cần hỏi lại.
 
-2. **`config.toml` có áp dụng được lên project cloud qua CLI hay không, và bằng lệnh nào?**
+2. **`config.toml` có áp dụng được lên project cloud qua CLI hay không, và bằng lệnh nào?** — ✅ RESOLVED bằng checkpoint `02-03` Task 2 + probe ở Task 3
    - What we know: docs CLI fetch được trong phiên này không xác nhận cơ chế đẩy config; dự án không dùng local dev stack.
    - What's unclear: phiên bản Supabase CLI thật sẽ dùng lúc implement có subcommand `config push` (hoặc tương đương) hay không.
    - Recommendation: chạy `npx supabase --help` và `npx supabase config --help` (nếu tồn tại) ngay đầu plan liên quan D-13a, thay vì giả định; luôn kết thúc bằng bước `curl /signup` để verify độc lập với cơ chế đã dùng.
 
-3. **`UserSession`/`AppUser` (domain.ts:179-194) chưa có field cho multi-membership hay `mustChangePassword` — cần mở rộng type này thế nào?**
+3. **`UserSession`/`AppUser` (domain.ts:179-194) chưa có field cho multi-membership hay `mustChangePassword` — cần mở rộng type này thế nào?** — ✅ RESOLVED trong `02-04-PLAN.md`: `domain.ts` **không** bị sửa; dùng `SessionContext` server-only
    - What we know: `UserSession` hiện tại (`companyId`, `role`, `signedInAt`) là shape V1 một-công-ty. AUTH-05 yêu cầu chọn công ty và AUTH-04 yêu cầu buộc đổi mật khẩu — cả hai cần state UI không có trong type hiện tại.
    - What's unclear: đây có nên là field mới trên `UserSession`, hay một type riêng (`SessionContext` ở server, khác `UserSession` ở client) — CONTEXT.md để "hình dạng cụ thể của `getSessionContext()`" là Claude's Discretion, nhưng không nói rõ `UserSession`/`domain.ts` có được sửa hay không.
    - Recommendation: planner nên quyết định tường minh trong PLAN.md liệu `domain.ts` có bị sửa (thêm field) hay giữ nguyên và dùng type server-only riêng — đây là quyết định kiến trúc nhỏ nhưng ảnh hưởng nhiều file, nên chốt sớm ở plan đầu tiên của phase.
