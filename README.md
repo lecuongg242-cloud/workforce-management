@@ -149,9 +149,12 @@ Cần làm khi kết nối thật:
 
 ## Bảo mật
 
-`docs/env` chứa khóa Supabase dạng plaintext và đã được đưa vào `.gitignore`.
-Nên **thu hồi và cấp lại** các khóa đó trước khi triển khai, đặc biệt là
-`SUPABASE_SERVICE_ROLE_KEY`.
+Biến môi trường thật chỉ nằm ở `.env.local` (đã có trong `.gitignore`, không
+bao giờ commit). `.env.example` là hợp đồng tên biến bắt buộc, không chứa giá
+trị thật nào. `docs/env` không còn là nơi giữ khóa — khóa từng nằm plaintext ở
+đó phải được coi là đã lộ và cặp khóa legacy HS256 (`anon` / `service_role`) đã
+bị thu hồi, chuyển hẳn sang mô hình khóa hiện hành
+(`SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY`).
 
 ## Phạm vi chưa triển khai
 
