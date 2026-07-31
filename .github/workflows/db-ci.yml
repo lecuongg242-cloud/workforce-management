@@ -1,0 +1,87 @@
+# .github/workflows/db-ci.yml
+#
+# Cong CI cho co lap doanh nghiep (DATA-04). Moi lan chay dung mot Postgres
+# sach trong container, ap toan bo migration, chay cong RLS roi chay bo test
+# co lap — khong dung bat ky khoa Supabase nao va khong dung toi project
+# cloud (D-04). Kich hoat tren moi pull_request (moi nhanh dich) va push vao
+# main (D-05) de "CI do" co nghia den la "khong merge duoc" (DATA-04).
+
+name: db-ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  db:
+    runs-on: ubuntu-latest
+    env:
+      PGPASSWORD: postgres
+      CONTAINER_NAME: tf-db-ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build CI Postgres image (postgres:17 + pgTAP)
+        run: |
+          set -euo pipefail
+          docker build -t tf-db-ci-image -f supabase/ci/Dockerfile .
+
+      - name: Start Postgres container
+        run: |
+          set -euo pipefail
+          docker run -d \
+            --name "$CONTAINER_NAME" \
+            -e POSTGRES_PASSWORD="$PGPASSWORD" \
+            -v "${{ github.workspace }}:/repo" \
+            tf-db-ci-image
+
+      - name: Wait for Postgres to be ready
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if docker exec "$CONTAINER_NAME" pg_isready -U postgres > /dev/null 2>&1; then
+              echo "Postgres is ready"
+              exit 0
+            fi
+            echo "Waiting for Postgres... ($i/30)"
+            sleep 2
+          done
+          echo "Postgres did not become ready in time" >&2
+          exit 1
+
+      - name: Apply migrations (supabase/migrations/*.sql, thu tu tu dien)
+        run: |
+          set -euo pipefail
+          for f in $(ls supabase/migrations/*.sql | sort); do
+            echo "Applying $f"
+            docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER_NAME" \
+              psql -U postgres -v ON_ERROR_STOP=1 -f "/repo/$f"
+          done
+
+      - name: Install pgTAP
+        run: |
+          set -euo pipefail
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER_NAME" \
+            psql -U postgres -v ON_ERROR_STOP=1 -f /repo/supabase/tests/00_install_pgtap.sql
+
+      - name: Load seed data
+        run: |
+          set -euo pipefail
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER_NAME" \
+            psql -U postgres -v ON_ERROR_STOP=1 -f /repo/supabase/seed.sql
+
+      - name: Run RLS coverage gate
+        run: |
+          set -euo pipefail
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER_NAME" \
+            psql -U postgres -v ON_ERROR_STOP=1 -f /repo/supabase/tests/00_rls_coverage.sql
+
+      - name: Run isolation test suite
+        run: |
+          set -euo pipefail
+          docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER_NAME" \
+            psql -U postgres -v ON_ERROR_STOP=1 -f /repo/supabase/tests/run-all.sql
