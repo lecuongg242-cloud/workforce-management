@@ -9,3 +9,4 @@
 \ir 00_rls_coverage.sql
 \ir 01_isolation_companies.sql
 \ir 02_time_overnight.sql
+\ir 03_isolation_core.sql
