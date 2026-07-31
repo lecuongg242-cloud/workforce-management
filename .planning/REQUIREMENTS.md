@@ -12,10 +12,10 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 
 ### Nền tảng dữ liệu (DATA)
 
-- [ ] **DATA-01**: Schema Postgres trên Supabase phủ đủ các thực thể trong `src/lib/types/domain.ts` (companies, employees, departments, shifts, attendance_records, work_requests) cộng các bảng mới của V2 (memberships, work_sites, attendance_photos, holidays, overtime_rules, audit_log, periods)
-- [ ] **DATA-02**: Mọi bảng thuộc phạm vi doanh nghiệp đều bật RLS với policy xác định quyền qua bảng membership, không đọc `company_id` do client gửi lên
-- [ ] **DATA-03**: Bộ test tự động chứng minh tài khoản của doanh nghiệp A không đọc/ghi được bất kỳ dòng nào của doanh nghiệp B, chạy trên chính hai bộ dữ liệu Ngọc Phát và Bình Minh
-- [ ] **DATA-04**: Kiểm tra tự động chặn merge nếu có bảng mới không bật RLS hoặc bật RLS mà không có policy nào
+- [x] **DATA-01**: Schema Postgres trên Supabase phủ đủ các thực thể trong `src/lib/types/domain.ts` (companies, employees, departments, shifts, attendance_records, work_requests) cộng các bảng mới của V2 (memberships, work_sites, attendance_photos, holidays, overtime_rules, audit_log, periods)
+- [x] **DATA-02**: Mọi bảng thuộc phạm vi doanh nghiệp đều bật RLS với policy xác định quyền qua bảng membership, không đọc `company_id` do client gửi lên
+- [x] **DATA-03**: Bộ test tự động chứng minh tài khoản của doanh nghiệp A không đọc/ghi được bất kỳ dòng nào của doanh nghiệp B, chạy trên chính hai bộ dữ liệu Ngọc Phát và Bình Minh
+- [x] **DATA-04**: Kiểm tra tự động chặn merge nếu có bảng mới không bật RLS hoặc bật RLS mà không có policy nào
 - [ ] **DATA-05**: Toàn bộ hàm trong `src/lib/mock/service.ts` được thay bằng truy vấn thật với chữ ký hàm giữ nguyên; `mock/db.ts` và `mock/seed.ts` bị xóa
 - [ ] **DATA-06**: Mọi thao tác thay đổi dữ liệu ghi lại vào audit log: ai, làm gì, lúc nào, giá trị trước và sau
 - [ ] **DATA-07**: Giờ giấc lưu và tính toán nhất quán theo múi giờ Việt Nam (UTC+7); ca qua đêm cắt qua nửa đêm vẫn ra đúng tổng giờ
@@ -116,10 +116,10 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
+| DATA-02 | Phase 1 | Complete |
+| DATA-03 | Phase 1 | Complete |
+| DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 2 | Pending |
 | DATA-06 | Phase 2 | Pending |
 | DATA-07 | Phase 1 | Pending |
@@ -156,6 +156,7 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | SADM-04 | Phase 6 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 38 total (đếm lại từ danh sách bên trên; con số 36 ghi lúc khởi tạo là sai)
 - Mapped to phases: 38
 - Unmapped: 0 ✓
