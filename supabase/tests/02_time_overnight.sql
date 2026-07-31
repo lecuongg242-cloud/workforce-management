@@ -10,7 +10,7 @@
 
 begin;
 
-select plan(51);
+select plan(53);
 
 /* ============================================================================
    Vong 1/3 — session timezone = UTC
@@ -340,6 +340,43 @@ select is(
   ),
   480,
   'tf_worked_minutes: 22:00 ngay D -> 06:00 ngay D+1 gio VN, 0 phut nghi = 480 (tz=America/New_York)'
+);
+
+/* ============================================================================
+   Enum nghiep vu: du 13 kieu (4 tao o 0002_tenancy.sql + 9 tao o
+   0003_enums_time.sql), khong gia tri nao la nhan tieng Viet.
+   ========================================================================= */
+
+select is(
+  (
+    select count(*)::int
+    from pg_type
+    where typname in (
+      'employee_status', 'contract_type', 'gender', 'attendance_status',
+      'request_type', 'request_status', 'system_role', 'company_role',
+      'department_status', 'shift_status', 'company_size', 'company_accent',
+      'membership_status'
+    )
+  ),
+  13,
+  'enum: du 13 kieu nghiep vu ton tai trong Postgres (4 tu 0002 + 9 tu 0003)'
+);
+
+-- Chi quet enum trong schema `public` (nghia la enum nghiep vu cua TimeFlow).
+-- Cac schema he thong cua Supabase (storage.buckettype, ...) co enum nhan
+-- UPPERCASE rieng cua ho (vd storage.buckettype: STANDARD/ANALYTICS/VECTOR) —
+-- khong phai enum nghiep vu, khong thuoc pham vi khang dinh nay.
+select is(
+  (
+    select count(*)::int
+    from pg_enum e
+    join pg_type t on t.oid = e.enumtypid
+    join pg_namespace n on n.oid = t.typnamespace
+    where n.nspname = 'public'
+      and e.enumlabel ~ '[^a-z0-9_+-]'
+  ),
+  0,
+  'enum: khong gia tri nao trong schema public chua ky tu ngoai chu thuong/so/gach duoi/cong/tru — tuc khong nhan tieng Viet'
 );
 
 select * from finish(true);
