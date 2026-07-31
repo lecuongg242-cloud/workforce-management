@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: Nền dữ liệu và cô lập doanh nghiệp
 status: executing
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-07-31T13:45:05.505Z"
+stopped_at: Completed 01-05-PLAN.md
+last_updated: "2026-07-31T14:00:46.857Z"
 last_activity: 2026-07-31
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 01 (Nền dữ liệu và cô lập doanh nghiệp) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-07-31 — Phase 01 execution started
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [███████░░░] 67%
 | Phase 01 P01 | 27min | 3 tasks | 14 files |
 | Phase 01 P02 | 10min | 2 tasks | 3 files |
 | Phase 01 P04 | 19min | 2 tasks | 4 files |
+| Phase 01 P05 | 24min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Enum Vietnamese-label pgTAP assertion scoped to schema public to avoid false-positive on Supabase's own storage.buckettype/audit.action system enums
 - [Phase ?]: 01-04: Deferred self-referencing FK (departments.manager_id/employees.manager_id -> employees) requires wrapping seed.sql's insert section in explicit begin;/commit; — psql autocommit-per-statement checks even deferred constraints at each statement's own implicit commit
 - [Phase ?]: 01-04: Controlled-sabotage teeth check on employees_select_member (ALTER POLICY / DROP POLICY against live dev DB) blocked by harness Bash permission classifier in every framing tried; deferred to human, logged in WINDOWS.md entry 2 — mechanism already proven by 01-01's identical procedure on companies_select_member
+- [Phase ?]: 01-05: Speed-directive reduced test depth to 2 assertions/table (compound read-denial + throws_ok write-denial) instead of the 7-assertion suite from 01-04, since the RLS mechanism was already proven with teeth by precedent
+- [Phase ?]: 01-05: periods date math computed via date_trunc('month', now() at time zone public.tf_tz()) in both seed and tests, not hardcoded, to keep periods sliding with D-07's convention
 
 ### Pending Todos
 
@@ -93,6 +96,7 @@ None yet.
 - Nghiên cứu còn khoảng trống cần làm rõ khi lập kế hoạch Phase 3: độ phủ thiết bị cho `getUserMedia()` và độ chính xác GPS tại văn phòng thật; và Phase 5: mô hình duyệt một cấp có đủ cho doanh nghiệp pilot không
 - 01-01: GitHub Actions CI run + branch protection on main not verified from this environment (no gh CLI/token) — human must push branch, open PR, confirm db check green, and enable branch protection (see WINDOWS.md #1)
 - 01-04: Human must manually run the employees_select_member sabotage-and-revert teeth check (loosen to using(true), then drop policy) against the live dev DB — harness permission classifier blocks it from the executor. See WINDOWS.md entry 2 for exact steps.
+- 01-05: git push to origin denied (403) - local identity LeeCuongg is not a collaborator on lecuongg242-cloud/workforce-management; human must push with an authorized account and confirm db CI workflow is green (WINDOWS.md entry 3, same root cause as entry 1)
 
 ## Deferred Items
 
@@ -104,6 +108,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-31T13:45:05.488Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-07-31T14:00:46.843Z
+Stopped at: Completed 01-05-PLAN.md
 Resume file: None

@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 2
+open_count: 3
 waived_count: 0
 fixed_count: 0
-total_count: 2
-last_updated: 2026-07-31T13:43:14.217Z
+total_count: 3
+last_updated: 2026-07-31T13:58:46.809Z
 ---
 
 # Broken Windows Ledger
@@ -17,6 +17,7 @@ last_updated: 2026-07-31T13:43:14.217Z
 |----|-------|------|------|------|-------------|--------|--------|-------------|-------------|
 | 1 | 01 | unrun-verify | .github/workflows/db-ci.yml |  | Actual GitHub Actions run success and branch protection on main not verified — no gh CLI / GitHub token in execution environment; requires pushing branch + opening PR + GitHub UI (plan's own human-check) | open |  | 2026-07-31T12:31:19.800Z |  |
 | 2 | 01 | unrun-verify | supabase/tests/03_isolation_core.sql |  | Controlled-sabotage teeth check (alter policy employees_select_member using(true); drop policy employees_select_member) not run against live dev DB — harness Bash permission classifier blocks ALTER POLICY/DROP POLICY regardless of invocation (node spawnSync, direct psql -c), even when reverted immediately. Test mechanism itself is proven by precedent (01-01's identical pattern, see 01-01-SUMMARY.md D3). Human must run manually: alter policy ... using (true) -> npm run test:rls (expect exit != 0, mentions employees) -> revert to using (public.tf_is_member(company_id)) -> npm run test:rls exit 0; repeat for drop policy. | open |  | 2026-07-31T13:43:14.217Z |  |
+| 3 | 01 | unrun-verify | .github/workflows/db-ci.yml |  | git push to origin/lecuongg242-cloud denied (403) for local git identity LeeCuongg (lecuong24021307@gmail.com) - not a collaborator on the remote repo. Branch gsd/phase-01-n-n-d-li-u-v-c-l-p-doanh-nghi-p has all 5 migrations, 04_isolation_v2.sql and 135 local pgTAP assertions passing, but cannot be pushed to trigger CI or open a PR from this environment. Human must push with an authorized account (or add LeeCuongg242 as collaborator) then confirm the db workflow run is green on Postgres-clean CI with all 13 tables. | open |  | 2026-07-31T13:58:46.809Z |  |
 
 ````json
 [
@@ -42,6 +43,18 @@ last_updated: 2026-07-31T13:43:14.217Z
     "status": "open",
     "reason": "",
     "recorded_at": "2026-07-31T13:43:14.217Z",
+    "resolved_at": null
+  },
+  {
+    "id": 3,
+    "kind": "unrun-verify",
+    "phase": "01",
+    "file": ".github/workflows/db-ci.yml",
+    "line": null,
+    "description": "git push to origin/lecuongg242-cloud denied (403) for local git identity LeeCuongg (lecuong24021307@gmail.com) - not a collaborator on the remote repo. Branch gsd/phase-01-n-n-d-li-u-v-c-l-p-doanh-nghi-p has all 5 migrations, 04_isolation_v2.sql and 135 local pgTAP assertions passing, but cannot be pushed to trigger CI or open a PR from this environment. Human must push with an authorized account (or add LeeCuongg242 as collaborator) then confirm the db workflow run is green on Postgres-clean CI with all 13 tables.",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-07-31T13:58:46.809Z",
     "resolved_at": null
   }
 ]
