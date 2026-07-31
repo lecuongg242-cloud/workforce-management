@@ -18,7 +18,7 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 - [x] **DATA-04**: Kiểm tra tự động chặn merge nếu có bảng mới không bật RLS hoặc bật RLS mà không có policy nào
 - [ ] **DATA-05**: Toàn bộ hàm trong `src/lib/mock/service.ts` được thay bằng truy vấn thật với chữ ký hàm giữ nguyên; `mock/db.ts` và `mock/seed.ts` bị xóa
 - [ ] **DATA-06**: Mọi thao tác thay đổi dữ liệu ghi lại vào audit log: ai, làm gì, lúc nào, giá trị trước và sau
-- [ ] **DATA-07**: Giờ giấc lưu và tính toán nhất quán theo múi giờ Việt Nam (UTC+7); ca qua đêm cắt qua nửa đêm vẫn ra đúng tổng giờ
+- [x] **DATA-07**: Giờ giấc lưu và tính toán nhất quán theo múi giờ Việt Nam (UTC+7); ca qua đêm cắt qua nửa đêm vẫn ra đúng tổng giờ
 - [ ] **DATA-08**: Hằng số `REFERENCE_DATE` bị gỡ bỏ, ứng dụng chạy theo thời gian thật mà không lỗi hydration
 
 ### Xác thực và phân quyền (AUTH)
@@ -122,7 +122,7 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 2 | Pending |
 | DATA-06 | Phase 2 | Pending |
-| DATA-07 | Phase 1 | Pending |
+| DATA-07 | Phase 1 | Complete |
 | DATA-08 | Phase 2 | Pending |
 | AUTH-01 | Phase 2 | Pending |
 | AUTH-02 | Phase 2 | Pending |

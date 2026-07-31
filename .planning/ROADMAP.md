@@ -46,12 +46,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Khóa Supabase cũ trong `docs/env` không còn dùng được; khóa mới nằm ngoài git và không xuất hiện trong client bundle.
   5. Ca đêm 22:00 hôm nay đến 06:00 hôm sau ra đúng 8 giờ công theo giờ Việt Nam, không lệch ngày khi máy chủ chạy ở múi giờ khác.
 
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 Plans:
 
 - [x] 01-01-PLAN.md — Lát cắt xuyên suốt: companies + memberships cô lập được, cổng quét RLS toàn schema, cổng CI trên Postgres sạch
-- [ ] 01-02-PLAN.md — Enum nghiệp vụ và quy ước thời gian UTC+7 / ca qua đêm tính vào ngày bắt đầu (D-08)
+- [x] 01-02-PLAN.md — Enum nghiệp vụ và quy ước thời gian UTC+7 / ca qua đêm tính vào ngày bắt đầu (D-08)
 - [ ] 01-03-PLAN.md — AUTH-06: thu hồi khóa legacy, chuyển sang mô hình khóa hiện hành, quét khóa lọt client bundle
 - [ ] 01-04-PLAN.md — Năm bảng thực thể V1 kèm RLS và test cô lập theo từng bảng
 - [ ] 01-05-PLAN.md — Sáu bảng mới của V2 kèm RLS, test cô lập, và bước đẩy schema đầy đủ
@@ -141,7 +141,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Nền dữ liệu và cô lập doanh nghiệp | 1/6 | In Progress|  |
+| 1. Nền dữ liệu và cô lập doanh nghiệp | 2/6 | In Progress|  |
 | 2. Phiên thật và cắt tầng dữ liệu giả | 0/TBD | Not started | - |
 | 3. Chấm công có bằng chứng | 0/TBD | Not started | - |
 | 4. Quy tắc công do doanh nghiệp tự khai | 0/TBD | Not started | - |
