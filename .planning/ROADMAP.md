@@ -70,7 +70,21 @@ Plans:
   4. Quản trị tạo được tài khoản cho nhân viên kèm mật khẩu tạm; nhân viên đăng nhập lần đầu buộc phải đổi mật khẩu mới đi tiếp được.
   5. Mọi màn hình V1 chạy trên dữ liệu Postgres thật theo ngày giờ thật (không còn `REFERENCE_DATE`), `mock/db.ts` và `mock/seed.ts` đã bị xóa, và mỗi thao tác ghi để lại một dòng audit log truy ngược được ai / làm gì / lúc nào / trước / sau.
 
-**Plans**: TBD
+**Plans:** 11 plans
+
+Plans:
+
+- [ ] 02-01-PLAN.md — Hạ tầng: hai gói Supabase ghim phiên bản, Vitest (bộ chạy test JS đầu tiên), hợp đồng biến môi trường
+- [ ] 02-02-PLAN.md — Vai trò nền tảng `platform_admins`, tách fixture khỏi seed, cổng đếm assertion, đẩy schema
+- [ ] 02-03-PLAN.md — 10 credential thật qua Admin API, 30 nhân viên không tài khoản, tắt đăng ký công khai
+- [ ] 02-04-PLAN.md — Lát cắt xuyên suốt: phiên cookie thật, cổng `middleware.ts`, Route Handler đọc và Server Action ghi đầu tiên
+- [ ] 02-05-PLAN.md — Lát cắt phòng ban + đường đọc nhân viên
+- [ ] 02-06-PLAN.md — Lát cắt ca làm việc (giờ, mảng ngày, cột sinh)
+- [ ] 02-07-PLAN.md — Lát cắt nhân viên: đọc hồ sơ, ba đường ghi, năm màn hình
+- [ ] 02-08-PLAN.md — Chấm công theo giờ server, bảng điều khiển từ dữ liệu thật, "hôm nay" do server cấp
+- [ ] 02-09-PLAN.md — Lát cắt yêu cầu và trang chi tiết nhân viên — hai màn hình cuối rời tầng giả lập
+- [ ] 02-10-PLAN.md — AUTH-04: quản trị tạo tài khoản kèm mật khẩu tạm, cổng buộc đổi mật khẩu lần đầu
+- [ ] 02-11-PLAN.md — Rule ESLint cưỡng chế quy ước thời gian, xóa tầng dữ liệu giả, nghiệm thu toàn phase
 
 ### Phase 3: Chấm công có bằng chứng
 
@@ -142,7 +156,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Nền dữ liệu và cô lập doanh nghiệp | 6/6 | In Progress|  |
-| 2. Phiên thật và cắt tầng dữ liệu giả | 0/TBD | Not started | - |
+| 2. Phiên thật và cắt tầng dữ liệu giả | 0/11 | Planned | - |
 | 3. Chấm công có bằng chứng | 0/TBD | Not started | - |
 | 4. Quy tắc công do doanh nghiệp tự khai | 0/TBD | Not started | - |
 | 5. Duyệt yêu cầu và chốt kỳ công | 0/TBD | Not started | - |
