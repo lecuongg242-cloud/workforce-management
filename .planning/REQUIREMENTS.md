@@ -134,7 +134,7 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | AUTH-03 | Phase 2 | Pending |
 | AUTH-04 | Phase 2 | Pending |
 | AUTH-05 | Phase 2 | Pending |
-| AUTH-06 | Phase 1 | Pending |
+| AUTH-06 | Phase 1 | Complete (phạm vi thu hẹp — chỉ vế client bundle) |
 | ATT-01 | Phase 3 | Pending |
 | ATT-02 | Phase 3 | Pending |
 | ATT-03 | Phase 3 | Pending |
