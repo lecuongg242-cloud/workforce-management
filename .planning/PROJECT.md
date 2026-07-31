@@ -131,7 +131,20 @@ sang dữ liệu thật phải gỡ bỏ giả định này. Chi tiết ở `.pl
 
 **Rủi ro bảo mật đang mở.** `docs/env` chứa khóa Supabase plaintext, trong đó có
 `SUPABASE_SERVICE_ROLE_KEY` — khóa này bỏ qua toàn bộ RLS. File đã nằm trong
-`.gitignore` nhưng khóa phải được thu hồi và cấp lại trước khi nối backend thật.
+`.gitignore`. Chủ dự án đã cân nhắc và chấp nhận rủi ro này ở giai đoạn hiện tại vì
+chỉ mình họ nắm file; AUTH-06 vẫn giữ trong phạm vi V2 để xử lý trước khi có dữ liệu
+thật của khách hàng.
+
+**Trạng thái project Supabase — đo trực tiếp ngày 2026-07-31** (ref `ujvgagujfsdrlmjdhooi`):
+
+- Schema `public`: **0 bảng/view**. `auth.users`: **0 tài khoản**. Storage: **0 bucket**.
+  Project hoàn toàn rỗng — Phase 1 viết migration từ đầu, không cần `supabase db pull`
+  để dựng baseline.
+- **Ký JWT bất đối xứng đã bật**: endpoint JWKS trả về một khóa `EC/ES256`. Do đó
+  `getClaims()` dùng được ngay, không phải làm bước chuyển khóa ký trước.
+- Project đang ở trạng thái song song hai mô hình khóa: cặp mới
+  `sb_publishable_` / `sb_secret_` đã có, đồng thời cặp legacy HS256
+  (`anon` / `service_role`) vẫn còn hiệu lực (gọi API trả 200).
 
 ## Constraints
 
