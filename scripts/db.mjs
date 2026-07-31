@@ -11,10 +11,50 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
+import path from "node:path";
 import process from "node:process";
 
 const COMMANDS = ["push", "seed", "test", "testdb"];
+
+/**
+ * Tim `psql`. Tren Windows, trinh cai PostgreSQL ghi PATH o muc may — shell nao
+ * mo truoc luc cai se khong thay `psql`, nen `npm run test:rls` hong o terminal
+ * khac voi terminal da cai. Do bien PATH truoc, roi soi cac thu muc cai mac dinh.
+ * Tren Linux/CI, `psql` luon nam san tren PATH nen nhanh dau tra ve ngay.
+ */
+function resolvePsql() {
+  if (process.env.PSQL_PATH && existsSync(process.env.PSQL_PATH)) {
+    return process.env.PSQL_PATH;
+  }
+
+  const probe = spawnSync(process.platform === "win32" ? "where" : "which", ["psql"], {
+    encoding: "utf8",
+    shell: false,
+  });
+  if (probe.status === 0) {
+    const hit = String(probe.stdout || "").split(/\r?\n/).find((line) => line.trim() !== "");
+    if (hit) return hit.trim();
+  }
+
+  if (process.platform === "win32") {
+    for (const root of ["C:\\Program Files\\PostgreSQL", "C:\\Program Files (x86)\\PostgreSQL"]) {
+      if (!existsSync(root)) continue;
+      const versions = readdirSync(root)
+        .filter((name) => /^\d+$/.test(name))
+        .sort((a, b) => Number(b) - Number(a));
+      for (const version of versions) {
+        const candidate = path.join(root, version, "bin", "psql.exe");
+        if (existsSync(candidate)) return candidate;
+      }
+    }
+  }
+
+  console.error(
+    "Khong tim thay `psql`. Cai PostgreSQL client roi mo lai terminal, hoac dat bien PSQL_PATH tro toi psql.exe.",
+  );
+  process.exit(1);
+}
 
 function requireConnectionUrl() {
   const url = process.env.POSTGRES_URL_NON_POOLING;
@@ -42,8 +82,11 @@ function run(command, args) {
   return result.status ?? 1;
 }
 
+let psqlBin = null;
+
 function runPsqlFile(url, file) {
-  return run("psql", [url, "-v", "ON_ERROR_STOP=1", "-f", file]);
+  if (psqlBin === null) psqlBin = resolvePsql();
+  return run(`"${psqlBin}"`, [url, "-v", "ON_ERROR_STOP=1", "-f", file]);
 }
 
 function cmdPush(url) {
