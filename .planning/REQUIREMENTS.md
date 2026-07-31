@@ -112,17 +112,56 @@ Loại trừ có chủ đích cho V2.
 
 ## Traceability
 
-Phase nào phủ requirement nào. Điền trong bước tạo roadmap.
+Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục tiêu và tiêu chí thành công của từng phase.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (chưa ánh xạ) | — | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 2 | Pending |
+| DATA-06 | Phase 2 | Pending |
+| DATA-07 | Phase 1 | Pending |
+| DATA-08 | Phase 2 | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| AUTH-04 | Phase 2 | Pending |
+| AUTH-05 | Phase 2 | Pending |
+| AUTH-06 | Phase 1 | Pending |
+| ATT-01 | Phase 3 | Pending |
+| ATT-02 | Phase 3 | Pending |
+| ATT-03 | Phase 3 | Pending |
+| ATT-04 | Phase 3 | Pending |
+| ATT-05 | Phase 3 | Pending |
+| ATT-06 | Phase 3 | Pending |
+| ATT-07 | Phase 3 | Pending |
+| ATT-08 | Phase 3 | Pending |
+| SET-01 | Phase 4 | Pending |
+| SET-02 | Phase 4 | Pending |
+| SET-03 | Phase 4 | Pending |
+| SET-04 | Phase 4 | Pending |
+| SET-05 | Phase 5 | Pending |
+| APRV-01 | Phase 5 | Pending |
+| APRV-02 | Phase 5 | Pending |
+| APRV-03 | Phase 5 | Pending |
+| APRV-04 | Phase 5 | Pending |
+| APRV-05 | Phase 5 | Pending |
+| PERD-01 | Phase 5 | Pending |
+| PERD-02 | Phase 5 | Pending |
+| SADM-01 | Phase 6 | Pending |
+| SADM-02 | Phase 6 | Pending |
+| SADM-03 | Phase 6 | Pending |
+| SADM-04 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 36 total
-- Mapped to phases: 0
-- Unmapped: 36 ⚠️
+- v1 requirements: 38 total (đếm lại từ danh sách bên trên; con số 36 ghi lúc khởi tạo là sai)
+- Mapped to phases: 38
+- Unmapped: 0 ✓
+
+Phân bổ theo phase: Phase 1 — 6 · Phase 2 — 8 · Phase 3 — 8 · Phase 4 — 4 · Phase 5 — 8 · Phase 6 — 4
 
 ---
 *Requirements defined: 2026-07-31*
-*Last updated: 2026-07-31 after initial definition*
+*Last updated: 2026-07-31 after roadmap traceability mapping*
