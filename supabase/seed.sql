@@ -11,6 +11,7 @@
 -- `on conflict (id) do nothing` vi khong co cot identity de restart.
 
 truncate
+  periods, audit_log, overtime_rules, holidays, attendance_photos, work_sites,
   work_requests, attendance_records, employees, shifts, departments,
   memberships, companies
   restart identity cascade;
@@ -186,6 +187,71 @@ insert into work_requests (
   (
     'wr-02', 'cty-02', 'nv-02b', 'leave', 'pending', '2026-08-05', '2026-08-05',
     null, null, 'Xin nghỉ khám sức khỏe', null, null, null
+  );
+
+/* -------------------------------------------------------------------------- */
+/* work_sites — moi cong ty mot dia diem lam viec                             */
+/* -------------------------------------------------------------------------- */
+
+insert into work_sites (id, company_id, name, latitude, longitude, radius_meters, is_active) values
+  ('ws-01', 'cty-01', 'Văn phòng chính', 10.782300, 106.695800, 150, true),
+  ('ws-02', 'cty-02', 'Xưởng sản xuất', 10.895500, 106.771200, 200, true);
+
+/* -------------------------------------------------------------------------- */
+/* attendance_photos — gan vao ban ghi cham cong da seed o tren; duong dan    */
+/* bat dau bang chinh company_id (CHECK cua bang buoc dieu nay)               */
+/* -------------------------------------------------------------------------- */
+
+insert into attendance_photos (
+  company_id, attendance_record_id, kind, storage_path, captured_at
+) values
+  ('cty-01', 'att-01a', 'check_in', 'cty-01/nv-01a/att-01a-check_in.jpg', '2026-07-28 08:10:00+07'),
+  ('cty-02', 'att-02a', 'check_in', 'cty-02/nv-02a/att-02a-check_in.jpg', '2026-07-28 06:05:00+07');
+
+/* -------------------------------------------------------------------------- */
+/* holidays — CO Y de rong o ca hai cong ty; khong chen dong nao o day.       */
+/* Doanh nghiep moi khoi tao khong co ngay le cai san la trang thai hop le.   */
+/* -------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------- */
+/* overtime_rules — moi cong ty mot he so cho rule_key = 'weekday'            */
+/* -------------------------------------------------------------------------- */
+
+insert into overtime_rules (company_id, rule_key, multiplier, effective_from) values
+  ('cty-01', 'weekday', 1.50, '2026-01-01'),
+  ('cty-02', 'weekday', 1.50, '2026-01-01');
+
+/* -------------------------------------------------------------------------- */
+/* audit_log — moi cong ty mot dong ghi thao tac tao nhan vien quan ly        */
+/* -------------------------------------------------------------------------- */
+
+insert into audit_log (company_id, actor_user_id, action, entity_table, entity_id, after) values
+  (
+    'cty-01', '00000000-0000-0000-0000-000000000001', 'insert', 'employees', 'nv-01a',
+    jsonb_build_object('full_name', 'Đoàn Minh Trí', 'status', 'active')
+  ),
+  (
+    'cty-02', '00000000-0000-0000-0000-000000000002', 'insert', 'employees', 'nv-02a',
+    jsonb_build_object('full_name', 'Vương Đức Hiếu', 'status', 'active')
+  );
+
+/* -------------------------------------------------------------------------- */
+/* periods — mot ky cong dang mo cho thang hien tai, tinh theo Asia/Ho_Chi_   */
+/* Minh (D-07: du lieu seed truot theo ngay chay, khong chot cung nhu V1)     */
+/* -------------------------------------------------------------------------- */
+
+insert into periods (company_id, start_date, end_date, status) values
+  (
+    'cty-01',
+    date_trunc('month', now() at time zone public.tf_tz())::date,
+    (date_trunc('month', now() at time zone public.tf_tz()) + interval '1 month - 1 day')::date,
+    'open'
+  ),
+  (
+    'cty-02',
+    date_trunc('month', now() at time zone public.tf_tz())::date,
+    (date_trunc('month', now() at time zone public.tf_tz()) + interval '1 month - 1 day')::date,
+    'open'
   );
 
 commit;
