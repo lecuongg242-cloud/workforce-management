@@ -1,0 +1,1 @@
+{"content":"@supabase/supabase-js latest is 2.111.0 (verified via npm registry), requires Node >=22. All sub-packages (auth-js, storage-js, realtime-js, functions-js, postgrest-js) pinned to same version. @supabase/ssr 0.12.4 peer-depends on ^2.111.0.","source":"web","provider":"webfetch","confidence":"MEDIUM","fetched_at":"2026-07-31T08:36:47.563Z","ttl":86400000,"kind":"docs"}
