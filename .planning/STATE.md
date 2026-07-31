@@ -15,7 +15,7 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-07-31)
 
-**Core value:** Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng người, đúng nơi, đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
+**Core value:** Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng nơi, đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
 **Current focus:** Phase 1 — Nền dữ liệu và cô lập doanh nghiệp
 
 ## Current Position

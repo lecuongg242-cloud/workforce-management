@@ -14,8 +14,8 @@ Supabase, chấm công có bằng chứng chống gian lận, và các module qu
 
 ## Core Value
 
-Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng người,
-đúng nơi, đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
+Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng nơi,
+đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
 
 ## Business Context
 
