@@ -58,7 +58,7 @@ The architecture enforces a single, controlled path from every View to Supabase:
 
 **Major components:**
 1. **Session/Auth layer** — Resolves "who is asking" (user, company, role) server-side; every data-access function calls this first
-2. **Domain data-access functions** — Replaces `mock/service.ts` function-for-function; each applies explicit `company_id` filter AND relies independently on RLS
+2. **Domain data-access functions** — Replaces `src/lib/mock/service.ts` function-for-function; each applies explicit `company_id` filter AND relies independently on RLS
 3. **Postgres RLS policies** — Every tenant table gets `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` with policies checking membership via a `memberships` table joined against `auth.uid()`
 4. **Supabase Storage (private)** — Attendance-photos bucket with RLS policies keyed to `company_id` path prefix
 5. **Audit log** — Append-only table recording who/what/when/before/after for every mutation
@@ -106,7 +106,7 @@ The architecture enforces a single, controlled path from every View to Supabase:
 ### Phase 3: Foundational Entity CRUD
 **Rationale:** Lowest-complexity proof that the "swap the body, keep the signature" pattern works end-to-end.
 
-**Delivers:** employees.ts, departments.ts, shifts.ts, work_sites.ts (all replaces mock/service.ts), Company Settings foundation, member invitation, audit logging on all mutations
+**Delivers:** employees.ts, departments.ts, shifts.ts, work_sites.ts (all replacing `src/lib/mock/service.ts`), Company Settings foundation, member invitation, audit logging on all mutations
 
 **Addresses:** Work hours + grace period, member invitation, role-based access
 
