@@ -57,7 +57,8 @@ Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra l�
 
 **Chấm công có bằng chứng**
 
-- [ ] Chấm công bắt buộc kèm ảnh chụp trực tiếp bằng camera (không cho chọn ảnh có sẵn)
+- [ ] Chấm công bắt buộc kèm ảnh **hiện trường nơi làm việc** chụp trực tiếp bằng camera
+      (không cho chọn ảnh có sẵn) — không phải ảnh chân dung nhân viên
 - [ ] Chấm công bắt buộc kèm toạ độ GPS, kiểm tra nằm trong bán kính điểm làm việc
 - [ ] Quản trị cấu hình được điểm làm việc và bán kính cho phép
 - [ ] Quản trị xem lại ảnh + vị trí của từng bản ghi chấm công
@@ -65,9 +66,10 @@ Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra l�
 
 **Cài đặt doanh nghiệp**
 
-- [ ] Trang `/admin/settings`: cấu hình giờ làm, quy tắc tính công, quy tắc tăng ca
-- [ ] Quản lý ngày nghỉ lễ
-- [ ] Mời thành viên vào doanh nghiệp và gán vai trò
+- [ ] Trang `/admin/settings`: cấu hình giờ làm, thời gian ân hạn, quy tắc tính công
+- [ ] Chủ doanh nghiệp tự khai ngày nghỉ lễ và hệ số tăng ca — hệ thống không áp cứng giá trị nào
+- [ ] Quản trị tạo tài khoản cho nhân viên và gán vai trò
+- [ ] Chốt kỳ công: kỳ đã chốt chỉ sửa được qua yêu cầu được duyệt, có ghi vết
 
 **Duyệt yêu cầu hoàn chỉnh**
 
@@ -95,6 +97,15 @@ Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra l�
   nghiệp; thiết kế đã có sẵn ở `docs/DESIGN-stripe.md` để dùng sau.
 - **Máy chấm công phần cứng, nhận diện khuôn mặt** — chi phí tích hợp lớn, không
   cần cho pilot.
+- **Nhận diện khuôn mặt / liveness detection** — ảnh chấm công là ảnh hiện trường nơi
+  làm việc, không có khuôn mặt để đối chiếu.
+- **Màn hình xin đồng ý thu thập dữ liệu** — ảnh chụp là nơi làm việc nên không phải
+  dữ liệu sinh trắc. Ghi chú còn tồn: toạ độ GPS của nhân viên vẫn thuộc dữ liệu cá
+  nhân theo NĐ 13/2023; theo dõi ở nhóm PRIV trong REQUIREMENTS.md cho V3.
+- **Mời thành viên qua email hoặc SMS OTP** — quản trị tạo tài khoản trực tiếp, không
+  phụ thuộc nhà cung cấp email/SMS.
+- **Duyệt nhiều cấp** — quá mức cần thiết cho doanh nghiệp pilot cơ cấu phẳng.
+- **Theo dõi vị trí liên tục** — chỉ lấy toạ độ tại thời điểm chấm công.
 - **Đa ngôn ngữ** — thị trường mục tiêu là Việt Nam, giữ một locale.
 - **Mobile app native** — web mobile-first đã phục vụ được nhân viên.
 
@@ -144,6 +155,10 @@ sang dữ liệu thật phải gỡ bỏ giả định này. Chi tiết ở `.pl
 | Vẫn bật RLS đầy đủ dù đã có tầng server | Phòng thủ hai lớp độc lập: handler quên filter thì DB vẫn từ chối | — Pending |
 | Không tách backend riêng (NestJS/Fastify) | Không tăng bảo mật ở quy mô này, chỉ thêm hạ tầng phải vá và giám sát; V1 vốn đã cấu trúc quanh một service layer | — Pending |
 | Chấm công = ảnh chụp trực tiếp + GPS trong bán kính | Hai tín hiệu độc lập; QR bị loại vì chụp sẵn quét ở nhà được, ảnh đơn thuần bị lách bằng cách chụp lại màn hình | — Pending |
+| Ảnh chấm công là ảnh hiện trường nơi làm việc, không phải selfie | Không thu thập dữ liệu sinh trắc, không cần liveness detection. Hệ quả phải hiểu đúng: ảnh + GPS chứng minh "một thiết bị đã ở đúng nơi", không chứng minh "đúng người" | — Pending |
+| Ngày lễ và hệ số tăng ca do chủ doanh nghiệp tự khai, không nhúng sẵn con số nào | Mỗi doanh nghiệp có chính sách riêng; nhúng cứng theo luật khiến hệ thống sai với nơi áp dụng khác đi và phải sửa code mỗi lần luật đổi | — Pending |
+| Quản trị tạo tài khoản trực tiếp thay vì mời qua email/SMS | Nhân viên SMB Việt nhiều người không dùng email; SMS phát sinh chi phí và phụ thuộc nhà cung cấp | — Pending |
+| Chốt kỳ công có trong V2 dù tính lương hoãn sang V3 | Không có chốt kỳ thì số liệu kỳ cũ đổi sau lưng, báo cáo đã xuất lệch với dữ liệu hiện tại | — Pending |
 | Hoãn tính lương sang V3 | Rủi ro nghiệp vụ và pháp lý cao; giá trị pilot nằm ở số liệu chấm công đúng | — Pending |
 | Giữ nguyên chữ ký hàm trong `service.ts` khi nối Supabase | V1 đã thiết kế cho đúng việc này; đổi thân hàm thì UI không phải sửa | — Pending |
 
