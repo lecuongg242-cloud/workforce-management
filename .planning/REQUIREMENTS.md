@@ -28,7 +28,11 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 - [ ] **AUTH-03**: Phân quyền bốn vai trò — nhân viên, quản lý, quản trị, super admin — quyết định được xem gì và làm gì
 - [ ] **AUTH-04**: Quản trị tạo tài khoản cho nhân viên kèm mật khẩu tạm; nhân viên bắt buộc đổi mật khẩu ở lần đăng nhập đầu
 - [ ] **AUTH-05**: Người dùng thuộc nhiều doanh nghiệp chọn được doanh nghiệp làm việc; doanh nghiệp đang chọn lấy từ phiên phía server, không tin giá trị client gửi lên
-- [ ] **AUTH-06**: Toàn bộ khóa Supabase trong `docs/env` được thu hồi và cấp lại theo mô hình khóa hiện hành; không khóa bí mật nào lọt xuống client bundle
+- [x] **AUTH-06**: Không khóa bí mật nào lọt xuống client bundle — `npm run check:secrets` quét `.next/static` và `.next/server/app` sau build, đối chiếu với giá trị thật của mọi biến không phải `NEXT_PUBLIC_` trong `.env.local` cộng tiền tố `sb_secret_`
+
+  > **Thu hẹp phạm vi ngày 2026-07-31.** Yêu cầu này ban đầu gộp thêm vế "thu hồi và cấp lại
+  > toàn bộ khóa Supabase trong `docs/env`". Chủ dự án đã quyết định gỡ vế đó khỏi phạm vi —
+  > xem bảng Out of Scope. Vế bundle giữ nguyên và đã hoàn thành.
 
 ### Chấm công có bằng chứng (ATT)
 
@@ -98,6 +102,7 @@ Loại trừ có chủ đích cho V2.
 
 | Feature | Reason |
 |---------|--------|
+| Thu hồi & cấp lại khóa Supabase legacy | Quyết định của chủ dự án ngày 2026-07-31, sau khi xem dữ liệu đo được: khóa chưa từng vào lịch sử git, `docs/env` chưa từng bị commit, không JWT nào trong repo. Rủi ro đã biết và được chấp nhận có ý thức: khóa `service_role` legacy vẫn sống, và nó **bỏ qua toàn bộ 52 RLS policy** của Phase 1 — ai cầm khóa đó thì cơ chế cô lập doanh nghiệp không áp dụng. Khóa là bearer token tĩnh hạn tới 2100, mô hình legacy không cho thu hồi riêng lẻ. Đây là loại trừ có chủ đích, **không phải bỏ sót** |
 | Chấm công bằng QR | Nhân viên chụp sẵn mã rồi quét từ nhà — không chứng minh được sự hiện diện |
 | Khóa thiết bị (mỗi nhân viên một máy đã đăng ký) | Phát sinh nghiệp vụ đổi máy / mất máy, tăng tải cho nhân sự; ảnh + GPS đã đủ ở quy mô pilot |
 | Nhận diện khuôn mặt / liveness detection | Ảnh chấm công là ảnh hiện trường nơi làm việc, không phải ảnh chân dung — không có khuôn mặt để đối chiếu |

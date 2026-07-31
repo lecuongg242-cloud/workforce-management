@@ -52,7 +52,7 @@ Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra l�
 - [ ] RLS policy cô lập dữ liệu theo `company_id` cho mọi bảng
 - [ ] Thay thân hàm trong `service.ts` bằng truy vấn thật, xóa `mock/db.ts` và `mock/seed.ts`
 - [ ] Supabase Auth thay `session-provider.tsx`; chặn route bằng `middleware.ts` đọc cookie
-- [ ] Thu hồi và cấp lại toàn bộ khóa Supabase đang nằm plaintext trong `docs/env`
+- [x] Không khóa bí mật nào lọt xuống client bundle (`npm run check:secrets`)
 - [ ] Phân quyền theo vai trò (nhân viên / quản lý / quản trị / super admin)
 
 **Chấm công có bằng chứng**
@@ -97,6 +97,12 @@ Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra l�
   nghiệp; thiết kế đã có sẵn ở `docs/DESIGN-stripe.md` để dùng sau.
 - **Máy chấm công phần cứng, nhận diện khuôn mặt** — chi phí tích hợp lớn, không
   cần cho pilot.
+- **Thu hồi & cấp lại khóa Supabase legacy** — gỡ khỏi phạm vi ngày 2026-07-31 theo quyết
+  định của chủ dự án. Dữ kiện đo được lúc quyết định: khóa chưa từng vào lịch sử git,
+  `docs/env` chưa từng bị commit, không JWT nào trong repo. Rủi ro được chấp nhận có ý thức:
+  khóa `service_role` legacy vẫn sống và **bỏ qua toàn bộ 52 RLS policy** — với ai cầm khóa
+  đó, cơ chế cô lập doanh nghiệp của Phase 1 không tồn tại. Loại trừ có chủ đích, không phải
+  bỏ sót.
 - **Nhận diện khuôn mặt / liveness detection** — ảnh chấm công là ảnh hiện trường nơi
   làm việc, không có khuôn mặt để đối chiếu.
 - **Màn hình xin đồng ý thu thập dữ liệu** — ảnh chụp là nơi làm việc nên không phải

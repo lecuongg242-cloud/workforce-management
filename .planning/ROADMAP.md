@@ -24,7 +24,7 @@ sớm có màn hình chạy được.
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Nền dữ liệu và cô lập doanh nghiệp** - Schema Postgres, RLS trên mọi bảng, test rò rỉ xuyên doanh nghiệp, cổng CI, thu hồi khóa
+- [ ] **Phase 1: Nền dữ liệu và cô lập doanh nghiệp** - Schema Postgres, RLS trên mọi bảng, test rò rỉ xuyên doanh nghiệp, cổng CI, chặn khóa bí mật lọt client bundle
 - [ ] **Phase 2: Phiên thật và cắt tầng dữ liệu giả** - Supabase Auth qua cookie, phân quyền bốn vai trò, toàn bộ `service.ts` chạy trên Postgres, xóa mock
 - [ ] **Phase 3: Chấm công có bằng chứng** - Ảnh hiện trường chụp trực tiếp, GPS kiểm ở server theo bán kính điểm làm việc, màn hình quản trị xem lại
 - [ ] **Phase 4: Quy tắc công do doanh nghiệp tự khai** - Trang cài đặt: giờ làm, ân hạn, ngày lễ, hệ số tăng ca; phân loại công theo quy tắc đang hiệu lực
@@ -43,7 +43,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. Hai bộ dữ liệu Ngọc Phát và Bình Minh tồn tại đầy đủ trên Supabase, phủ hết thực thể của `src/lib/types/domain.ts` lẫn các bảng mới của V2 (memberships, work_sites, attendance_photos, holidays, overtime_rules, audit_log, periods).
   2. Chạy bộ test cô lập: tài khoản thuộc Ngọc Phát không đọc và không ghi được bất kỳ dòng nào của Bình Minh, và ngược lại — test báo kết quả theo từng bảng, không phải một khẳng định chung chung.
   3. Thêm một bảng mới mà quên bật RLS, hoặc bật RLS mà không có policy nào, thì CI báo đỏ và chặn merge.
-  4. Khóa Supabase cũ trong `docs/env` không còn dùng được; khóa mới nằm ngoài git và không xuất hiện trong client bundle.
+  4. Khóa mới nằm ngoài git và không xuất hiện trong client bundle, chứng minh bằng `npm run check:secrets` chạy trên build thật. *(Vế "thu hồi khóa legacy" đã được gỡ khỏi phạm vi ngày 2026-07-31 theo quyết định của chủ dự án — xem Out of Scope trong REQUIREMENTS.md.)*
   5. Ca đêm 22:00 hôm nay đến 06:00 hôm sau ra đúng 8 giờ công theo giờ Việt Nam, không lệch ngày khi máy chủ chạy ở múi giờ khác.
 
 **Plans:** 6/6 plans executed
