@@ -1,0 +1,352 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ==========================================================================
+   TimeFlow — Design tokens
+   Nguon: docs/DESIGN-stripe.md (chi ap dung ngon ngu hinh anh + token,
+   khong sao chep thuong hieu).
+   ========================================================================== */
+
+:root {
+  /* --- Brand ------------------------------------------------------------ */
+  --tf-primary: #533afd;
+  --tf-primary-deep: #4434d4;
+  --tf-primary-press: #2e2b8c;
+  --tf-primary-soft: #665efd;
+  --tf-primary-subdued: #b9b9f9;
+  --tf-primary-wash: #eeecff;
+  --tf-brand-dark: #1c1e54;
+  --tf-brand-dark-soft: #262a68;
+
+  /* --- Text ------------------------------------------------------------- */
+  --tf-ink: #0d253d;
+  --tf-ink-secondary: #273951;
+  --tf-ink-muted: #64748d;
+
+  /* --- Surface ---------------------------------------------------------- */
+  --tf-canvas: #ffffff;
+  --tf-canvas-soft: #f6f9fc;
+  --tf-canvas-cream: #f5e9d4;
+  --tf-hairline: #e3e8ee;
+  --tf-hairline-input: #a8c3de;
+
+  /* --- Gradient mesh stops --------------------------------------------- */
+  --tf-mesh-cream: #f5e9d4;
+  --tf-mesh-orange: #f7b267;
+  --tf-mesh-lavender: #c9c2fb;
+  --tf-mesh-indigo: #533afd;
+  --tf-mesh-ruby: #ea2261;
+  --tf-mesh-magenta: #f96bee;
+
+  /* --- Semantic (chi dung cho badge / alert / icon / trang thai) -------- */
+  --tf-success: #067647;
+  --tf-success-soft: #ecfdf3;
+  --tf-success-border: #abefc6;
+  --tf-warning: #b54708;
+  --tf-warning-soft: #fffaeb;
+  --tf-warning-border: #fedf89;
+  --tf-error: #b42318;
+  --tf-error-soft: #fef3f2;
+  --tf-error-border: #fecdca;
+  --tf-info: #175cd3;
+  --tf-info-soft: #eff8ff;
+  --tf-info-border: #b2ddff;
+  --tf-neutral: #475467;
+  --tf-neutral-soft: #f2f4f7;
+  --tf-neutral-border: #e3e8ee;
+
+  /* --- Radius ----------------------------------------------------------- */
+  --tf-radius-input: 6px;
+  --tf-radius-control: 8px;
+  --tf-radius-card: 12px;
+  --tf-radius-panel: 16px;
+
+  /* shadcn dung --radius lam goc; giu o 8px cho control */
+  --radius: 8px;
+
+  /* --- Elevation -------------------------------------------------------- */
+  --tf-shadow-e1: 0 1px 3px rgba(0, 55, 112, 0.08);
+  --tf-shadow-e2:
+    0 8px 24px rgba(0, 55, 112, 0.08), 0 2px 6px rgba(0, 55, 112, 0.04);
+
+  /* --- Layout metrics --------------------------------------------------- */
+  --tf-sidebar-w: 256px;
+  --tf-topbar-h: 60px;
+  --tf-bottomnav-h: 64px;
+
+  /* --- shadcn/ui variable mapping -------------------------------------- */
+  --background: var(--tf-canvas);
+  --foreground: var(--tf-ink);
+  --card: var(--tf-canvas);
+  --card-foreground: var(--tf-ink);
+  --popover: var(--tf-canvas);
+  --popover-foreground: var(--tf-ink);
+  --primary: var(--tf-primary);
+  --primary-foreground: #ffffff;
+  --secondary: var(--tf-canvas-soft);
+  --secondary-foreground: var(--tf-ink);
+  --muted: var(--tf-canvas-soft);
+  --muted-foreground: var(--tf-ink-muted);
+  --accent: var(--tf-primary-wash);
+  --accent-foreground: var(--tf-primary-deep);
+  --destructive: var(--tf-error);
+  --destructive-foreground: #ffffff;
+  --border: var(--tf-hairline);
+  --input: var(--tf-hairline-input);
+  --ring: var(--tf-primary);
+}
+
+@theme inline {
+  /* shadcn bridge */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* brand utilities: bg-brand-dark, text-ink-muted, border-hairline ... */
+  --color-brand: var(--tf-primary);
+  --color-brand-deep: var(--tf-primary-deep);
+  --color-brand-press: var(--tf-primary-press);
+  --color-brand-soft: var(--tf-primary-soft);
+  --color-brand-subdued: var(--tf-primary-subdued);
+  --color-brand-wash: var(--tf-primary-wash);
+  --color-brand-dark: var(--tf-brand-dark);
+  --color-brand-dark-soft: var(--tf-brand-dark-soft);
+
+  --color-ink: var(--tf-ink);
+  --color-ink-secondary: var(--tf-ink-secondary);
+  --color-ink-muted: var(--tf-ink-muted);
+
+  --color-canvas: var(--tf-canvas);
+  --color-canvas-soft: var(--tf-canvas-soft);
+  --color-canvas-cream: var(--tf-canvas-cream);
+  --color-hairline: var(--tf-hairline);
+  --color-hairline-input: var(--tf-hairline-input);
+
+  --color-success: var(--tf-success);
+  --color-success-soft: var(--tf-success-soft);
+  --color-success-border: var(--tf-success-border);
+  --color-warning: var(--tf-warning);
+  --color-warning-soft: var(--tf-warning-soft);
+  --color-warning-border: var(--tf-warning-border);
+  --color-danger: var(--tf-error);
+  --color-danger-soft: var(--tf-error-soft);
+  --color-danger-border: var(--tf-error-border);
+  --color-info: var(--tf-info);
+  --color-info-soft: var(--tf-info-soft);
+  --color-info-border: var(--tf-info-border);
+  --color-neutral-ink: var(--tf-neutral);
+  --color-neutral-soft: var(--tf-neutral-soft);
+  --color-neutral-border: var(--tf-neutral-border);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-input: var(--tf-radius-input);
+  --radius-control: var(--tf-radius-control);
+  --radius-card: var(--tf-radius-card);
+  --radius-panel: var(--tf-radius-panel);
+
+  --shadow-e1: var(--tf-shadow-e1);
+  --shadow-e2: var(--tf-shadow-e2);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+
+  --spacing-sidebar: var(--tf-sidebar-w);
+  --spacing-topbar: var(--tf-topbar-h);
+  --spacing-bottomnav: var(--tf-bottomnav-h);
+}
+
+@layer base {
+  * {
+    border-color: var(--tf-hairline);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--tf-canvas);
+    color: var(--tf-ink);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.5;
+    /* ss01 theo dac ta thiet ke; tat ligature khong can thiet */
+    font-feature-settings: "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Heading nhe (weight 300) + letter-spacing am — chu ky cua he thiet ke */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 300;
+    color: var(--tf-ink);
+    text-wrap: balance;
+  }
+
+  /* Focus ring ro rang o moi noi */
+  :focus-visible {
+    outline: 2px solid var(--tf-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Focus ring tren nen navy */
+  .on-dark :focus-visible {
+    outline-color: #ffffff;
+  }
+
+  ::selection {
+    background: var(--tf-primary-subdued);
+    color: var(--tf-primary-press);
+  }
+}
+
+@layer components {
+  /* ---- Thang chu hien thi ------------------------------------------- */
+  .display-xl {
+    font-size: 44px;
+    font-weight: 300;
+    line-height: 1.08;
+    letter-spacing: -1.1px;
+  }
+  .display-lg {
+    font-size: 32px;
+    font-weight: 300;
+    line-height: 1.12;
+    letter-spacing: -0.64px;
+  }
+  .display-md {
+    font-size: 26px;
+    font-weight: 300;
+    line-height: 1.15;
+    letter-spacing: -0.26px;
+  }
+  .heading-lg {
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1.2;
+    letter-spacing: -0.22px;
+  }
+  .heading-md {
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: -0.2px;
+  }
+  .heading-sm {
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: -0.1px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--tf-ink-muted);
+  }
+
+  @media (max-width: 767px) {
+    .display-xl {
+      font-size: 32px;
+      letter-spacing: -0.7px;
+    }
+    .display-lg {
+      font-size: 26px;
+      letter-spacing: -0.4px;
+    }
+    .display-md {
+      font-size: 22px;
+      letter-spacing: -0.2px;
+    }
+  }
+
+  /* ---- Chu so dang bang: bat buoc cho gio / tien / so lieu ----------- */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.2px;
+  }
+
+  /* ---- Be mat dung chung -------------------------------------------- */
+  .surface-card {
+    background-color: var(--tf-canvas);
+    border: 1px solid var(--tf-hairline);
+    border-radius: var(--tf-radius-card);
+    box-shadow: var(--tf-shadow-e1);
+  }
+
+  .surface-panel {
+    background-color: var(--tf-canvas);
+    border: 1px solid var(--tf-hairline);
+    border-radius: var(--tf-radius-panel);
+    box-shadow: var(--tf-shadow-e2);
+  }
+
+  /* ---- Thanh cuon manh ----------------------------------------------- */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--tf-hairline) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--tf-hairline);
+    border-radius: 9999px;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ---- Vung an toan cho iPhone --------------------------------------- */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
