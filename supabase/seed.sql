@@ -409,6 +409,15 @@ where d.id = v.dept_id;
 /* Ngay khong nam trong working_days cua ca -> status 'day_off'. O vi tri    */
 /* chu ky thu 6 (lich su goc la leave_paid), luan phien sang leave_unpaid o  */
 /* nua sau moi 16 ngay de bao phu ca 7 trang thai attendance_status.         */
+/*                                                                            */
+/* Rieng ca overnight (D-08, tieu chi nghiem thu so 5): moi ban ghi co ca hai */
+/* moc gio phai co worked_minutes bang DUNG public.tf_shift_minutes cua ca —  */
+/* khong duoc lech theo do tre/som nhu ca ngay, vi lech se lam               */
+/* worked_minutes # tf_shift_minutes(start,end,break). Nen voi nhan vien lam  */
+/* ca overnight, cac vi tri chu ky co ca hai moc gio (0-5) deu ep ve dung gio */
+/* bat dau/ket thuc ca (offset 0) va status 'on_time'; vi tri 6 (nghi) va 7   */
+/* (missing_checkout, thieu gio ra) khong bi anh huong vi nam ngoai pham vi   */
+/* khang dinh do ("co du hai moc gio").                                      */
 /* -------------------------------------------------------------------------- */
 
 with anchor as (
@@ -444,12 +453,20 @@ raw as (
     (anchor.d - d.day_offset) as work_date,
     extract(isodow from (anchor.d - d.day_offset))::int as weekday,
     case
+      when s.overnight and p.checkin_offset is not null and p.checkout_offset is not null
+        then 'on_time'::attendance_status
       when (d.day_offset % 8) = 6 and (d.day_offset % 16) >= 8
         then 'leave_unpaid'::attendance_status
       else p.base_status
     end as pattern_status,
-    p.checkin_offset,
-    p.checkout_offset
+    case
+      when s.overnight and p.checkin_offset is not null and p.checkout_offset is not null then 0
+      else p.checkin_offset
+    end as checkin_offset,
+    case
+      when s.overnight and p.checkin_offset is not null and p.checkout_offset is not null then 0
+      else p.checkout_offset
+    end as checkout_offset
   from employees e
   join shifts s on s.id = e.shift_id
   cross join days d
