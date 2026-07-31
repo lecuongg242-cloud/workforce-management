@@ -414,13 +414,20 @@ select lives_ok(
   'employees: chen dong voi manager_id NULL thanh cong'
 );
 
+-- Ngay dung mot bieu thuc tuong doi (moc neo + 5, tuong lai) thay vi hang so
+-- tuyet doi: tu plan 01-06, seed.sql sinh lich su ~30 ngay gan day cho MOI
+-- nhan vien (D-06/D-07), nen bat ky ngay qua khu co dinh nao gan "hom nay"
+-- deu co the trung voi mot dong da duoc seed cho nv-01a/sft-01-day va vo
+-- unique(employee_id, work_date, shift_id). Ngay tuong lai khong bao gio
+-- nam trong pham vi lich su do.
 select lives_ok(
   $null_att$insert into attendance_records (
     id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at,
     status, location
   ) values (
-    'att-nullable-check', 'cty-01', 'nv-01a', '2026-07-29', 'sft-01-day',
-    '2026-07-29 08:00:00+07', null, 'missing_checkout', 'Van phong'
+    'att-nullable-check', 'cty-01', 'nv-01a', (public.tf_work_date(now()) + 5), 'sft-01-day',
+    ((public.tf_work_date(now()) + 5)::timestamp + time '08:00') at time zone public.tf_tz(),
+    null, 'missing_checkout', 'Van phong'
   )$null_att$,
   'attendance_records: chen dong voi check_out_at NULL thanh cong'
 );
