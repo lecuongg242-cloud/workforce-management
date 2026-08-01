@@ -9,23 +9,29 @@ import { CurrentShiftCard } from "@/components/employee-app/current-shift-card";
 import { MonthSummary } from "@/components/employee-app/month-summary";
 import { QuickActions } from "@/components/employee-app/quick-actions";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentGreeting } from "@/hooks/use-current-greeting";
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
-import { REFERENCE_DATE, REFERENCE_MONTH } from "@/lib/constants";
-import { formatFullDate, getShortName, greetingByHour } from "@/lib/format";
 import {
   checkIn as checkInService,
   checkOut as checkOutService,
-  getEmployee,
   getMonthlySummary,
   listAttendance,
-  listShifts,
-} from "@/lib/mock/service";
+} from "@/lib/data/attendance";
+import { getEmployee } from "@/lib/data/employees";
+import { listShifts } from "@/lib/data/shifts";
+import { formatFullDate, getShortName } from "@/lib/format";
 import { useMockData } from "@/lib/mock/store";
 import type { AttendanceRecord, CheckInState } from "@/lib/types/domain";
 import { DemoStateSwitcher } from "@/components/employee-app/demo-state-switcher";
 
-export function EmployeeHomeView(): React.ReactElement {
+export function EmployeeHomeView({
+  today,
+  month,
+}: {
+  today: string;
+  month: string;
+}): React.ReactElement {
   const session = useAuthenticatedSession();
   const { invalidate } = useMockData();
   const employeeId = session.user.employeeId;
@@ -45,19 +51,16 @@ export function EmployeeHomeView(): React.ReactElement {
         listAttendance({
           companyId: session.companyId,
           employeeId,
-          date: REFERENCE_DATE,
+          date: today,
         }),
-        getMonthlySummary(session.companyId, employeeId, REFERENCE_MONTH),
+        getMonthlySummary(session.companyId, employeeId, month),
       ]);
       return { employee, shifts, todayRecord: todayRecords[0] ?? null, summary };
     },
-    [employeeId, session.companyId],
+    [employeeId, session.companyId, today, month],
   );
 
-  const [greeting, setGreeting] = React.useState("Chào buổi sáng");
-  React.useEffect(() => {
-    setGreeting(greetingByHour(new Date().getHours()));
-  }, []);
+  const greeting = useCurrentGreeting();
 
   const shift =
     data?.shifts.find((item) => item.id === data.employee?.shiftId) ?? null;
@@ -80,7 +83,7 @@ export function EmployeeHomeView(): React.ReactElement {
       id: "demo",
       companyId: session.companyId,
       employeeId,
-      date: REFERENCE_DATE,
+      date: today,
       shiftId: shift?.id ?? "",
       checkIn: "07:52",
       checkOut: null,
@@ -103,12 +106,12 @@ export function EmployeeHomeView(): React.ReactElement {
       workedMinutes: base.workedMinutes > 0 ? base.workedMinutes : 492,
       status: base.checkOut ? base.status : "on_time",
     };
-  }, [demoState, data, session.companyId, employeeId, shift]);
+  }, [demoState, data, session.companyId, employeeId, shift, today]);
 
   const handleCheckIn = async (time: string): Promise<void> => {
     setIsPending(true);
     try {
-      await checkInService(session.companyId, employeeId, REFERENCE_DATE, time);
+      await checkInService(session.companyId, employeeId, today, time);
       setDemoState(null);
       invalidate();
       toast.success(`Đã ghi nhận giờ vào ca lúc ${time}.`);
@@ -153,7 +156,7 @@ export function EmployeeHomeView(): React.ReactElement {
           {greeting}, {getShortName(data?.employee?.fullName ?? session.user.fullName)}
         </h1>
         <p className="num mt-1 text-[13px] text-ink-muted">
-          Hôm nay, {formatFullDate(REFERENCE_DATE)}
+          Hôm nay, {formatFullDate(today)}
         </p>
       </header>
 

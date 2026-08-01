@@ -14,27 +14,22 @@ import { TodayActivity } from "@/components/dashboard/today-activity";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentGreeting } from "@/hooks/use-current-greeting";
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
-import { REFERENCE_DATE } from "@/lib/constants";
-import { formatFullDate, greetingByHour } from "@/lib/format";
-import { getDashboardSummary } from "@/lib/mock/service";
+import { getDashboardSummary } from "@/lib/data/dashboard";
+import { formatFullDate } from "@/lib/format";
 
-export function DashboardView(): React.ReactElement {
+export function DashboardView({ today }: { today: string }): React.ReactElement {
   const session = useAuthenticatedSession();
-  const [date, setDate] = React.useState(REFERENCE_DATE);
+  const [date, setDate] = React.useState(today);
 
   const { data, isLoading, error, reload } = useMockQuery(
     () => getDashboardSummary(session.companyId, date),
     [session.companyId, date],
   );
 
-  // Loi chao doc theo gio may nguoi dung — tinh sau khi gan vao DOM de
-  // markup cua may chu va trinh duyet khong lech nhau
-  const [greeting, setGreeting] = React.useState("Chào buổi sáng");
-  React.useEffect(() => {
-    setGreeting(greetingByHour(new Date().getHours()));
-  }, []);
+  const greeting = useCurrentGreeting();
 
   return (
     <div className="grid gap-6">

@@ -13,18 +13,15 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
-import { REFERENCE_MONTH, WEEKDAY_LABEL } from "@/lib/constants";
+import { WEEKDAY_LABEL } from "@/lib/constants";
+import { getMonthlySummary, listAttendance } from "@/lib/data/attendance";
+import { listShifts } from "@/lib/data/shifts";
 import {
   formatDate,
   formatDurationShort,
   formatTime,
   getWeekday,
 } from "@/lib/format";
-import {
-  getMonthlySummary,
-  listAttendance,
-  listShifts,
-} from "@/lib/mock/service";
 import type { AttendanceRecord, AttendanceStatus } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -39,10 +36,10 @@ const dotClass: Record<AttendanceStatus, string> = {
   day_off: "bg-neutral-border",
 };
 
-export function HistoryView(): React.ReactElement {
+export function HistoryView({ month: initialMonth }: { month: string }): React.ReactElement {
   const session = useAuthenticatedSession();
   const employeeId = session.user.employeeId;
-  const [month, setMonth] = React.useState(REFERENCE_MONTH);
+  const [month, setMonth] = React.useState(initialMonth);
   const [selectedDate, setSelectedDate] = React.useState<string | null>(null);
 
   const { data, isLoading, error, reload } = useMockQuery(
@@ -84,7 +81,7 @@ export function HistoryView(): React.ReactElement {
       </header>
 
       <div className="surface-card flex items-center justify-center p-2">
-        <MonthStepper month={month} onChange={setMonth} maxMonth={REFERENCE_MONTH} />
+        <MonthStepper month={month} onChange={setMonth} maxMonth={initialMonth} />
       </div>
 
       {error ? (
