@@ -20,6 +20,10 @@ export function useCurrentGreeting(): string {
   const [greeting, setGreeting] = React.useState("Chào buổi sáng");
 
   React.useEffect(() => {
+    // Gio dia phuong trang tri (loi chao), CHI tinh SAU khi mount, khong
+    // anh huong tinh dung dan cua du lieu "hom nay" (D-19) va khong gay
+    // lech hydration.
+    // eslint-disable-next-line timeflow/no-date-in-client
     setGreeting(greetingByHour(new Date().getHours()));
   }, []);
 

@@ -2,6 +2,8 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { FlatCompat } from "@eslint/eslintrc";
 
+import timeflowNoDateInClient from "./eslint-rules/no-date-in-client.mjs";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -14,41 +16,33 @@ const eslintConfig = [
   {
     // File sinh tu dong / cong cu GSD framework, khong phai ma nguon app —
     // khong kiem tra bang ESLint cua app (dung require() CommonJS thuan,
-    // khong tuan theo quy uoc next/typescript)
-    ignores: [".next/**", "node_modules/**", "out/**", "next-env.d.ts", ".claude/**"],
+    // khong tuan theo quy uoc next/typescript). `eslint-rules/__fixtures__`
+    // chua mot fixture CO CHU DICH VI PHAM D-19a (dung de chung minh rule
+    // ben duoi co rang) — neu lot vao luot lint thuong thi se do vinh vien;
+    // no van lint duoc rieng qua `npx eslint --no-ignore <path>`.
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      "out/**",
+      "next-env.d.ts",
+      ".claude/**",
+      "eslint-rules/__fixtures__/**",
+    ],
   },
   {
-    // D-19a: cuong che "hom nay" khong bao gio duoc tu tinh lai bang dong ho
-    // thiet bi trong ba man hinh vua chuyen sang du lieu that o plan 02-08
-    // (dashboard, trang chu nhan vien, lich su cham cong) — ca ba deu nhan
-    // "hom nay" qua prop tu Server Component (`src/lib/today.ts`), D-19.
-    // PHAM VI CO CHU DICH: chi ba file NAY, khong phai moi client component
-    // trong repo — mot vai component khac (vi du
-    // `src/components/employee-app/attendance-status-card.tsx`) co dong ho
-    // chay THAT (tick moi giay) khoi tao SAU khi gan vao DOM qua useEffect,
-    // day la hoa van hop le KHONG gay lech hydration va nam ngoai pham vi
-    // plan nay — mo rong luat nay ra toan repo la viec cua mot plan khac,
-    // ghi lai o SUMMARY cua 02-08 nhu mot khoang trong da biet.
-    files: [
-      "src/app/admin/dashboard/dashboard-view.tsx",
-      "src/app/employee/employee-home-view.tsx",
-      "src/app/employee/history/history-view.tsx",
-    ],
+    // D-19a: cuong che "hom nay do server cap" tren toan bo src/ — thay the
+    // rule pham vi hep cua plan 02-08 (chi ba file view). Rule cuc bo doc
+    // chi thi "use client" that o dau file (khong theo danh sach duong dan
+    // phai cap nhat tay), xem `eslint-rules/no-date-in-client.mjs`.
+    // Bao gom them `eslint-rules/__fixtures__/**/*.tsx` de rule chay duoc
+    // khi lint TRUC TIEP fixture (bo qua `ignores` o tren bang `--no-ignore`)
+    // — day la cach acceptance criteria cua 02-11 chung minh rule co rang.
+    files: ["src/**/*.{ts,tsx}", "eslint-rules/__fixtures__/**/*.tsx"],
+    plugins: {
+      timeflow: timeflowNoDateInClient,
+    },
     rules: {
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
-          message:
-            "Khong duoc doc dong ho thiet bi bang `new Date()` o day (D-19/D-19a). Nhan 'hom nay' qua prop tu Server Component — xem src/lib/today.ts.",
-        },
-        {
-          selector:
-            "CallExpression[callee.object.name='Date'][callee.property.name='now']",
-          message:
-            "Khong duoc doc dong ho thiet bi bang `Date.now()` o day (D-19/D-19a). Nhan 'hom nay' qua prop tu Server Component — xem src/lib/today.ts.",
-        },
-      ],
+      "timeflow/no-date-in-client": "error",
     },
   },
 ];

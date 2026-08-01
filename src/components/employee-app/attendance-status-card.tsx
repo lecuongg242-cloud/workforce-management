@@ -39,8 +39,16 @@ export function AttendanceStatusCard({
   const [now, setNow] = React.useState<Date | null>(null);
 
   React.useEffect(() => {
+    // Dong ho THAT, khoi tao SAU khi component gan vao DOM (useEffect,
+    // khong phai lan ve dau tien) nen khong gay lech hydration; day la
+    // ngoai le hop le duy nhat da biet cua D-19a, ghi tu 02-08.
+    // eslint-disable-next-line timeflow/no-date-in-client
     setNow(new Date());
-    const timer = setInterval(() => setNow(new Date()), 1000);
+    const timer = setInterval(
+      // eslint-disable-next-line timeflow/no-date-in-client -- xem ly do o tren: dong ho tick that, khong dung cho "hom nay" cua du lieu.
+      () => setNow(new Date()),
+      1000,
+    );
     return () => clearInterval(timer);
   }, []);
 
