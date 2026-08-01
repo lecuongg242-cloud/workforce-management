@@ -19,28 +19,27 @@
 -- NV001, nhan vien demo cua Phase 2.
 --
 -- Chay lai duoc nhieu lan: `truncate ... restart identity cascade` xoa sach
--- toan bo du lieu doanh nghiep truoc khi chen lai; auth.users dung
--- `on conflict (id) do nothing` vi khong co cot identity de restart.
+-- toan bo du lieu doanh nghiep truoc khi chen lai.
+--
+-- File nay KHONG con chua danh tinh (khong insert nao cham vao auth.users)
+-- va KHONG con uuid tong hop nao (D-15). Du lieu nghiep vu la trung lap voi
+-- danh tinh: `employees.user_id`/`audit_log.actor_user_id` cua hai nhan vien
+-- neo (nv-01a, nv-02a) va hai dong audit_log de NULL o day. Danh tinh den tu
+-- hai duong khac nhau tuy moi truong:
+--   - Postgres CI (pgTAP): `supabase/tests/00_fixture_users.sql` chen 4 uuid
+--     tong hop truc tiep vao `auth.users` — an toan tren CI vi
+--     0001_supabase_compat.sql chi coi `auth.users` la bang tuong thich, khong
+--     co rang buoc `auth.identities` nhu Supabase that.
+--   - Cloud that: `scripts/seed-auth.mjs` la duong DUY NHAT tao tai khoan that
+--     (qua Supabase Auth API, co ca `auth.identities`) — chen thang vao
+--     `auth.users` ma thieu `auth.identities` la chinh xac ly do khong tai
+--     khoan nao trong seed truoc day dang nhap duoc.
 
 truncate
   periods, audit_log, overtime_rules, holidays, attendance_photos, work_sites,
   work_requests, attendance_records, employees, shifts, departments,
   memberships, companies
   restart identity cascade;
-
-/* -------------------------------------------------------------------------- */
-/* auth.users gia lap — 4 user co dinh dung lam fixture                        */
-/* -------------------------------------------------------------------------- */
--- 0001: owner Ngoc Phat | 0002: owner Binh Minh
--- 0003: thanh vien ca hai doanh nghiep (ca thanh vien kep)
--- 0004: khong thuoc doanh nghiep nao (ca khong membership)
-
-insert into auth.users (id, instance_id, aud, role, email) values
-  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'owner1@timeflow.test'),
-  ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'owner2@timeflow.test'),
-  ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'dualmember@timeflow.test'),
-  ('00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'nomember@timeflow.test')
-on conflict (id) do nothing;
 
 -- Tu day tro di chay trong MOT transaction: departments.manager_id tham
 -- chieu toi mot dong employees se chi ton tai o cau insert phia sau (tham
@@ -76,16 +75,12 @@ insert into companies (id, name, code, industry, size, phone, address, accent) v
   );
 
 /* -------------------------------------------------------------------------- */
-/* memberships                                                                 */
+/* memberships — CO Y de rong o day (con lai trong danh sach truncate o tren) */
 /* -------------------------------------------------------------------------- */
-
-insert into memberships (user_id, company_id, role, status, last_accessed_at) values
-  ('00000000-0000-0000-0000-000000000001', 'cty-01', 'owner', 'active', now()),
-  ('00000000-0000-0000-0000-000000000002', 'cty-02', 'owner', 'active', now()),
-  ('00000000-0000-0000-0000-000000000003', 'cty-01', 'admin', 'active', now()),
-  ('00000000-0000-0000-0000-000000000003', 'cty-02', 'admin', 'active', now());
--- User 0004 co ton tai trong auth.users nhung khong co membership nao —
--- dung lam fixture cho ca "khong thuoc doanh nghiep nao doc duoc 0 dong".
+-- Memberships gan voi danh tinh (auth.users) nen khong con o seed.sql (D-15).
+-- Postgres CI: supabase/tests/00_fixture_users.sql chen 4 dong memberships
+-- ngay sau khi chen 4 uuid tong hop. Cloud that: scripts/seed-auth.mjs la
+-- duong tao tai khoan that va gan membership tuong ung.
 
 /* -------------------------------------------------------------------------- */
 /* departments — 9 dong (5 cty-01 + 4 cty-02), port tu seedDepartments +      */
@@ -127,9 +122,10 @@ insert into shifts (
 /* -------------------------------------------------------------------------- */
 /* employees — 40 dong (28 cty-01 + 12 cty-02), port tu employeeSeeds +      */
 /* employee2Seeds. Nhan vien dau tien cua moi cong ty giu id neo 'nv-01a'/   */
-/* 'nv-02a' (03_isolation_core.sql, 04_isolation_v2.sql hardcode id nay) va  */
-/* duoc gan user_id toi user owner tuong ung de Phase 2 co san cap tai khoan */
-/* <-> nhan vien. nv-01a = Nguyen Minh Anh (NV001), nhan vien demo.          */
+/* 'nv-02a' (03_isolation_core.sql, 04_isolation_v2.sql hardcode id nay).    */
+/* user_id de NULL o day (D-15) — moi truong co danh tinh (pgTAP fixture     */
+/* hoac scripts/seed-auth.mjs) tu UPDATE cot nay sau. nv-01a = Nguyen Minh   */
+/* Anh (NV001), nhan vien demo.                                              */
 /* -------------------------------------------------------------------------- */
 
 insert into employees (
@@ -142,7 +138,7 @@ insert into employees (
     'nv-01a', 'cty-01', 'NV001', 'Nguyễn Minh Anh', 'nv001@ngocphat.test', '0901000137',
     '1997-04-12', 'female', null, 'dept-03', 'Nhân viên kinh doanh', 'full_time', '2023-03-06',
     'nv-05', 'sft-01-day', 'Văn phòng chính', 'active', 'employee',
-    true, true, false, '00000000-0000-0000-0000-000000000001'::uuid
+    true, true, false, null
   ),
   (
     'nv-02', 'cty-01', 'NV002', 'Trần Hoàng Nam', 'nv002@ngocphat.test', '0901000274',
@@ -310,7 +306,7 @@ insert into employees (
     'nv-02a', 'cty-02', 'BM001', 'Đoàn Minh Trí', 'bm001@binhminh.test', '0902000149',
     '1985-03-18', 'male', null, 'dept-02', 'Quản đốc phân xưởng A', 'full_time', '2020-04-06',
     null, 'sft-02-day', 'Nhà máy Bình Dương', 'active', 'manager',
-    true, true, false, '00000000-0000-0000-0000-000000000002'::uuid
+    true, true, false, null
   ),
   (
     'nv2-02', 'cty-02', 'BM002', 'Nguyễn Thị Bích Ngọc', 'bm002@binhminh.test', '0902000298',
@@ -685,14 +681,18 @@ insert into overtime_rules (company_id, rule_key, multiplier, effective_from) va
 /* -------------------------------------------------------------------------- */
 /* audit_log — moi cong ty mot dong ghi thao tac tao nhan vien demo           */
 /* -------------------------------------------------------------------------- */
+-- actor_user_id de NULL o day (D-15, khong con danh tinh trong file nay).
+-- company_id/entity_id giu nguyen vi 05_seed_fixture.sql va 04_isolation_v2.sql
+-- doc theo hai cot do, khong theo actor. Moi truong co danh tinh se UPDATE
+-- actor_user_id sau (xem supabase/tests/00_fixture_users.sql).
 
 insert into audit_log (company_id, actor_user_id, action, entity_table, entity_id, after) values
   (
-    'cty-01', '00000000-0000-0000-0000-000000000001', 'insert', 'employees', 'nv-01a',
+    'cty-01', null, 'insert', 'employees', 'nv-01a',
     jsonb_build_object('full_name', 'Nguyễn Minh Anh', 'status', 'active')
   ),
   (
-    'cty-02', '00000000-0000-0000-0000-000000000002', 'insert', 'employees', 'nv-02a',
+    'cty-02', null, 'insert', 'employees', 'nv-02a',
     jsonb_build_object('full_name', 'Đoàn Minh Trí', 'status', 'active')
   );
 

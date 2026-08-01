@@ -6,9 +6,12 @@
 \set ON_ERROR_STOP on
 
 \ir helpers.sql
+\ir 00_fixture_users.sql
 \ir 00_rls_coverage.sql
 \ir 01_isolation_companies.sql
 \ir 02_time_overnight.sql
 \ir 03_isolation_core.sql
 \ir 04_isolation_v2.sql
 \ir 05_seed_fixture.sql
+\ir 06_platform_admins.sql
+\ir 07_search_normalize.sql

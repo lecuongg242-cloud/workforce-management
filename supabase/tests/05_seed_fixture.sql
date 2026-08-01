@@ -46,7 +46,7 @@ select is((select count(*)::int from work_requests where status = 'pending'), 8,
 select ok(
   (select count(*) from memberships where company_id = 'cty-01') > 0
     and (select count(*) from memberships where company_id = 'cty-02') > 0,
-  'memberships: co it nhat mot dong cho ca cty-01 va cty-02'
+  'memberships: co it nhat mot dong cho ca cty-01 va cty-02 (nguon du lieu la fixture cua bo test — 00_fixture_users.sql — khong con o seed.sql tu D-15)'
 );
 
 select ok(
