@@ -21,7 +21,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useSession } from "@/lib/auth/session-provider";
 import { BREADCRUMB_LABELS } from "@/lib/nav";
-import { listAllEmployees } from "@/lib/mock/service";
+import { listAllEmployees } from "@/lib/data/employees";
 import { normalizeText } from "@/lib/format";
 import type { Company } from "@/lib/types/domain";
 
