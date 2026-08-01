@@ -15,7 +15,8 @@
     "check:secrets": "node scripts/check-bundle-secrets.mjs",
     "test": "vitest run",
     "check:assertions": "node scripts/check-pgtap-assertions.mjs",
-    "seed:auth": "node --env-file=.env.local scripts/seed-auth.mjs"
+    "seed:auth": "node --env-file=.env.local scripts/seed-auth.mjs",
+    "reset:passwords": "node --env-file=.env.local scripts/reset-temp-passwords.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
