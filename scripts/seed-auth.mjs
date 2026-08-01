@@ -208,17 +208,32 @@ async function main() {
 
     const dualUserId = dualEmp?.user_id ?? null;
 
-    // Mot dong employees con trong o doanh nghiep thu hai de gan nguoi nay vao.
-    const { data: freeSlots } = await admin
-      .from("employees")
-      .select("id, code, email")
-      .eq("company_id", COMPANIES[1])
-      .eq("status", "active")
-      .is("user_id", null)
-      .order("code", { ascending: true })
-      .limit(1);
+    // Da gan lan truoc chua? Phai hoi truoc khi chiem them mot dong employees,
+    // neu khong thi moi lan chay lai script se an them mot suat nhan vien o
+    // doanh nghiep thu hai — chay ba lan la mat ba dong, va khong ai nhan ra
+    // vi so tong ket van "gan dung".
+    const { data: already } = dualUserId
+      ? await admin
+          .from("employees")
+          .select("id, code")
+          .eq("company_id", COMPANIES[1])
+          .eq("user_id", dualUserId)
+          .maybeSingle()
+      : { data: null };
 
-    const slot = freeSlots && freeSlots.length > 0 ? freeSlots[0] : null;
+    // Chi tim dong trong khi chua gan bao gio.
+    const { data: freeSlots } = already
+      ? { data: null }
+      : await admin
+          .from("employees")
+          .select("id, code, email")
+          .eq("company_id", COMPANIES[1])
+          .eq("status", "active")
+          .is("user_id", null)
+          .order("code", { ascending: true })
+          .limit(1);
+
+    const slot = already ?? (freeSlots && freeSlots.length > 0 ? freeSlots[0] : null);
 
     if (dualUserId && slot) {
       const { error: memErr } = await admin.from("memberships").upsert(
