@@ -40,7 +40,7 @@ import {
 } from "@/lib/constants";
 import { createCompany } from "@/lib/data/companies";
 import { formatDuration, isOvernight, minutesBetween } from "@/lib/format";
-import { useMockData } from "@/lib/mock/store";
+import { useDataStore } from "@/lib/data/store";
 import type { CompanySize, WeekdayNumber } from "@/lib/types/domain";
 import {
   companyStepSchema,
@@ -59,7 +59,7 @@ const STEPS = [
 export function OnboardingWizard(): React.ReactElement {
   const router = useRouter();
   const { selectCompany } = useSession();
-  const { invalidate } = useMockData();
+  const { invalidate } = useDataStore();
   const [step, setStep] = React.useState(0);
   const [isFinishing, setIsFinishing] = React.useState(false);
 

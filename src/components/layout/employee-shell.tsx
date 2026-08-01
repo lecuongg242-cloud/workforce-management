@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useSession } from "@/lib/auth/session-provider";
 import { getEmployee } from "@/lib/data/employees";
 
@@ -32,7 +32,7 @@ export function EmployeeShell({
   }, [status, router]);
 
   // Header hien thi ho so NHAN VIEN dang xem, khong phai ten tai khoan quan tri
-  const { data: employee } = useMockQuery(
+  const { data: employee } = useDataQuery(
     () => (employeeId ? getEmployee(employeeId) : Promise.resolve(null)),
     [employeeId],
   );

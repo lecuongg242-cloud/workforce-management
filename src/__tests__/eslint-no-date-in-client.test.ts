@@ -16,38 +16,57 @@ import { describe, expect, it } from "vitest";
 
 const RULE_ID = "timeflow/no-date-in-client";
 
+// Mot instance ESLint dung chung cho ca file test -- khoi tao lai config
+// flat (next/core-web-vitals + next/typescript qua FlatCompat) cho MOI lan
+// goi la rat cham (vai giay), lam vuot testTimeout mac dinh 5000ms khi chay
+// chung voi ca bo suite (setup nang hon khi chay don le).
+const eslint = new ESLint({
+  overrideConfigFile: "eslint.config.mjs",
+  ignore: false,
+});
+
 async function lintFile(filePath: string) {
-  const eslint = new ESLint({
-    overrideConfigFile: "eslint.config.mjs",
-    ignore: false,
-  });
   const results = await eslint.lintFiles([filePath]);
   return results.flatMap((result) => result.messages);
 }
 
 describe("timeflow/no-date-in-client (D-19a)", () => {
-  it("bat vi pham that tren fixture co chi thi 'use client'", async () => {
-    const messages = await lintFile(
-      "eslint-rules/__fixtures__/violating-client.tsx",
-    );
-    const ruleMessages = messages.filter((m) => m.ruleId === RULE_ID);
+  it(
+    "bat vi pham that tren fixture co chi thi 'use client'",
+    async () => {
+      const messages = await lintFile(
+        "eslint-rules/__fixtures__/violating-client.tsx",
+      );
+      const ruleMessages = messages.filter((m) => m.ruleId === RULE_ID);
 
-    expect(ruleMessages.length).toBeGreaterThan(0);
-  });
+      expect(ruleMessages.length).toBeGreaterThan(0);
+    },
+    20000,
+  );
 
-  it("khong bao loi nao mang ma rule tren fixture doi chung (cung noi dung, khong co chi thi client)", async () => {
-    const messages = await lintFile("eslint-rules/__fixtures__/clean-server.tsx");
-    const ruleMessages = messages.filter((m) => m.ruleId === RULE_ID);
+  it(
+    "khong bao loi nao mang ma rule tren fixture doi chung (cung noi dung, khong co chi thi client)",
+    async () => {
+      const messages = await lintFile(
+        "eslint-rules/__fixtures__/clean-server.tsx",
+      );
+      const ruleMessages = messages.filter((m) => m.ruleId === RULE_ID);
 
-    expect(ruleMessages.length).toBe(0);
-  });
+      expect(ruleMessages.length).toBe(0);
+    },
+    20000,
+  );
 
-  it("khong bao nham tren mot client component that dang dung dung prop server-cap (chong bao nham)", async () => {
-    const messages = await lintFile(
-      "src/app/admin/dashboard/dashboard-view.tsx",
-    );
-    const ruleMessages = messages.filter((m) => m.ruleId === RULE_ID);
+  it(
+    "khong bao nham tren mot client component that dang dung dung prop server-cap (chong bao nham)",
+    async () => {
+      const messages = await lintFile(
+        "src/app/admin/dashboard/dashboard-view.tsx",
+      );
+      const ruleMessages = messages.filter((m) => m.ruleId === RULE_ID);
 
-    expect(ruleMessages.length).toBe(0);
-  });
+      expect(ruleMessages.length).toBe(0);
+    },
+    20000,
+  );
 });

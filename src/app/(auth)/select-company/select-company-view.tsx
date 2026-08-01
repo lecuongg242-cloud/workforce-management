@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useSession } from "@/lib/auth/session-provider";
 import { COMPANY_ROLE_LABEL } from "@/lib/constants";
 import { listCompanies } from "@/lib/data/companies";
@@ -28,7 +28,7 @@ const accentClass: Record<Company["accent"], string> = {
 export function SelectCompanyView(): React.ReactElement {
   const router = useRouter();
   const { status, session, selectCompany } = useSession();
-  const { data: companies, isLoading, error, reload } = useMockQuery(
+  const { data: companies, isLoading, error, reload } = useDataQuery(
     () => listCompanies(),
     [],
   );

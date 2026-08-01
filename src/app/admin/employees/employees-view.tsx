@@ -21,7 +21,7 @@ import { PaginationBar } from "@/components/employees/pagination-bar";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import {
   CONTRACT_TYPE_OPTIONS,
@@ -35,7 +35,7 @@ import {
   listEmployees,
   updateEmployee,
 } from "@/lib/data/employees";
-import { useMockData } from "@/lib/mock/store";
+import { useDataStore } from "@/lib/data/store";
 import type {
   ContractType,
   Employee,
@@ -44,7 +44,7 @@ import type {
 
 export function EmployeesView(): React.ReactElement {
   const session = useAuthenticatedSession();
-  const { invalidate } = useMockData();
+  const { invalidate } = useDataStore();
 
   const [search, setSearch] = React.useState("");
   const [departmentId, setDepartmentId] = React.useState<string>("all");
@@ -70,12 +70,12 @@ export function EmployeesView(): React.ReactElement {
     setSelectedIds([]);
   }, [debouncedSearch, departmentId, status, contractType, pageSize]);
 
-  const { data: departments } = useMockQuery(
+  const { data: departments } = useDataQuery(
     () => listDepartments(session.companyId),
     [session.companyId],
   );
 
-  const { data, isLoading, error, reload } = useMockQuery(
+  const { data, isLoading, error, reload } = useDataQuery(
     () =>
       listEmployees({
         companyId: session.companyId,

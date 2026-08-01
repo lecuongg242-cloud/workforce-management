@@ -2,7 +2,7 @@ import type { ZodTypeAny, z } from "zod";
 
 /**
  * Goi mot Route Handler (GET) va parse ket qua bang schema Zod dung chung
- * (D-12d). Ninh giu hinh dang loi cua `useMockQuery` (`error: string | null`,
+ * (D-12d). Ninh giu hinh dang loi cua `useDataQuery` (`error: string | null`,
  * D-12e) — moi truong hop loi o day deu nem `Error` mang `message` tieng
  * Viet, khong bao gio de loi mang/HTTP tho lot len view.
  */

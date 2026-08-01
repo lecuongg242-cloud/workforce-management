@@ -23,16 +23,6 @@ export const DEFAULT_TIMEZONE = "Asia/Ho_Chi_Minh";
 export const DEFAULT_LOCALE = "vi-VN";
 export const DEFAULT_CURRENCY = "VND";
 
-/**
- * Ngay tham chieu cua toan bo du lieu mau.
- * Dung hang so thay vi `new Date()` de server va client luon dung nhau
- * (tranh loi hydration) va so lieu demo khong doi giua cac lan tai trang.
- */
-export const REFERENCE_DATE = "2026-07-27"; // Thứ Hai
-export const REFERENCE_MONTH = "2026-07";
-
-export const STORAGE_KEY_SESSION = "timeflow.session";
-
 /* -------------------------------------------------------------------------- */
 /* Nhan hien thi                                                               */
 /* -------------------------------------------------------------------------- */

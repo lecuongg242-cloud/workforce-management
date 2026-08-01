@@ -6,8 +6,8 @@ import { DEFAULT_TIMEZONE } from "@/lib/constants";
  * roi truyen ket qua xuong client component lam PROP. Khong client component
  * nao duoc phep tu tinh lai gia tri nay (vi du bang `new Date()`), vi lam
  * vay se lech giua lan ve dau tien o server va lan ve lai o trinh duyet
- * (hydration mismatch) — day chinh la ly do V1 phai dong bang `REFERENCE_DATE`
- * (xem `src/lib/constants.ts`) thay vi doc dong ho that.
+ * (hydration mismatch) — day chinh la ly do V1 phai dong bang mot ngay mau
+ * co dinh (da xoa o plan 02-11) thay vi doc dong ho that.
  *
  * Dung `Intl.DateTimeFormat` voi locale "en-CA" (dinh dang mac dinh la
  * "YYYY-MM-DD") va `timeZone` lay tu `DEFAULT_TIMEZONE` (cung hang so mui gio

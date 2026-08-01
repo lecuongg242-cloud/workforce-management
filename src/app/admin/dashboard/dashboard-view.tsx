@@ -15,7 +15,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentGreeting } from "@/hooks/use-current-greeting";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import { getDashboardSummary } from "@/lib/data/dashboard";
 import { formatFullDate } from "@/lib/format";
@@ -24,7 +24,7 @@ export function DashboardView({ today }: { today: string }): React.ReactElement 
   const session = useAuthenticatedSession();
   const [date, setDate] = React.useState(today);
 
-  const { data, isLoading, error, reload } = useMockQuery(
+  const { data, isLoading, error, reload } = useDataQuery(
     () => getDashboardSummary(session.companyId, date),
     [session.companyId, date],
   );

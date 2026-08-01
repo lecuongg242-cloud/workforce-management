@@ -51,7 +51,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import {
   ACCOUNT_LABELS,
@@ -75,17 +75,19 @@ import { getEmployee, listAllEmployees, updateEmployee } from "@/lib/data/employ
 import { createEmployeeAccount } from "@/lib/data/mutations/accounts";
 import { listRequests } from "@/lib/data/requests";
 import { listShifts } from "@/lib/data/shifts";
-import { useMockData } from "@/lib/mock/store";
+import { useDataStore } from "@/lib/data/store";
 
 export function EmployeeDetailView({
   employeeId,
   month,
+  today,
 }: {
   employeeId: string;
   month: string;
+  today: string;
 }): React.ReactElement {
   const session = useAuthenticatedSession();
-  const { invalidate } = useMockData();
+  const { invalidate } = useDataStore();
   const [isEditing, setIsEditing] = React.useState(false);
   const [confirmTerminate, setConfirmTerminate] = React.useState(false);
   const [isPending, setIsPending] = React.useState(false);
@@ -95,7 +97,7 @@ export function EmployeeDetailView({
     temporaryPassword: string;
   } | null>(null);
 
-  const { data, isLoading, error, reload } = useMockQuery(
+  const { data, isLoading, error, reload } = useDataQuery(
     async () => {
       const employee = await getEmployee(employeeId);
       if (!employee) return null;
@@ -600,6 +602,7 @@ export function EmployeeDetailView({
             departments={departments}
             shifts={shifts}
             allEmployees={allEmployees}
+            defaultStartDate={today}
           />
         </DialogContent>
       </Dialog>

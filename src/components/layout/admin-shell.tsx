@@ -7,7 +7,7 @@ import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { AdminTopbar } from "@/components/layout/admin-topbar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useSession } from "@/lib/auth/session-provider";
 import { listCompanies } from "@/lib/data/companies";
 
@@ -34,7 +34,7 @@ export function AdminShell({
     }
   }, [status, router]);
 
-  const { data: companies } = useMockQuery(() => listCompanies(), []);
+  const { data: companies } = useDataQuery(() => listCompanies(), []);
 
   const handleSignOut = React.useCallback(() => {
     signOut();

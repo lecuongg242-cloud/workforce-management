@@ -20,7 +20,7 @@ import { EmployeeAvatar } from "@/components/common/employee-avatar";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import {
   useAuthenticatedSession,
   useSession,
@@ -36,7 +36,7 @@ export function ProfileView(): React.ReactElement {
   const router = useRouter();
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
 
-  const { data, isLoading, error, reload } = useMockQuery(
+  const { data, isLoading, error, reload } = useDataQuery(
     async () => {
       const [employee, departments, shifts] = await Promise.all([
         getEmployee(session.user.employeeId),

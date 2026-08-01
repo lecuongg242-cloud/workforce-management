@@ -27,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import { formatNumber } from "@/lib/format";
 import {
@@ -38,13 +38,13 @@ import {
   type DepartmentWithStats,
 } from "@/lib/data/departments";
 import { listAllEmployees } from "@/lib/data/employees";
-import { useMockData } from "@/lib/mock/store";
+import { useDataStore } from "@/lib/data/store";
 import type { Department } from "@/lib/types/domain";
 import type { DepartmentFormValues } from "@/lib/validation/schemas";
 
 export function DepartmentsView(): React.ReactElement {
   const session = useAuthenticatedSession();
-  const { invalidate } = useMockData();
+  const { invalidate } = useDataStore();
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Department | null>(null);
@@ -52,7 +52,7 @@ export function DepartmentsView(): React.ReactElement {
     React.useState<DepartmentWithStats | null>(null);
   const [isPending, setIsPending] = React.useState(false);
 
-  const { data, isLoading, error, reload } = useMockQuery(
+  const { data, isLoading, error, reload } = useDataQuery(
     async () => {
       const [departments, employees] = await Promise.all([
         listDepartments(session.companyId),

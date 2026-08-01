@@ -5,7 +5,7 @@ import * as React from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SessionProvider } from "@/lib/auth/session-provider";
-import { MockDataProvider } from "@/lib/mock/store";
+import { DataStoreProvider } from "@/lib/data/store";
 import type { UserSession } from "@/lib/types/domain";
 
 export function AppProviders({
@@ -17,12 +17,12 @@ export function AppProviders({
 }): React.ReactElement {
   return (
     <SessionProvider initialSession={initialSession}>
-      <MockDataProvider>
+      <DataStoreProvider>
         <TooltipProvider delayDuration={200}>
           {children}
           <Toaster position="top-right" richColors closeButton />
         </TooltipProvider>
-      </MockDataProvider>
+      </DataStoreProvider>
     </SessionProvider>
   );
 }

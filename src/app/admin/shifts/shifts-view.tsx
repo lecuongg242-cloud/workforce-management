@@ -12,7 +12,7 @@ import { ShiftCard } from "@/components/shifts/shift-card";
 import { ShiftDialog } from "@/components/shifts/shift-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import { formatNumber } from "@/lib/format";
 import {
@@ -22,13 +22,13 @@ import {
   updateShift,
   type ShiftWithStats,
 } from "@/lib/data/shifts";
-import { useMockData } from "@/lib/mock/store";
+import { useDataStore } from "@/lib/data/store";
 import type { Shift } from "@/lib/types/domain";
 import type { ShiftFormValues } from "@/lib/validation/schemas";
 
 export function ShiftsView(): React.ReactElement {
   const session = useAuthenticatedSession();
-  const { invalidate } = useMockData();
+  const { invalidate } = useDataStore();
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Shift | null>(null);
@@ -36,7 +36,7 @@ export function ShiftsView(): React.ReactElement {
     React.useState<ShiftWithStats | null>(null);
   const [isPending, setIsPending] = React.useState(false);
 
-  const { data: shifts, isLoading, error, reload } = useMockQuery(
+  const { data: shifts, isLoading, error, reload } = useDataQuery(
     () => listShifts(session.companyId),
     [session.companyId],
   );

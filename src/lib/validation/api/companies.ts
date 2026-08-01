@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * Schema Zod dung CHUNG o ca hai dau (D-12d): `src/app/api/companies/route.ts`
  * parse truoc khi tra ve, `src/lib/data/companies.ts` parse sau khi nhan —
- * neu khong, `fetch` mat kieu end-to-end va `useMockQuery` se tra ve `any`.
+ * neu khong, `fetch` mat kieu end-to-end va `useDataQuery` se tra ve `any`.
  *
  * KHONG dua `company_id`/`companyId` hay bat ky dinh danh doanh nghiep nao
  * vao day — neu client gui them tham so, no bi bo qua vi schema khong khai

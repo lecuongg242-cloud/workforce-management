@@ -10,7 +10,7 @@ import { MonthSummary } from "@/components/employee-app/month-summary";
 import { QuickActions } from "@/components/employee-app/quick-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentGreeting } from "@/hooks/use-current-greeting";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import {
   checkIn as checkInService,
@@ -21,7 +21,7 @@ import {
 import { getEmployee } from "@/lib/data/employees";
 import { listShifts } from "@/lib/data/shifts";
 import { formatFullDate, getShortName } from "@/lib/format";
-import { useMockData } from "@/lib/mock/store";
+import { useDataStore } from "@/lib/data/store";
 import type { AttendanceRecord, CheckInState } from "@/lib/types/domain";
 import { DemoStateSwitcher } from "@/components/employee-app/demo-state-switcher";
 
@@ -33,7 +33,7 @@ export function EmployeeHomeView({
   month: string;
 }): React.ReactElement {
   const session = useAuthenticatedSession();
-  const { invalidate } = useMockData();
+  const { invalidate } = useDataStore();
   const employeeId = session.user.employeeId;
   const [isPending, setIsPending] = React.useState(false);
 
@@ -43,7 +43,7 @@ export function EmployeeHomeView({
    */
   const [demoState, setDemoState] = React.useState<CheckInState | null>(null);
 
-  const { data, isLoading, error, reload } = useMockQuery(
+  const { data, isLoading, error, reload } = useDataQuery(
     async () => {
       const [employee, shifts, todayRecords, summary] = await Promise.all([
         getEmployee(employeeId),

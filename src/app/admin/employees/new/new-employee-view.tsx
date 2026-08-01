@@ -9,16 +9,20 @@ import { EmployeeForm } from "@/components/employees/employee-form";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import { listDepartments } from "@/lib/data/departments";
 import { listAllEmployees } from "@/lib/data/employees";
 import { listShifts } from "@/lib/data/shifts";
 
-export function NewEmployeeView(): React.ReactElement {
+export function NewEmployeeView({
+  defaultStartDate,
+}: {
+  defaultStartDate: string;
+}): React.ReactElement {
   const session = useAuthenticatedSession();
 
-  const { data, isLoading, error, reload } = useMockQuery(
+  const { data, isLoading, error, reload } = useDataQuery(
     async () => {
       const [departments, shifts, employees] = await Promise.all([
         listDepartments(session.companyId),
@@ -71,6 +75,7 @@ export function NewEmployeeView(): React.ReactElement {
             departments={data.departments}
             shifts={data.shifts}
             allEmployees={data.employees}
+            defaultStartDate={defaultStartDate}
           />
         )}
       </section>

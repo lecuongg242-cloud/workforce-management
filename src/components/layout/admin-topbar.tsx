@@ -18,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useSession } from "@/lib/auth/session-provider";
 import { BREADCRUMB_LABELS } from "@/lib/nav";
 import { listAllEmployees } from "@/lib/data/employees";
@@ -67,7 +67,7 @@ export function AdminTopbar({
   const [search, setSearch] = React.useState("");
   const debouncedSearch = useDebounce(search, 250);
 
-  const { data: employees } = useMockQuery(
+  const { data: employees } = useDataQuery(
     () => listAllEmployees(currentCompanyId),
     [currentCompanyId],
   );

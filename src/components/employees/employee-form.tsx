@@ -26,12 +26,11 @@ import { Switch } from "@/components/ui/switch";
 import {
   CONTRACT_TYPE_OPTIONS,
   GENDER_OPTIONS,
-  REFERENCE_DATE,
   SYSTEM_ROLE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from "@/lib/constants";
 import { createEmployee, updateEmployee } from "@/lib/data/employees";
-import { useMockData } from "@/lib/mock/store";
+import { useDataStore } from "@/lib/data/store";
 import type {
   Department,
   Employee,
@@ -58,6 +57,7 @@ export function EmployeeForm({
   departments,
   shifts,
   allEmployees,
+  defaultStartDate,
 }: {
   mode: "create" | "edit";
   companyId: string;
@@ -65,9 +65,10 @@ export function EmployeeForm({
   departments: Department[];
   shifts: Shift[];
   allEmployees: Employee[];
+  defaultStartDate: string;
 }): React.ReactElement {
   const router = useRouter();
-  const { invalidate } = useMockData();
+  const { invalidate } = useDataStore();
   const [confirmLeave, setConfirmLeave] = React.useState(false);
 
   const defaultValues: EmployeeFormValues = React.useMemo(
@@ -105,7 +106,7 @@ export function EmployeeForm({
             departmentId: departments[0]?.id ?? "",
             position: "",
             contractType: "full_time",
-            startDate: REFERENCE_DATE,
+            startDate: defaultStartDate,
             managerId: null,
             shiftId: shifts[0]?.id ?? "",
             workLocation: WORK_LOCATION_OPTIONS[0].value,
@@ -115,7 +116,7 @@ export function EmployeeForm({
             canViewPayslip: true,
             canCheckInRemotely: false,
           },
-    [employee, departments, shifts, allEmployees],
+    [employee, departments, shifts, allEmployees, defaultStartDate],
   );
 
   const {

@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/common/status-badge";
 import { MonthSummary } from "@/components/employee-app/month-summary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMockQuery } from "@/hooks/use-mock-query";
+import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import { WEEKDAY_LABEL } from "@/lib/constants";
 import { getMonthlySummary, listAttendance } from "@/lib/data/attendance";
@@ -42,7 +42,7 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
   const [month, setMonth] = React.useState(initialMonth);
   const [selectedDate, setSelectedDate] = React.useState<string | null>(null);
 
-  const { data, isLoading, error, reload } = useMockQuery(
+  const { data, isLoading, error, reload } = useDataQuery(
     async () => {
       const [records, summary, shifts] = await Promise.all([
         listAttendance({ companyId: session.companyId, employeeId, month }),
