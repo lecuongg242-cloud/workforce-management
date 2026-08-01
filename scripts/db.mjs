@@ -129,6 +129,61 @@ function cmdTest(url) {
   return 0;
 }
 
+/**
+ * Cong chan D-15: `test` va `testdb` nap `supabase/tests/00_fixture_users.sql`,
+ * file nay chen thang 4 uuid tong hop vao `auth.users` — bang do Supabase quan ly.
+ *
+ * Tren Postgres tam cua CI dieu do vo hai: `auth.users` o day chi la bang tuong
+ * thich do `0001_supabase_compat.sql` tao, khong co GoTrue nao doc no.
+ *
+ * Tren project cloud that thi khac han. Cac dong fixture thieu `encrypted_password`,
+ * `confirmation_token`, `recovery_token`, `email_change`, `created_at` — GoTrue quet
+ * TOAN BO bang khi liet ke nguoi dung, gap NULL o cot no khai la khong-null thi ca
+ * truy van sap. Ket qua da xay ra that: `GET /auth/v1/admin/users` tra 500
+ * "Database error finding users", tuc la 4 dong rac lam hong duong di cua moi tai
+ * khoan that. Xem CONTEXT.md cua phase 2, muc D-15.
+ *
+ * Bat bien "uuid tong hop khong bao gio cham cloud" tu day duoc cuong che bang may,
+ * khong con dua vao viec nho don tay.
+ */
+function assertNotCloud(url, command) {
+  let host = "";
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    // Chuoi ket noi dang key=value khong parse duoc thanh URL — do tho bang chuoi.
+    host = String(url).toLowerCase();
+  }
+
+  const looksLikeCloud =
+    host.includes("supabase.co") ||
+    host.includes("supabase.com") ||
+    host.includes("supabase.in");
+
+  if (!looksLikeCloud) return;
+
+  if (process.env.TF_ALLOW_CLOUD_TESTS === "1") {
+    console.error(
+      `CANH BAO: chay \`${command}\` len project cloud vi TF_ALLOW_CLOUD_TESTS=1.\n` +
+        "Sau khi chay xong, PHAI xoa 4 dong fixture khoi auth.users, neu khong\n" +
+        "GoTrue Admin API se tra 500 tren moi truy van nguoi dung.",
+    );
+    return;
+  }
+
+  console.error(
+    `TU CHOI: \`${command}\` nap fixture pgTAP vao \`auth.users\`, va dich den la project cloud (${host}).\n` +
+      "\n" +
+      "Bon uuid tong hop trong `supabase/tests/00_fixture_users.sql` thieu cac cot\n" +
+      "GoTrue bat buoc. Ghi chung len cloud lam `GET /auth/v1/admin/users` tra 500\n" +
+      "cho MOI nguoi dung, ke ca cac tai khoan that hoan toan hop le.\n" +
+      "\n" +
+      "Chay bo test tren Postgres tam thay vi cloud (dung nhu CI lam).\n" +
+      "Neu that su can chay len cloud: dat TF_ALLOW_CLOUD_TESTS=1 va tu don sach sau do.",
+  );
+  process.exit(1);
+}
+
 function main() {
   const [, , command] = process.argv;
 
@@ -138,6 +193,10 @@ function main() {
   }
 
   const url = requireConnectionUrl();
+
+  if (command === "test" || command === "testdb") {
+    assertNotCloud(url, command);
+  }
 
   let exitCode = 1;
   switch (command) {
