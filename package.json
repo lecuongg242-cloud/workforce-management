@@ -12,10 +12,15 @@
     "db:seed": "node --env-file=.env.local scripts/db.mjs seed",
     "test:rls": "node --env-file=.env.local scripts/db.mjs test",
     "test:db": "node --env-file=.env.local scripts/db.mjs testdb",
-    "check:secrets": "node scripts/check-bundle-secrets.mjs"
+    "check:secrets": "node scripts/check-bundle-secrets.mjs",
+    "test": "vitest run",
+    "check:assertions": "node scripts/check-pgtap-assertions.mjs",
+    "seed:auth": "node --env-file=.env.local scripts/seed-auth.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
+    "@supabase/ssr": "0.12.4",
+    "@supabase/supabase-js": "2.111.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -35,13 +40,19 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@tailwindcss/postcss": "^4.0.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "16.3.2",
     "@types/node": "^20.17.10",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "6.0.5",
     "eslint": "^9.17.0",
     "eslint-config-next": "^15.0.0",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4.0.0",
     "tw-animate-css": "^1.2.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vite-tsconfig-paths": "6.1.1",
+    "vitest": "4.1.10"
   }
 }

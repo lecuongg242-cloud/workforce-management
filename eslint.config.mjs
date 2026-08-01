@@ -12,8 +12,10 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    // File sinh tu dong, khong kiem tra
-    ignores: [".next/**", "node_modules/**", "out/**", "next-env.d.ts"],
+    // File sinh tu dong / cong cu GSD framework, khong phai ma nguon app —
+    // khong kiem tra bang ESLint cua app (dung require() CommonJS thuan,
+    // khong tuan theo quy uoc next/typescript)
+    ignores: [".next/**", "node_modules/**", "out/**", "next-env.d.ts", ".claude/**"],
   },
 ];
 
