@@ -54,7 +54,6 @@ import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import {
   CONTRACT_TYPE_LABEL,
   GENDER_LABEL,
-  REFERENCE_MONTH,
   REQUEST_TYPE_LABEL,
   SYSTEM_ROLE_LABEL,
   WEEKDAY_LABEL,
@@ -67,20 +66,19 @@ import {
   formatTime,
   minutesBetween,
 } from "@/lib/format";
+import { getMonthlySummary, listAttendance } from "@/lib/data/attendance";
 import { listDepartments } from "@/lib/data/departments";
 import { getEmployee, listAllEmployees, updateEmployee } from "@/lib/data/employees";
+import { listRequests } from "@/lib/data/requests";
 import { listShifts } from "@/lib/data/shifts";
-import {
-  getMonthlySummary,
-  listAttendance,
-  listRequests,
-} from "@/lib/mock/service";
 import { useMockData } from "@/lib/mock/store";
 
 export function EmployeeDetailView({
   employeeId,
+  month,
 }: {
   employeeId: string;
+  month: string;
 }): React.ReactElement {
   const session = useAuthenticatedSession();
   const { invalidate } = useMockData();
@@ -100,7 +98,7 @@ export function EmployeeDetailView({
           listAllEmployees(session.companyId),
           listAttendance({ companyId: session.companyId, employeeId }),
           listRequests({ companyId: session.companyId, employeeId }),
-          getMonthlySummary(session.companyId, employeeId, REFERENCE_MONTH),
+          getMonthlySummary(session.companyId, employeeId, month),
         ]);
 
       return {
@@ -113,7 +111,7 @@ export function EmployeeDetailView({
         summary,
       };
     },
-    [employeeId, session.companyId],
+    [employeeId, session.companyId, month],
   );
 
   const handleTerminate = async (): Promise<void> => {
@@ -312,7 +310,7 @@ export function EmployeeDetailView({
           <div className="grid gap-4 self-start">
             <section className="surface-card p-4">
               <h2 className="heading-sm mb-3 text-ink">
-                Công tháng {REFERENCE_MONTH.slice(5)}/{REFERENCE_MONTH.slice(0, 4)}
+                Công tháng {month.slice(5)}/{month.slice(0, 4)}
               </h2>
               <dl className="grid grid-cols-2 gap-3">
                 <MiniStat label="Ngày công" value={`${summary.workedDays}`} />
@@ -369,7 +367,7 @@ export function EmployeeDetailView({
             <header className="border-b border-hairline px-4 py-3.5">
               <h2 className="heading-sm text-ink">Bảng chấm công gần đây</h2>
               <p className="mt-0.5 text-xs text-ink-muted">
-                {formatMonthLabel(REFERENCE_MONTH)} và các ngày trước đó
+                {formatMonthLabel(month)} và các ngày trước đó
               </p>
             </header>
             {attendance.length === 0 ? (
