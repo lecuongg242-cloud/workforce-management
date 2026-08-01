@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Phiên thật và cắt tầng dữ liệu giả
 status: executing
-stopped_at: Completed 02-07-PLAN.md
-last_updated: "2026-08-01T08:19:32.403Z"
+stopped_at: Completed 02-08-PLAN.md
+last_updated: "2026-08-01T10:01:44.163Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 17
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 02 (Phiên thật và cắt tầng dữ liệu giả) — EXECUTING
-Plan: 8 of 11
+Plan: 9 of 11
 Status: Ready to execute
 Last activity: 2026-08-01 — Phase 02 execution started
 
-Progress: [███████░░░] 65%
+Progress: [███████░░░] 71%
 
 ## Performance Metrics
 
@@ -69,6 +69,7 @@ Progress: [███████░░░] 65%
 | Phase 02 P05 | 95min | 3 tasks | 11 files |
 | Phase 02 P06 | 55min | 2 tasks | 7 files |
 | Phase 02 P07 | 80min | 3 tasks | 15 files |
+| Phase 02 P08 | 100min | 3 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,10 @@ Recent decisions affecting current work:
 - [Phase ?]: createEmployee kiem ma trung khong phan biet hoa thuong qua RPC scalar tf_employee_code_taken (migration 0009), dung lai tf_normalize thay vi viet lai logic chuan hoa o JS
 - [Phase ?]: updateEmployee co hai nhanh quyen: owner/admin sua moi ho so, con lai chi sua ho so co id bang employeeId cua chinh phien -- kiem tra chay TRUOC ca createServerSupabase() de tu choi khong cham DB
 - [Phase ?]: bulkMoveDepartment tra 0 va khong cham session/DB/mang khi ids rong; audit_log ghi mot dong CHO MOI nhan vien bi doi phong ban trong thao tac hang loat, khong gop thanh mot dong
+- [Phase ?]: 02-08: them migration 0010 (tf_server_now, tf_local_instant) de checkIn/checkOut doc dong ho database va tinh gio bat dau/ket thuc ca ke hoach ma khong viet offset mui gio thu hai
+- [Phase ?]: 02-08: lateMinutes/earlyLeaveMinutes tinh qua tf_worked_minutes tren cap timestamptz that (khong phai hai chuoi HH:mm) -- loai bo hoan toan nhu cau nguong chan 720-phut cua tang gia lap
+- [Phase ?]: 02-08: checkIn dung khuon doc-truoc-insert-hoac-update thay vi upsert PostgREST -- da xac nhan qua psql that rang upsert se ghi de id cua dong dang co khi trung unique constraint
+- [Phase ?]: 02-08: rule ESLint D-19a (cam new Date/Date.now) ap dung pham vi hep chi ba file view cua plan, khong phai toan repo, de khong pha vo dong ho tick that hop le cua attendance-status-card.tsx ngoai pham vi
 
 ### Pending Todos
 
@@ -136,6 +141,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-01T08:19:32.375Z
-Stopped at: Completed 02-07-PLAN.md
+Last session: 2026-08-01T10:01:44.128Z
+Stopped at: Completed 02-08-PLAN.md
 Resume file: None
