@@ -9,14 +9,15 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useSession } from "@/lib/auth/session-provider";
-import { listCompanies } from "@/lib/mock/service";
+import { listCompanies } from "@/lib/data/companies";
 
 /**
  * Khung giao dien quan tri: sidebar + topbar + noi dung.
  *
- * Chan truy cap o phia trinh duyet vi phien dang nhap gia lap nam trong
- * localStorage — middleware cua Next khong doc duoc. Khi chuyen sang
- * Supabase Auth, phan chan nay se thay bang middleware doc cookie.
+ * Chan truy cap that nam o `middleware.ts` (doc cookie phien Supabase truoc
+ * khi bat ky Server Component nao render) va o `src/app/admin/layout.tsx`
+ * (redirect toi /select-company khi chua chon doanh nghiep). Kiem tra
+ * `status === "guest"` o day chi la lop du phong phia trinh duyet.
  */
 export function AdminShell({
   children,

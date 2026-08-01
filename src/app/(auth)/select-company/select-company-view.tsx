@@ -13,8 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useSession } from "@/lib/auth/session-provider";
 import { COMPANY_ROLE_LABEL } from "@/lib/constants";
+import { listCompanies } from "@/lib/data/companies";
 import { formatDateTime, formatNumber } from "@/lib/format";
-import { listCompanies } from "@/lib/mock/service";
 import type { Company } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -37,10 +37,8 @@ export function SelectCompanyView(): React.ReactElement {
     if (status === "guest") router.replace("/login");
   }, [status, router]);
 
-  const handleEnter = (company: Company): void => {
-    // TODO(02-04 Task 2): swap to `await selectCompany(company.id)` khi doi
-    // nguon du lieu sang @/lib/data/companies.
-    void selectCompany(company.id);
+  const handleEnter = async (company: Company): Promise<void> => {
+    await selectCompany(company.id);
     router.push("/admin/dashboard");
   };
 

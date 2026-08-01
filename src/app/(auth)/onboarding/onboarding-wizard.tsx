@@ -38,8 +38,8 @@ import {
   INDUSTRY_OPTIONS,
   WEEKDAY_OPTIONS,
 } from "@/lib/constants";
+import { createCompany } from "@/lib/data/companies";
 import { formatDuration, isOvernight, minutesBetween } from "@/lib/format";
-import { createCompany } from "@/lib/mock/service";
 import { useMockData } from "@/lib/mock/store";
 import type { CompanySize, WeekdayNumber } from "@/lib/types/domain";
 import {
@@ -114,9 +114,7 @@ export function OnboardingWizard(): React.ReactElement {
         address: values.address,
       });
       invalidate();
-      // TODO(02-04 Task 2): swap to `await selectCompany(company.id)` khi doi
-      // nguon du lieu sang @/lib/data/companies.
-      void selectCompany(company.id);
+      await selectCompany(company.id);
       toast.success("Đã tạo doanh nghiệp thành công", {
         description: `${company.name} đã sẵn sàng để thêm nhân viên.`,
       });
