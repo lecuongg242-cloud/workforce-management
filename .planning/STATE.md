@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Phiên thật và cắt tầng dữ liệu giả
 status: executing
-stopped_at: Completed 02-05-PLAN.md
-last_updated: "2026-08-01T07:19:44.437Z"
+stopped_at: Completed 02-06-PLAN.md
+last_updated: "2026-08-01T07:39:38.149Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 17
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 02 (Phiên thật và cắt tầng dữ liệu giả) — EXECUTING
-Plan: 6 of 11
+Plan: 7 of 11
 Status: Ready to execute
 Last activity: 2026-08-01 — Phase 02 execution started
 
-Progress: [█████░░░░░] 53%
+Progress: [██████░░░░] 59%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [█████░░░░░] 53%
 | Phase 02 P01 | 35min | 4 tasks | 8 files |
 | Phase 02 P02 | 90min | 3 tasks | 9 files |
 | Phase 02 P05 | 95min | 3 tasks | 11 files |
+| Phase 02 P06 | 55min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-05: RPC tf_search_employee_ids tra ve danh sach id (khong phai setof employees day du) de Route Handler chi giu MOT hinh dang query builder (.from("employees")) bat ke co tu khoa tim kiem hay khong
 - [Phase ?]: 02-05: employeeSchema tach thanh employeeRowSchema (transform snake_case->camelCase, chi server-side) va employeeSchema (plain, dung o ca hai dau D-12d) vi Employee co ~20 truong khong the dung mot schema cho ca hai chieu
 - [Phase ?]: 02-05: deleteDepartment bat rieng loi Postgres 23503 (FK vi pham, con nhan vien thuoc phong ban) thanh thong diep tieng Viet ro rang -- rang buoc nay khong ton tai trong mock/service.ts
+- [Phase ?]: 02-06: Wire contract cua GET /api/shifts la hinh dang cuoi cung (camelCase, HH:mm) — shiftRowSchema transform ngay sau doc DB, shiftWithStatsSchema (plain) dung o ca hai dau (D-12d)
+- [Phase ?]: 02-06: Cot sinh (overnight) chi duoc doc lai, khong bao gio tinh lai o tang ung dung — canh bang test sabotage-and-revert
 
 ### Pending Todos
 
@@ -129,6 +132,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-01T07:19:44.406Z
-Stopped at: Completed 02-05-PLAN.md
+Last session: 2026-08-01T07:39:38.109Z
+Stopped at: Completed 02-06-PLAN.md
 Resume file: None

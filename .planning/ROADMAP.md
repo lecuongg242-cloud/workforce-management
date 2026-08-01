@@ -70,7 +70,7 @@ Plans:
   4. Quản trị tạo được tài khoản cho nhân viên kèm mật khẩu tạm; nhân viên đăng nhập lần đầu buộc phải đổi mật khẩu mới đi tiếp được.
   5. Mọi màn hình V1 chạy trên dữ liệu Postgres thật theo ngày giờ thật (không còn `REFERENCE_DATE`), `mock/db.ts` và `mock/seed.ts` đã bị xóa, và mỗi thao tác ghi để lại một dòng audit log truy ngược được ai / làm gì / lúc nào / trước / sau.
 
-**Plans:** 3/11 plans executed
+**Plans:** 4/11 plans executed
 
 Plans:
 **Wave 1**
@@ -92,7 +92,7 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 02-05-PLAN.md — Lát cắt phòng ban + đường đọc nhân viên
-- [ ] 02-06-PLAN.md — Lát cắt ca làm việc (giờ, mảng ngày, cột sinh)
+- [x] 02-06-PLAN.md — Lát cắt ca làm việc (giờ, mảng ngày, cột sinh)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
@@ -184,7 +184,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Nền dữ liệu và cô lập doanh nghiệp | 6/6 | In Progress|  |
-| 2. Phiên thật và cắt tầng dữ liệu giả | 3/11 | In Progress|  |
+| 2. Phiên thật và cắt tầng dữ liệu giả | 4/11 | In Progress|  |
 | 3. Chấm công có bằng chứng | 0/TBD | Not started | - |
 | 4. Quy tắc công do doanh nghiệp tự khai | 0/TBD | Not started | - |
 | 5. Duyệt yêu cầu và chốt kỳ công | 0/TBD | Not started | - |
