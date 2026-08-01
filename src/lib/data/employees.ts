@@ -1,9 +1,16 @@
 import { fetchJson } from "@/lib/data/fetch-json";
 import {
+  employeeDetailResponseSchema,
   employeeListResponseSchema,
   paginatedEmployeeSchema,
 } from "@/lib/validation/api/employees";
 import type { Employee, EmployeeQuery, Paginated } from "@/lib/types/domain";
+
+export {
+  bulkMoveDepartment,
+  createEmployee,
+  updateEmployee,
+} from "@/lib/data/mutations/employees";
 
 /**
  * Chu ky giu Y HET `src/lib/mock/service.ts` — call site chi doi dong
@@ -39,4 +46,13 @@ export async function listEmployees(
 export async function listAllEmployees(companyId: string): Promise<Employee[]> {
   void companyId;
   return fetchJson("/api/employees?mode=all", employeeListResponseSchema);
+}
+
+/**
+ * Doc mot ho so nhan vien qua `GET /api/employees/<id>`. Tra `null` khi
+ * khong tim thay hoac `id` thuoc doanh nghiep khac (T-02-07-01) — khong bao
+ * gio nem trong hai truong hop nay, giu dung chu ky cu cua `mock/service.ts`.
+ */
+export async function getEmployee(id: string): Promise<Employee | null> {
+  return fetchJson(`/api/employees/${id}`, employeeDetailResponseSchema);
 }

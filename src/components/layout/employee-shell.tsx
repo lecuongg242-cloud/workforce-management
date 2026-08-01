@@ -8,7 +8,7 @@ import { MobileHeader } from "@/components/layout/mobile-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useSession } from "@/lib/auth/session-provider";
-import { getEmployee } from "@/lib/mock/service";
+import { getEmployee } from "@/lib/data/employees";
 
 /**
  * Khung giao dien nhan vien — thiet ke cho dien thoai truoc.

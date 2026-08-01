@@ -133,3 +133,63 @@ export const employeeQuerySchema = z.object({
 });
 
 export type EmployeeRow = z.infer<typeof employeeSchema>;
+
+/**
+ * Hinh dang phan hoi cua `GET /api/employees/[id]` (plan 02-07) — cho phep
+ * `null` khi khong tim thay hoac id thuoc doanh nghiep khac (T-02-07-01: tra
+ * `null` chu khong phai 404, de khong phan biet duoc "khong ton tai" voi
+ * "thuoc doanh nghiep khac").
+ */
+export const employeeDetailResponseSchema = employeeSchema.nullable();
+
+/**
+ * `EmployeeInput` cua domain.ts (`Omit<Employee, "id" | "companyId">`) —
+ * dung cho ca `createEmployee` lan `updateEmployee` (plan 02-07). KHONG khai
+ * `user_id`: cot do do duong tao tai khoan o plan 02-10 quan ly, khong do
+ * bieu mau nhan vien. `.transform()` tra ve dong snake_case san sang
+ * ghi/hop nhat, cung khuon voi `shiftInputSchema` cua 02-06 (nhieu truong,
+ * anh xa tay se de sai sot).
+ */
+export const employeeInputSchema = z
+  .object({
+    code: z.string(),
+    fullName: z.string(),
+    email: z.string(),
+    phone: z.string(),
+    dateOfBirth: z.string(),
+    gender: genderSchema,
+    avatarUrl: z.string().nullable(),
+    departmentId: z.string(),
+    position: z.string(),
+    contractType: contractTypeSchema,
+    startDate: z.string(),
+    managerId: z.string().nullable(),
+    shiftId: z.string(),
+    workLocation: z.string(),
+    status: employeeStatusSchema,
+    systemRole: systemRoleSchema,
+    invitationSent: z.boolean(),
+    canViewPayslip: z.boolean(),
+    canCheckInRemotely: z.boolean(),
+  })
+  .transform((input) => ({
+    code: input.code,
+    full_name: input.fullName,
+    email: input.email,
+    phone: input.phone,
+    date_of_birth: input.dateOfBirth,
+    gender: input.gender,
+    avatar_url: input.avatarUrl,
+    department_id: input.departmentId,
+    position: input.position,
+    contract_type: input.contractType,
+    start_date: input.startDate,
+    manager_id: input.managerId,
+    shift_id: input.shiftId,
+    work_location: input.workLocation,
+    status: input.status,
+    system_role: input.systemRole,
+    invitation_sent: input.invitationSent,
+    can_view_payslip: input.canViewPayslip,
+    can_check_in_remotely: input.canCheckInRemotely,
+  }));

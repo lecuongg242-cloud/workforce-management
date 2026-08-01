@@ -11,11 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
-import {
-  listAllEmployees,
-  listDepartments,
-  listShifts,
-} from "@/lib/mock/service";
+import { listDepartments } from "@/lib/data/departments";
+import { listAllEmployees } from "@/lib/data/employees";
+import { listShifts } from "@/lib/data/shifts";
 
 export function NewEmployeeView(): React.ReactElement {
   const session = useAuthenticatedSession();

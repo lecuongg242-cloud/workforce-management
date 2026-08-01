@@ -26,7 +26,9 @@ import {
   useSession,
 } from "@/lib/auth/session-provider";
 import { formatDate } from "@/lib/format";
-import { getEmployee, listDepartments, listShifts } from "@/lib/mock/service";
+import { listDepartments } from "@/lib/data/departments";
+import { getEmployee } from "@/lib/data/employees";
+import { listShifts } from "@/lib/data/shifts";
 
 export function ProfileView(): React.ReactElement {
   const session = useAuthenticatedSession();

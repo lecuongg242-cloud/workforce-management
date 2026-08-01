@@ -67,15 +67,13 @@ import {
   formatTime,
   minutesBetween,
 } from "@/lib/format";
+import { listDepartments } from "@/lib/data/departments";
+import { getEmployee, listAllEmployees, updateEmployee } from "@/lib/data/employees";
+import { listShifts } from "@/lib/data/shifts";
 import {
-  getEmployee,
   getMonthlySummary,
-  listAllEmployees,
   listAttendance,
-  listDepartments,
   listRequests,
-  listShifts,
-  updateEmployee,
 } from "@/lib/mock/service";
 import { useMockData } from "@/lib/mock/store";
 

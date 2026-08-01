@@ -30,7 +30,7 @@ import {
   SYSTEM_ROLE_OPTIONS,
   WORK_LOCATION_OPTIONS,
 } from "@/lib/constants";
-import { createEmployee, updateEmployee } from "@/lib/mock/service";
+import { createEmployee, updateEmployee } from "@/lib/data/employees";
 import { useMockData } from "@/lib/mock/store";
 import type {
   Department,

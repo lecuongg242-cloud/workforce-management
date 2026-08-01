@@ -29,12 +29,12 @@ import {
   EMPLOYEE_STATUS_OPTIONS,
 } from "@/lib/constants";
 import { formatNumber } from "@/lib/format";
+import { listDepartments } from "@/lib/data/departments";
 import {
   bulkMoveDepartment,
-  listDepartments,
   listEmployees,
   updateEmployee,
-} from "@/lib/mock/service";
+} from "@/lib/data/employees";
 import { useMockData } from "@/lib/mock/store";
 import type {
   ContractType,
