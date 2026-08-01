@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: Nền dữ liệu và cô lập doanh nghiệp
+current_phase: 02
+current_phase_name: Phiên thật và cắt tầng dữ liệu giả
 status: executing
-stopped_at: Completed 01-06-PLAN.md (Phase 1 complete)
-last_updated: "2026-07-31T16:35:40.566Z"
-last_activity: 2026-07-31
-last_activity_desc: Phase 01 execution started
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-08-01T04:06:03.417Z"
+last_activity: 2026-08-01
+last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 17
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-31)
 
 **Core value:** Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng nơi, đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
-**Current focus:** Phase 01 — Nền dữ liệu và cô lập doanh nghiệp
+**Current focus:** Phase 02 — Phiên thật và cắt tầng dữ liệu giả
 
 ## Current Position
 
-Phase: 01 (Nền dữ liệu và cô lập doanh nghiệp) — EXECUTING
-Plan: 6 of 6
+Phase: 02 (Phiên thật và cắt tầng dữ liệu giả) — EXECUTING
+Plan: 2 of 11
 Status: Ready to execute
-Last activity: 2026-07-31 — Phase 01 execution started
+Last activity: 2026-08-01 — Phase 02 execution started
 
-Progress: [██████████] 100%
+Progress: [████░░░░░░] 41%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 01 P04 | 19min | 2 tasks | 4 files |
 | Phase 01 P05 | 24min | 3 tasks | 4 files |
 | Phase 01 P06 | 55min | 2 tasks | 4 files |
+| Phase 02 P01 | 35min | 4 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,11 @@ Recent decisions affecting current work:
 - [Phase ?]: 01-06: Full V1 seed dataset ported with sliding dates (D-07) via public.tf_work_date(now()) anchor; overnight-shift attendance pinned to exact scheduled duration to satisfy D-08's worked_minutes invariant
 - [Phase ?]: 01-06: Preserved anchor fixture ids (dept-01/02, sft-01-day/02-day, nv-01a/02a, att-02a) required by prior plans' pgTAP tests while renaming the rest of the id scheme for the full 40-employee/9-department/7-shift dataset
 - [Phase ?]: 01-03: AUTH-06 narrowed 2026-07-31 — "revoke & reissue legacy Supabase keys" (Task 2, checkpoint:human-action) moved to Out of Scope by deliberate product decision; "no secret key reaches the client bundle" clause delivered and verified (`npm run check:secrets`). Legacy `service_role` key remains active and bypasses RLS — accepted risk, recorded in REQUIREMENTS.md/PROJECT.md §Out of Scope, not an outstanding blocker.
+- [Phase ?]: 02-01: Task 1 npm package legitimacy gate approved via npm registry API evidence (name + repository.url match for vitest, @vitejs/plugin-react, jsdom)
+- [Phase ?]: 02-01: eslint.config.mjs ignores gained .claude/** — first plan to run repo-wide npm run lint, which surfaced GSD tooling's CommonJS require() was never excluded
+- [Phase ?]: 02-01: .env.local/.env.example publishable key renamed to NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY by operator (agent Read/Write blocked on .env* paths); hit and fixed a PowerShell 5.1 BOM incident
+- [Phase ?]: 02-01: found and fixed a second, related Windows encoding bug in .env.example (em-dash mojibake from double-encoding, not BOM) before commit, via direct byte-level replacement
+- [Phase ?]: 02-01: check:secrets gate proven to have teeth via controlled sabotage-and-revert on login-form.tsx — exit 0 -> 1 -> 0, no leftover temp code in git status
 
 ### Pending Todos
 
@@ -113,6 +119,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-31T14:32:54.108Z
-Stopped at: Completed 01-06-PLAN.md (Phase 1 complete)
+Last session: 2026-08-01T04:06:03.380Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None
