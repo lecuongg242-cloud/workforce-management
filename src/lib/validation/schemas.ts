@@ -28,6 +28,27 @@ export const loginSchema = z.object({
 export type LoginFormValues = z.infer<typeof loginSchema>;
 
 /* -------------------------------------------------------------------------- */
+/* Doi mat khau bat buoc lan dau (02-10, D-16)                                */
+/* -------------------------------------------------------------------------- */
+
+export const changePasswordSchema = z
+  .object({
+    newPassword: z
+      .string()
+      .min(1, "Vui lòng nhập mật khẩu mới.")
+      .min(8, "Mật khẩu mới phải có ít nhất 8 ký tự."),
+    confirmPassword: z
+      .string()
+      .min(1, "Vui lòng nhập lại mật khẩu mới."),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    message: "Mật khẩu nhập lại không khớp.",
+    path: ["confirmPassword"],
+  });
+
+export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
+
+/* -------------------------------------------------------------------------- */
 /* Onboarding                                                                  */
 /* -------------------------------------------------------------------------- */
 

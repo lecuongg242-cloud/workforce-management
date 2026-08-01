@@ -6,16 +6,26 @@ import { resolveGate } from "@/middleware";
  * Test ham thuan `resolveGate` — logic quyet dinh "duong dan nay di dau" da
  * duoc tach khoi runtime Next (xem src/middleware.ts) chinh vi Vitest khong
  * chay duoc Server Component/middleware that.
+ *
+ * `mustChangePassword: false` o moi test trong nhom nay (AUTH-02, tu plan
+ * 02-04) — cac test nay kiem cong bao ve route CU, khong lien quan co buoc
+ * doi mat khau; nhom test rieng cho co do (D-16, plan 02-10) o Task 3.
  */
 describe("resolveGate (AUTH-02)", () => {
   it("/admin/dashboard + khong claims -> redirect /login", () => {
     expect(
-      resolveGate({ pathname: "/admin/dashboard", hasClaims: false }),
+      resolveGate({
+        pathname: "/admin/dashboard",
+        hasClaims: false,
+        mustChangePassword: false,
+      }),
     ).toEqual({ action: "redirect", to: "/login" });
   });
 
   it("/employee + khong claims -> redirect /login", () => {
-    expect(resolveGate({ pathname: "/employee", hasClaims: false })).toEqual({
+    expect(
+      resolveGate({ pathname: "/employee", hasClaims: false, mustChangePassword: false }),
+    ).toEqual({
       action: "redirect",
       to: "/login",
     });
@@ -23,18 +33,26 @@ describe("resolveGate (AUTH-02)", () => {
 
   it("/employee/history + khong claims -> redirect /login (duong dan con cung bi chan)", () => {
     expect(
-      resolveGate({ pathname: "/employee/history", hasClaims: false }),
+      resolveGate({
+        pathname: "/employee/history",
+        hasClaims: false,
+        mustChangePassword: false,
+      }),
     ).toEqual({ action: "redirect", to: "/login" });
   });
 
   it("/login + khong claims -> pass", () => {
-    expect(resolveGate({ pathname: "/login", hasClaims: false })).toEqual({
+    expect(
+      resolveGate({ pathname: "/login", hasClaims: false, mustChangePassword: false }),
+    ).toEqual({
       action: "pass",
     });
   });
 
   it("/login + co claims -> redirect /admin/dashboard", () => {
-    expect(resolveGate({ pathname: "/login", hasClaims: true })).toEqual({
+    expect(
+      resolveGate({ pathname: "/login", hasClaims: true, mustChangePassword: false }),
+    ).toEqual({
       action: "redirect",
       to: "/admin/dashboard",
     });
@@ -42,19 +60,33 @@ describe("resolveGate (AUTH-02)", () => {
 
   it("/admin/dashboard + co claims -> pass", () => {
     expect(
-      resolveGate({ pathname: "/admin/dashboard", hasClaims: true }),
+      resolveGate({
+        pathname: "/admin/dashboard",
+        hasClaims: true,
+        mustChangePassword: false,
+      }),
     ).toEqual({ action: "pass" });
   });
 
   it("/select-company + co claims -> pass", () => {
-    expect(resolveGate({ pathname: "/select-company", hasClaims: true })).toEqual({
+    expect(
+      resolveGate({
+        pathname: "/select-company",
+        hasClaims: true,
+        mustChangePassword: false,
+      }),
+    ).toEqual({
       action: "pass",
     });
   });
 
   it("/administration + khong claims -> pass (so khop theo doan duong dan, khong phai tien to chuoi tho)", () => {
     expect(
-      resolveGate({ pathname: "/administration", hasClaims: false }),
+      resolveGate({
+        pathname: "/administration",
+        hasClaims: false,
+        mustChangePassword: false,
+      }),
     ).toEqual({ action: "pass" });
   });
 });
