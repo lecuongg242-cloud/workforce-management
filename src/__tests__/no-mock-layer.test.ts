@@ -20,6 +20,13 @@ import { describe, expect, it } from "vitest";
 
 const PROJECT_ROOT = process.cwd();
 
+// File nay LA cong kiem tra -- noi dung cua no (ke ca chinh docstring/khang
+// dinh o tren) buoc phai nhac lai nguyen van cac chuoi bi cam de mo ta dieu
+// no dang tim, nen tu no se luon "vi pham". Loai chinh no khoi danh sach
+// quet -- day KHONG phai mot ngoai le lam yeu cong, vi day la cong, khong
+// phai ma nguon ung dung dang duoc cong kiem tra.
+const SELF_PATH = "src/__tests__/no-mock-layer.test.ts";
+
 function listTrackedSrcFiles(): string[] {
   const output = execSync("git ls-files -- src", {
     cwd: PROJECT_ROOT,
@@ -28,7 +35,8 @@ function listTrackedSrcFiles(): string[] {
   return output
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    .filter((line) => line.length > 0)
+    .filter((line) => line !== SELF_PATH);
 }
 
 const trackedFiles = listTrackedSrcFiles();
