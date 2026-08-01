@@ -23,7 +23,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { REFERENCE_DATE, REQUEST_TYPE_OPTIONS } from "@/lib/constants";
+import { REQUEST_TYPE_OPTIONS } from "@/lib/constants";
 import type { RequestType } from "@/lib/types/domain";
 import {
   workRequestSchema,
@@ -32,17 +32,21 @@ import {
 
 /**
  * Bieu mau tao yeu cau, mo tu duoi len (bottom sheet) cho phu hop voi
- * thao tac mot tay tren dien thoai.
+ * thao tac mot tay tren dien thoai. `today` (D-19) do Server Component cap
+ * qua prop tu tren xuong (`page.tsx` -> `RequestsView` -> day) — KHONG doc
+ * `new Date()` hay mot hang so ngay co dinh o day.
  */
 export function RequestFormSheet({
   open,
   onOpenChange,
   defaultType,
+  today,
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultType?: RequestType;
+  today: string;
   onSubmit: (values: WorkRequestFormValues) => Promise<void>;
 }): React.ReactElement {
   const {
@@ -56,8 +60,8 @@ export function RequestFormSheet({
     resolver: zodResolver(workRequestSchema),
     defaultValues: {
       type: defaultType ?? "leave",
-      fromDate: REFERENCE_DATE,
-      toDate: REFERENCE_DATE,
+      fromDate: today,
+      toDate: today,
       fromTime: null,
       toTime: null,
       reason: "",
@@ -68,13 +72,13 @@ export function RequestFormSheet({
     if (!open) return;
     reset({
       type: defaultType ?? "leave",
-      fromDate: REFERENCE_DATE,
-      toDate: REFERENCE_DATE,
+      fromDate: today,
+      toDate: today,
       fromTime: defaultType && defaultType !== "leave" ? "08:00" : null,
       toTime: defaultType && defaultType !== "leave" ? "17:30" : null,
       reason: "",
     });
-  }, [open, defaultType, reset]);
+  }, [open, defaultType, today, reset]);
 
   const type = watch("type");
   const needsTime = type !== "leave";

@@ -15,11 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import { formatNumber } from "@/lib/format";
-import {
-  createRequest,
-  listAllEmployees,
-  listRequests,
-} from "@/lib/mock/service";
+import { listAllEmployees } from "@/lib/data/employees";
+import { createRequest, listRequests } from "@/lib/data/requests";
 import { useMockData } from "@/lib/mock/store";
 import type { RequestStatus, RequestType, WorkRequest } from "@/lib/types/domain";
 import type { WorkRequestFormValues } from "@/lib/validation/schemas";
@@ -42,7 +39,7 @@ function isRequestType(value: string | null): value is RequestType {
   return value !== null && REQUEST_TYPES.includes(value as RequestType);
 }
 
-export function RequestsView(): React.ReactElement {
+export function RequestsView({ today }: { today: string }): React.ReactElement {
   const session = useAuthenticatedSession();
   const searchParams = useSearchParams();
   const { invalidate } = useMockData();
@@ -201,6 +198,7 @@ export function RequestsView(): React.ReactElement {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         defaultType={defaultType}
+        today={today}
         onSubmit={handleSubmit}
       />
     </div>

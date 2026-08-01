@@ -3,12 +3,15 @@ import { Suspense } from "react";
 
 import { RequestsView } from "@/app/employee/requests/requests-view";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getServerToday } from "@/lib/today";
 
 export const metadata: Metadata = {
   title: "Yêu cầu",
 };
 
-export default function EmployeeRequestsPage(): React.ReactElement {
+export default async function EmployeeRequestsPage(): Promise<React.ReactElement> {
+  const today = await getServerToday();
+
   return (
     <Suspense
       fallback={
@@ -19,7 +22,7 @@ export default function EmployeeRequestsPage(): React.ReactElement {
         </div>
       }
     >
-      <RequestsView />
+      <RequestsView today={today} />
     </Suspense>
   );
 }
