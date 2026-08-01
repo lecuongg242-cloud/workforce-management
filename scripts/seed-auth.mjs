@@ -183,6 +183,78 @@ async function main() {
     }
   }
 
+  // (e2) Mot nguoi thuoc HAI doanh nghiep — de AUTH-05 kiem duoc.
+  //
+  // Truoc buoc nay, moi tai khoan chi thuoc dung mot doanh nghiep, nen tieu chi
+  // "nguoi thuoc nhieu doanh nghiep doi duoc noi lam viec va du lieu doi theo"
+  // khong the nghiem thu bang du lieu mau — khong phai chua kiem, ma la KHONG
+  // CO GI DE KIEM. Day la thieu sot cua bo seed, khong phai cua ma nguon.
+  //
+  // Schema cho phep: `memberships` unique theo (user_id, company_id) chu khong
+  // theo user_id, va `employees.user_id` khong co rang buoc unique. Mot nguoi
+  // lam o hai cong ty lien quan la tinh huong that, khong phai truong hop bia.
+  //
+  // Cach lam: lay tai khoan manager cua doanh nghiep dau, gan them mot
+  // membership o doanh nghiep thu hai va noi vao mot dong employees con trong
+  // o do. Khong tao tai khoan moi — van dung 10 tai khoan.
+  const dualEmail = rows.find((r) => r.company === COMPANIES[0] && r.role === "manager")?.email;
+
+  if (dualEmail) {
+    const { data: dualEmp } = await admin
+      .from("employees")
+      .select("user_id")
+      .eq("email", dualEmail)
+      .maybeSingle();
+
+    const dualUserId = dualEmp?.user_id ?? null;
+
+    // Mot dong employees con trong o doanh nghiep thu hai de gan nguoi nay vao.
+    const { data: freeSlots } = await admin
+      .from("employees")
+      .select("id, code, email")
+      .eq("company_id", COMPANIES[1])
+      .eq("status", "active")
+      .is("user_id", null)
+      .order("code", { ascending: true })
+      .limit(1);
+
+    const slot = freeSlots && freeSlots.length > 0 ? freeSlots[0] : null;
+
+    if (dualUserId && slot) {
+      const { error: memErr } = await admin.from("memberships").upsert(
+        {
+          user_id: dualUserId,
+          company_id: COMPANIES[1],
+          role: "manager",
+          status: "active",
+        },
+        { onConflict: "user_id,company_id" },
+      );
+
+      const { error: empErr } = await admin
+        .from("employees")
+        .update({ user_id: dualUserId, system_role: "manager" })
+        .eq("id", slot.id);
+
+      if (memErr || empErr) {
+        console.error(
+          `Canh bao: khong gan duoc thanh vien thu hai cho "${dualEmail}": ${
+            memErr?.message ?? empErr?.message
+          }`,
+        );
+      } else {
+        console.log(
+          `Thanh vien hai doanh nghiep: ${dualEmail} nay thuoc ca ${COMPANIES[0]} va ${COMPANIES[1]} (AUTH-05).`,
+        );
+      }
+    } else {
+      console.error(
+        "Canh bao: khong dung duoc tai khoan thuoc hai doanh nghiep — " +
+          (dualUserId ? "khong con dong employees trong o doanh nghiep thu hai." : "khong tim thay user_id cua manager."),
+      );
+    }
+  }
+
   // (f) Kiem chung dang nhap that bang tai khoan vua tao moi.
   if (firstNewAccount) {
     const { error: signInError } = await anon.auth.signInWithPassword({
@@ -219,8 +291,11 @@ async function main() {
     console.log(`${row.email} | ${row.company} | ${row.role} | ${row.password}`);
   }
   console.log("-----------------------------------------------------------");
+  // Ky vong 29 chu khong phai 30: 40 nhan vien tru 10 dong duoc gan o vong lap
+  // chinh, tru them 1 dong o doanh nghiep thu hai danh cho nguoi thuoc ca hai
+  // doanh nghiep (buoc e2, phuc vu AUTH-05).
   console.log(
-    `Tong ket: ${createdCount} tai khoan tao moi, ${existingCount} tai khoan da ton tai, ${rows.length} tai khoan (ky vong 10), ${nullUserIdCount} dong employees con user_id = null (ky vong 30).`,
+    `Tong ket: ${createdCount} tai khoan tao moi, ${existingCount} tai khoan da ton tai, ${rows.length} tai khoan (ky vong 10), ${nullUserIdCount} dong employees con user_id = null (ky vong 29).`,
   );
 }
 
