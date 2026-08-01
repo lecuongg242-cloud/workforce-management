@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Phiên thật và cắt tầng dữ liệu giả
 status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-08-01T04:36:05.505Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-08-01T07:19:44.437Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 17
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 02 (Phiên thật và cắt tầng dữ liệu giả) — EXECUTING
-Plan: 3 of 11
+Plan: 6 of 11
 Status: Ready to execute
 Last activity: 2026-08-01 — Phase 02 execution started
 
-Progress: [█████░░░░░] 47%
+Progress: [█████░░░░░] 53%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [█████░░░░░] 47%
 | Phase 01 P06 | 55min | 2 tasks | 4 files |
 | Phase 02 P01 | 35min | 4 tasks | 8 files |
 | Phase 02 P02 | 90min | 3 tasks | 9 files |
+| Phase 02 P05 | 95min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -98,6 +99,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-02: tf_normalize(text) uses translate() over a 134-char Vietnamese diacritic table (not unaccent extension) to match src/lib/format.ts normalizeText() exactly
 - [Phase ?]: 02-02: seed.sql identity fully split into supabase/tests/00_fixture_users.sql (pgTAP-only, never reaches cloud via db:seed); scripts/check-pgtap-assertions.mjs is the D-15a mechanical floor gate (184 assertions)
 - [Phase ?]: 02-02: discovered npm run test:db locally commits 4 synthetic fixture rows to the live Supabase db (bounded/accepted per plan's own db:seed-only acceptance criteria); logged as Threat Flag in 02-02-SUMMARY.md
+- [Phase ?]: 02-05: RPC tf_search_employee_ids tra ve danh sach id (khong phai setof employees day du) de Route Handler chi giu MOT hinh dang query builder (.from("employees")) bat ke co tu khoa tim kiem hay khong
+- [Phase ?]: 02-05: employeeSchema tach thanh employeeRowSchema (transform snake_case->camelCase, chi server-side) va employeeSchema (plain, dung o ca hai dau D-12d) vi Employee co ~20 truong khong the dung mot schema cho ca hai chieu
+- [Phase ?]: 02-05: deleteDepartment bat rieng loi Postgres 23503 (FK vi pham, con nhan vien thuoc phong ban) thanh thong diep tieng Viet ro rang -- rang buoc nay khong ton tai trong mock/service.ts
 
 ### Pending Todos
 
@@ -113,6 +117,7 @@ None yet.
 - 01-01: GitHub Actions CI run + branch protection on main not verified from this environment (no gh CLI/token) — human must push branch, open PR, confirm db check green, and enable branch protection (see WINDOWS.md #1)
 - 01-04: Human must manually run the employees_select_member sabotage-and-revert teeth check (loosen to using(true), then drop policy) against the live dev DB — harness permission classifier blocks it from the executor. See WINDOWS.md entry 2 for exact steps.
 - 01-05: git push to origin denied (403) - local identity LeeCuongg is not a collaborator on lecuongg242-cloud/workforce-management; human must push with an authorized account and confirm db CI workflow is green (WINDOWS.md entry 3, same root cause as entry 1)
+- 02-03/02-04: khong co SUMMARY.md tren dia mac du code da duoc feat()/test() commit va migration da push (chi 02-01/02-02/02-05 co SUMMARY trong thu muc phase 02) -- can mot lan finalize rieng (SUMMARY + docs commit) cho hai plan nay de dong bo STATE/ROADMAP.
 
 ## Deferred Items
 
@@ -124,6 +129,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-01T04:36:05.473Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-08-01T07:19:44.406Z
+Stopped at: Completed 02-05-PLAN.md
 Resume file: None
