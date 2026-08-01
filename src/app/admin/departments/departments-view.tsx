@@ -33,11 +33,11 @@ import { formatNumber } from "@/lib/format";
 import {
   createDepartment,
   deleteDepartment,
-  listAllEmployees,
   listDepartments,
   updateDepartment,
   type DepartmentWithStats,
-} from "@/lib/mock/service";
+} from "@/lib/data/departments";
+import { listAllEmployees } from "@/lib/data/employees";
 import { useMockData } from "@/lib/mock/store";
 import type { Department } from "@/lib/types/domain";
 import type { DepartmentFormValues } from "@/lib/validation/schemas";
