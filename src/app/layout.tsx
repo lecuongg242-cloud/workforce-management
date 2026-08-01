@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 
 import { AppProviders } from "@/app/providers";
+import { getClientSession } from "@/lib/auth/session-context";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
 import "./globals.css";
 
@@ -27,13 +28,19 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Server Component: dung phien mot lan roi truyen xuong lam prop, khong
+  // component client nao duoc tu doc lai kho luu tru trinh duyet nua.
+  const initialSession = await getClientSession();
+
   return (
     <html lang="vi" className={inter.variable}>
       <body className="min-h-dvh antialiased">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders initialSession={initialSession}>
+          {children}
+        </AppProviders>
       </body>
     </html>
   );

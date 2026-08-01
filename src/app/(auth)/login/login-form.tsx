@@ -13,7 +13,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSession } from "@/lib/auth/session-provider";
-import { seedCompanies } from "@/lib/mock/seed";
 import { loginSchema, type LoginFormValues } from "@/lib/validation/schemas";
 
 export function LoginForm(): React.ReactElement {
@@ -42,11 +41,16 @@ export function LoginForm(): React.ReactElement {
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
-      await signIn(values.email);
-      // Tai khoan thuoc nhieu doanh nghiep thi phai chon truoc khi vao quan tri
-      router.push(seedCompanies.length > 1 ? "/select-company" : "/admin/dashboard");
-    } catch {
-      setSubmitError("Email hoặc mật khẩu không đúng. Vui lòng thử lại.");
+      await signIn(values.email, values.password);
+      // middleware.ts + getSessionContext() quyet dinh phan con lai: nguoi
+      // co nhieu membership se bi dua toi /select-company (NoActiveCompanyError).
+      router.push("/admin/dashboard");
+    } catch (cause) {
+      setSubmitError(
+        cause instanceof Error
+          ? cause.message
+          : "Email hoặc mật khẩu không đúng. Vui lòng thử lại.",
+      );
     }
   });
 

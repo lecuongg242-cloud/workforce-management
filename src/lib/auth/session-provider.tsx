@@ -1,18 +1,24 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 
-import { REFERENCE_DATE, STORAGE_KEY_SESSION } from "@/lib/constants";
-import { seedCompanies, seedUser } from "@/lib/mock/seed";
-import type { AppUser, CompanyRole, UserSession } from "@/lib/types/domain";
+import { selectCompanyAction } from "@/lib/data/mutations/companies";
+import { signOutAction } from "@/lib/data/mutations/session";
+import { createBrowserSupabase } from "@/lib/supabase/browser";
+import type { UserSession } from "@/lib/types/domain";
 
 /**
- * Phien dang nhap gia lap.
+ * Phien dang nhap that qua Supabase Auth.
  *
- * Giai doan nay chua noi Supabase Auth: phien duoc luu trong localStorage de
- * mo phong dung luong (dang nhap -> chon doanh nghiep -> vao trang quan tri).
- * Khi thay bang Supabase, chi can doi `signIn` / `signOut` va cach doc phien;
- * toan bo component su dung `useSession()` khong phai sua.
+ * Phien nam o cookie do `@supabase/ssr` quan ly, khong con luu o kho luu tru
+ * cua trinh duyet.
+ * `SessionProvider` khong tu doc phien nua -- no nhan `initialSession` (da
+ * duoc `src/app/layout.tsx` dung o server bang `getClientSession()`) lam
+ * prop va khoi tao state ngay lap tuc, khong con `useEffect` doc kho luu
+ * tru trinh duyet nen cung khong con trang thai "loading" nhap nhay o lan
+ * ve dau. Giu "loading" trong union kieu de khong pha call site nao dang so
+ * sanh voi no.
  */
 
 export type SessionStatus = "loading" | "authenticated" | "guest";
@@ -20,92 +26,63 @@ export type SessionStatus = "loading" | "authenticated" | "guest";
 interface SessionContextValue {
   status: SessionStatus;
   session: UserSession | null;
-  signIn: (email: string) => Promise<UserSession>;
-  selectCompany: (companyId: string, role: CompanyRole) => void;
-  signOut: () => void;
+  signIn: (email: string, password: string) => Promise<void>;
+  selectCompany: (companyId: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const SessionContext = React.createContext<SessionContextValue | null>(null);
 
-function readStoredSession(): UserSession | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY_SESSION);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as UserSession;
-    if (!parsed.user?.id || !parsed.companyId) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredSession(session: UserSession | null): void {
-  if (typeof window === "undefined") return;
-  if (session) {
-    window.localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(session));
-  } else {
-    window.localStorage.removeItem(STORAGE_KEY_SESSION);
-  }
-}
-
 export function SessionProvider({
+  initialSession,
   children,
 }: {
+  initialSession: UserSession | null;
   children: React.ReactNode;
 }): React.ReactElement {
-  const [status, setStatus] = React.useState<SessionStatus>("loading");
-  const [session, setSession] = React.useState<UserSession | null>(null);
-
-  // Doc phien sau khi da gan vao DOM — localStorage khong ton tai tren server
-  React.useEffect(() => {
-    const stored = readStoredSession();
-    setSession(stored);
-    setStatus(stored ? "authenticated" : "guest");
-  }, []);
-
-  const signIn = React.useCallback(async (email: string) => {
-    // Gia lap thoi gian goi mang
-    await new Promise((resolve) => setTimeout(resolve, 700));
-
-    const user: AppUser = { ...seedUser, email: email || seedUser.email };
-    const defaultCompany = seedCompanies[0];
-    const next: UserSession = {
-      user,
-      companyId: defaultCompany.id,
-      role: defaultCompany.role,
-      signedInAt: `${REFERENCE_DATE}T08:00:00+07:00`,
-    };
-
-    writeStoredSession(next);
-    setSession(next);
-    setStatus("authenticated");
-    return next;
-  }, []);
-
-  const selectCompany = React.useCallback(
-    (companyId: string, role: CompanyRole) => {
-      setSession((current) => {
-        const base: UserSession = current ?? {
-          user: seedUser,
-          companyId,
-          role,
-          signedInAt: `${REFERENCE_DATE}T08:00:00+07:00`,
-        };
-        const next: UserSession = { ...base, companyId, role };
-        writeStoredSession(next);
-        return next;
-      });
-      setStatus("authenticated");
-    },
-    [],
+  const router = useRouter();
+  const [session, setSession] = React.useState<UserSession | null>(
+    initialSession,
+  );
+  const [status, setStatus] = React.useState<SessionStatus>(
+    initialSession ? "authenticated" : "guest",
   );
 
-  const signOut = React.useCallback(() => {
-    writeStoredSession(null);
-    setSession(null);
-    setStatus("guest");
-  }, []);
+  // Khi server dung lai `initialSession` (sau router.refresh()), dong bo lai
+  // state cuc bo — Component nay khong tu doc phien nua.
+  React.useEffect(() => {
+    setSession(initialSession);
+    setStatus(initialSession ? "authenticated" : "guest");
+  }, [initialSession]);
+
+  const signIn = React.useCallback(
+    async (email: string, password: string): Promise<void> => {
+      const supabase = createBrowserSupabase();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        throw new Error("Email hoặc mật khẩu không đúng. Vui lòng thử lại.");
+      }
+      router.refresh();
+    },
+    [router],
+  );
+
+  const selectCompany = React.useCallback(
+    async (companyId: string): Promise<void> => {
+      await selectCompanyAction(companyId);
+      router.refresh();
+    },
+    [router],
+  );
+
+  const signOut = React.useCallback(async (): Promise<void> => {
+    await signOutAction();
+    router.replace("/login");
+    router.refresh();
+  }, [router]);
 
   const value = React.useMemo<SessionContextValue>(
     () => ({ status, session, signIn, selectCompany, signOut }),

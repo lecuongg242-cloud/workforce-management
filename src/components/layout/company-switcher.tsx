@@ -64,7 +64,9 @@ export function CompanySwitcher({
             className="gap-2.5"
             onSelect={() => {
               if (company.id === currentCompanyId) return;
-              selectCompany(company.id, company.role);
+              // TODO(02-04 Task 2): swap to `await selectCompany(company.id)`
+              // khi doi nguon du lieu sang @/lib/data/companies.
+              void selectCompany(company.id);
               router.push("/admin/dashboard");
             }}
           >

@@ -38,7 +38,9 @@ export function SelectCompanyView(): React.ReactElement {
   }, [status, router]);
 
   const handleEnter = (company: Company): void => {
-    selectCompany(company.id, company.role);
+    // TODO(02-04 Task 2): swap to `await selectCompany(company.id)` khi doi
+    // nguon du lieu sang @/lib/data/companies.
+    void selectCompany(company.id);
     router.push("/admin/dashboard");
   };
 

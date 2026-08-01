@@ -114,7 +114,9 @@ export function OnboardingWizard(): React.ReactElement {
         address: values.address,
       });
       invalidate();
-      selectCompany(company.id, company.role);
+      // TODO(02-04 Task 2): swap to `await selectCompany(company.id)` khi doi
+      // nguon du lieu sang @/lib/data/companies.
+      void selectCompany(company.id);
       toast.success("Đã tạo doanh nghiệp thành công", {
         description: `${company.name} đã sẵn sàng để thêm nhân viên.`,
       });

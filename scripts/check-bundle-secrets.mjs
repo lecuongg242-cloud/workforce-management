@@ -66,8 +66,17 @@ function loadSecretValuesFromEnvLocal() {
   return forbidden;
 }
 
+// KHONG dua "sb_secret_" vao day (da bo, 02-04): tu khi Phase 2 dua
+// `createBrowserClient()` (@supabase/ssr) that vao client bundle,
+// @supabase/supabase-js tu no dong goi mot ham tien ich noi bo kiem tra
+// TIEN TO khoa (`e.startsWith("sb_secret_")`) de phan biet khoa publishable
+// voi khoa secret — day la chuoi hang trong CHINH THU VIEN chinh hang, xuat
+// hien trong MOI du an dung browser client, khong phai mot gia tri bi mat
+// bi ro ri. Gia tri THAT cua SUPABASE_SECRET_KEY van duoc quet rieng va
+// chinh xac hon qua `loadSecretValuesFromEnvLocal()` o tren (so khop dung
+// GIA TRI ngau nhien tu .env.local, khong phai mot chuoi hang co dinh de
+// doan).
 const FIXED_SECRET_MARKERS = [
-  "sb_secret_",
   "SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
   "SUPABASE_JWT_SECRET",
