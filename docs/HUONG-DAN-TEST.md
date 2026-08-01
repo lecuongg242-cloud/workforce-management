@@ -19,8 +19,10 @@ Kiểm thử chia làm ba lớp, chạy theo đúng thứ tự:
 2. **Nghiệm thu tay** — những điều chỉ người thật bấm mới thấy được.
 3. **Sự cố đã gặp** — các bẫy có thật của dự án này, kèm cách nhận ra và xử lý.
 
-> **Quy ước:** không tài liệu nào trong repo được chứa mật khẩu hay khóa. Credential lấy
-> bằng cách chạy lệnh, không phải bằng cách đọc file.
+> **Quy ước credential.** Không file nào **được git theo dõi** chứa mật khẩu hay khóa.
+> Danh sách tài khoản (email, doanh nghiệp, vai trò) thì nằm ngay trong tài liệu này vì
+> nó không phải bí mật và không đổi. Mật khẩu tạm lấy bằng `npm run reset:passwords`,
+> hoặc đọc `docs/env.test-accounts` — file đó nằm ngoài git (`.gitignore` dòng 37).
 
 ---
 
@@ -87,20 +89,44 @@ npm run dev
 Đọc dòng `Local:` trong output để biết cổng — Next.js tự nhảy cổng khi 3000 bận, có thể
 ra 3006, 3007…
 
-`seed:auth` tạo **10 tài khoản đại diện**: mỗi doanh nghiệp một owner, một admin, một
-manager và hai nhân viên.
+### Mười tài khoản nghiệm thu
 
-| Doanh nghiệp | Mã | Email |
-|---|---|---|
-| Công ty TNHH Thương mại Ngọc Phát | `cty-01` | `nv001…nv005@ngocphat.test` |
-| Xưởng Sản xuất Bình Minh | `cty-02` | `bm001…bm005@binhminh.test` |
+`seed:auth` tạo 10 tài khoản đại diện — mỗi doanh nghiệp một owner, một admin, một
+manager và hai nhân viên:
+
+| Email | Doanh nghiệp | Vai trò | Dùng để nghiệm thu |
+|---|---|---|---|
+| `nv001@ngocphat.test` | Ngọc Phát (`cty-01`) | owner | Toàn bộ phần quản trị: dashboard, phòng ban, ca, nhân viên, tạo tài khoản |
+| `nv002@ngocphat.test` | Ngọc Phát | admin | Phân quyền cấp admin |
+| `nv003@ngocphat.test` | Ngọc Phát | manager | Phân quyền cấp giữa |
+| `nv004@ngocphat.test` | Ngọc Phát | employee | App nhân viên: chấm công, lịch sử, yêu cầu, hồ sơ |
+| `nv005@ngocphat.test` | Ngọc Phát | employee | Nhân viên thứ hai, để so sánh |
+| `bm001@binhminh.test` | Bình Minh (`cty-02`) | owner | **Kiểm cô lập**: dán id nhân viên của `cty-01` vào |
+| `bm002@binhminh.test` | Bình Minh | admin | |
+| `bm003@binhminh.test` | Bình Minh | manager | |
+| `bm004@binhminh.test` | Bình Minh | employee | App nhân viên phía doanh nghiệp thứ hai |
+| `bm005@binhminh.test` | Bình Minh | employee | |
+
+**Mật khẩu tạm không nằm trong tài liệu này.** Hai lý do, cả hai đều thực tế:
+
+- Mật khẩu commit vào git thì nằm lại trong lịch sử vĩnh viễn, kể cả sau khi xóa.
+- Chúng **đổi mỗi lần** ai đó chạy `reset:passwords` — chép vào đây là biến một tài
+  liệu đúng thành tài liệu sai ngay ở lần chạy kế tiếp.
+
+Lấy bảng mật khẩu bằng một trong hai cách:
+
+```bash
+npm run reset:passwords     # sinh bo moi va in ra man hinh
+cat docs/env.test-accounts  # bo da luu lan truoc (file nay nam ngoai git)
+```
 
 **30 nhân viên còn lại cố ý không có tài khoản** (`employees.user_id = null`). Đó không
 phải thiếu sót mà mô phỏng đúng thực tế: công nhân ca kíp không bao giờ đăng nhập. Chính
-những người này là đối tượng để test chức năng "quản trị tạo tài khoản".
+những người này là đối tượng để test chức năng "quản trị tạo tài khoản đăng nhập".
 
 > **Lần đăng nhập đầu của mọi tài khoản đều bị ép sang trang đổi mật khẩu.** Đó là AUTH-04
-> hoạt động đúng, không phải lỗi. Sau khi đổi, mật khẩu trong bảng hết hiệu lực.
+> hoạt động đúng, không phải lỗi. Sau khi đổi, mật khẩu tạm hết hiệu lực — muốn quay lại
+> trạng thái ban đầu thì chạy `npm run reset:passwords`.
 
 ---
 
