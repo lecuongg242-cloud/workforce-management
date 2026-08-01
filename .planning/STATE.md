@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Phiên thật và cắt tầng dữ liệu giả
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-08-01T04:06:03.417Z"
+stopped_at: Completed 02-02-PLAN.md
+last_updated: "2026-08-01T04:36:05.505Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 17
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 02 (Phiên thật và cắt tầng dữ liệu giả) — EXECUTING
-Plan: 2 of 11
+Plan: 3 of 11
 Status: Ready to execute
 Last activity: 2026-08-01 — Phase 02 execution started
 
-Progress: [████░░░░░░] 41%
+Progress: [█████░░░░░] 47%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [████░░░░░░] 41%
 | Phase 01 P05 | 24min | 3 tasks | 4 files |
 | Phase 01 P06 | 55min | 2 tasks | 4 files |
 | Phase 02 P01 | 35min | 4 tasks | 8 files |
+| Phase 02 P02 | 90min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,10 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-01: .env.local/.env.example publishable key renamed to NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY by operator (agent Read/Write blocked on .env* paths); hit and fixed a PowerShell 5.1 BOM incident
 - [Phase ?]: 02-01: found and fixed a second, related Windows encoding bug in .env.example (em-dash mojibake from double-encoding, not BOM) before commit, via direct byte-level replacement
 - [Phase ?]: 02-01: check:secrets gate proven to have teeth via controlled sabotage-and-revert on login-form.tsx — exit 0 -> 1 -> 0, no leftover temp code in git status
+- [Phase ?]: 02-02: platform_admins table + tf_is_platform_admin() clone tf_is_member's security-definer guard shape (no user param, RLS deny-all select policy)
+- [Phase ?]: 02-02: tf_normalize(text) uses translate() over a 134-char Vietnamese diacritic table (not unaccent extension) to match src/lib/format.ts normalizeText() exactly
+- [Phase ?]: 02-02: seed.sql identity fully split into supabase/tests/00_fixture_users.sql (pgTAP-only, never reaches cloud via db:seed); scripts/check-pgtap-assertions.mjs is the D-15a mechanical floor gate (184 assertions)
+- [Phase ?]: 02-02: discovered npm run test:db locally commits 4 synthetic fixture rows to the live Supabase db (bounded/accepted per plan's own db:seed-only acceptance criteria); logged as Threat Flag in 02-02-SUMMARY.md
 
 ### Pending Todos
 
@@ -119,6 +124,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-01T04:06:03.380Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-08-01T04:36:05.473Z
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
