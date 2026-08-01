@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: Phiên thật và cắt tầng dữ liệu giả
 status: executing
-stopped_at: Completed 02-06-PLAN.md
-last_updated: "2026-08-01T07:39:38.149Z"
+stopped_at: Completed 02-07-PLAN.md
+last_updated: "2026-08-01T08:19:32.403Z"
 last_activity: 2026-08-01
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 17
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 02 (Phiên thật và cắt tầng dữ liệu giả) — EXECUTING
-Plan: 7 of 11
+Plan: 8 of 11
 Status: Ready to execute
 Last activity: 2026-08-01 — Phase 02 execution started
 
-Progress: [██████░░░░] 59%
+Progress: [███████░░░] 65%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████░░░░] 59%
 | Phase 02 P02 | 90min | 3 tasks | 9 files |
 | Phase 02 P05 | 95min | 3 tasks | 11 files |
 | Phase 02 P06 | 55min | 2 tasks | 7 files |
+| Phase 02 P07 | 80min | 3 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-05: deleteDepartment bat rieng loi Postgres 23503 (FK vi pham, con nhan vien thuoc phong ban) thanh thong diep tieng Viet ro rang -- rang buoc nay khong ton tai trong mock/service.ts
 - [Phase ?]: 02-06: Wire contract cua GET /api/shifts la hinh dang cuoi cung (camelCase, HH:mm) — shiftRowSchema transform ngay sau doc DB, shiftWithStatsSchema (plain) dung o ca hai dau (D-12d)
 - [Phase ?]: 02-06: Cot sinh (overnight) chi duoc doc lai, khong bao gio tinh lai o tang ung dung — canh bang test sabotage-and-revert
+- [Phase ?]: createEmployee kiem ma trung khong phan biet hoa thuong qua RPC scalar tf_employee_code_taken (migration 0009), dung lai tf_normalize thay vi viet lai logic chuan hoa o JS
+- [Phase ?]: updateEmployee co hai nhanh quyen: owner/admin sua moi ho so, con lai chi sua ho so co id bang employeeId cua chinh phien -- kiem tra chay TRUOC ca createServerSupabase() de tu choi khong cham DB
+- [Phase ?]: bulkMoveDepartment tra 0 va khong cham session/DB/mang khi ids rong; audit_log ghi mot dong CHO MOI nhan vien bi doi phong ban trong thao tac hang loat, khong gop thanh mot dong
 
 ### Pending Todos
 
@@ -132,6 +136,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-01T07:39:38.109Z
-Stopped at: Completed 02-06-PLAN.md
+Last session: 2026-08-01T08:19:32.375Z
+Stopped at: Completed 02-07-PLAN.md
 Resume file: None
