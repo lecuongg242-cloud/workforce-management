@@ -21,7 +21,7 @@ import {
   listShifts,
   updateShift,
   type ShiftWithStats,
-} from "@/lib/mock/service";
+} from "@/lib/data/shifts";
 import { useMockData } from "@/lib/mock/store";
 import type { Shift } from "@/lib/types/domain";
 import type { ShiftFormValues } from "@/lib/validation/schemas";

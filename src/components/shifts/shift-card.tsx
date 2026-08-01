@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { WEEKDAY_LABEL } from "@/lib/constants";
 import { formatDuration, formatNumber, minutesBetween } from "@/lib/format";
-import type { ShiftWithStats } from "@/lib/mock/service";
+import type { ShiftWithStats } from "@/lib/data/shifts";
 
 /** The hien thi mot ca lam viec */
 export function ShiftCard({
