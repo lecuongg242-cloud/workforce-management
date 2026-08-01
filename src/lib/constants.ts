@@ -221,6 +221,48 @@ export const INDUSTRY_OPTIONS: Option<string>[] = [
   { value: "other", label: "Lĩnh vực khác" },
 ];
 
+/* -------------------------------------------------------------------------- */
+/* Vong doi tai khoan nhan vien (02-10)                                        */
+/* -------------------------------------------------------------------------- */
+
+export const ACCOUNT_LABELS = {
+  createButtonIdle: "Tạo tài khoản đăng nhập",
+  createButtonPending: "Đang tạo tài khoản…",
+  createSuccessToast: "Đã tạo tài khoản đăng nhập.",
+  dialogTitle: "Tài khoản đã được tạo",
+  dialogDescription:
+    "Mật khẩu tạm dưới đây chỉ hiển thị đúng một lần ở màn hình này. Hãy chuyển cho nhân viên qua một kênh an toàn (nhắn tin trực tiếp, gọi điện...), không gửi qua email hay kênh công khai.",
+  emailLabel: "Email đăng nhập",
+  temporaryPasswordLabel: "Mật khẩu tạm",
+  closeButton: "Đã lưu lại, đóng",
+  genericError: "Không thể tạo tài khoản cho nhân viên này.",
+} as const;
+
+/* -------------------------------------------------------------------------- */
+/* Doi mat khau bat buoc lan dau (02-10, D-16/D-16a)                          */
+/* -------------------------------------------------------------------------- */
+
+export const CHANGE_PASSWORD_LABELS = {
+  pageTitle: "Đổi mật khẩu",
+  heading: "Đổi mật khẩu lần đầu",
+  description:
+    "Đây là lần đăng nhập đầu tiên bằng mật khẩu tạm. Vui lòng đặt một mật khẩu mới trước khi tiếp tục.",
+  newPasswordLabel: "Mật khẩu mới",
+  confirmPasswordLabel: "Nhập lại mật khẩu mới",
+  submitIdle: "Đổi mật khẩu",
+  submitPending: "Đang đổi mật khẩu…",
+  successToast: "Đã đổi mật khẩu, đang chuyển hướng…",
+  // Loi loai 1: mat khau CHUA doi duoc -- nguoi dung thu lai la an toan.
+  notChangedErrorFallback: "Không đổi được mật khẩu. Vui lòng thử lại.",
+  // Loi loai 2: mat khau DA doi thanh cong nhung phien khong lam moi duoc --
+  // TUYET DOI khong duoc gop chung voi thong diep tren (T-02-10-07): nguoi
+  // dung phai biet mat khau moi da co hieu luc, khong duoc thu lai bang mat
+  // khau cu.
+  changedButSessionStaleError:
+    "Mật khẩu mới đã có hiệu lực, nhưng phiên đăng nhập chưa làm mới được. Vui lòng đăng nhập lại bằng mật khẩu mới.",
+  notForcedError: "Tài khoản của bạn không ở trạng thái buộc đổi mật khẩu.",
+} as const;
+
 export const WORK_LOCATION_OPTIONS: Option<string>[] = [
   { value: "Văn phòng chính", label: "Văn phòng chính" },
   { value: "Chi nhánh Quận 7", label: "Chi nhánh Quận 7" },

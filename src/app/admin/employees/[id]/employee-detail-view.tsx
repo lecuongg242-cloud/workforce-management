@@ -8,6 +8,8 @@ import {
   CalendarClock,
   ClipboardList,
   Clock,
+  KeyRound,
+  Loader2,
   Mail,
   MailPlus,
   MoreHorizontal,
@@ -52,6 +54,7 @@ import {
 import { useMockQuery } from "@/hooks/use-mock-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import {
+  ACCOUNT_LABELS,
   CONTRACT_TYPE_LABEL,
   GENDER_LABEL,
   REQUEST_TYPE_LABEL,
@@ -69,6 +72,7 @@ import {
 import { getMonthlySummary, listAttendance } from "@/lib/data/attendance";
 import { listDepartments } from "@/lib/data/departments";
 import { getEmployee, listAllEmployees, updateEmployee } from "@/lib/data/employees";
+import { createEmployeeAccount } from "@/lib/data/mutations/accounts";
 import { listRequests } from "@/lib/data/requests";
 import { listShifts } from "@/lib/data/shifts";
 import { useMockData } from "@/lib/mock/store";
@@ -85,6 +89,11 @@ export function EmployeeDetailView({
   const [isEditing, setIsEditing] = React.useState(false);
   const [confirmTerminate, setConfirmTerminate] = React.useState(false);
   const [isPending, setIsPending] = React.useState(false);
+  const [isCreatingAccount, setIsCreatingAccount] = React.useState(false);
+  const [newAccount, setNewAccount] = React.useState<{
+    email: string;
+    temporaryPassword: string;
+  } | null>(null);
 
   const { data, isLoading, error, reload } = useMockQuery(
     async () => {
@@ -113,6 +122,20 @@ export function EmployeeDetailView({
     },
     [employeeId, session.companyId, month],
   );
+
+  const handleCreateAccount = async (): Promise<void> => {
+    setIsCreatingAccount(true);
+    try {
+      const result = await createEmployeeAccount(employeeId);
+      setNewAccount(result);
+      invalidate();
+      toast.success(ACCOUNT_LABELS.createSuccessToast);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : ACCOUNT_LABELS.genericError);
+    } finally {
+      setIsCreatingAccount(false);
+    }
+  };
 
   const handleTerminate = async (): Promise<void> => {
     setIsPending(true);
@@ -163,6 +186,8 @@ export function EmployeeDetailView({
   const department = departments.find((item) => item.id === employee.departmentId);
   const shift = shifts.find((item) => item.id === employee.shiftId);
   const manager = allEmployees.find((item) => item.id === employee.managerId);
+  const isAdminRole = session.role === "owner" || session.role === "admin";
+  const canCreateAccount = isAdminRole && !employee.hasAccount;
 
   return (
     <div className="grid gap-6">
@@ -199,6 +224,25 @@ export function EmployeeDetailView({
               <Pencil aria-hidden="true" />
               Chỉnh sửa
             </Button>
+            {canCreateAccount ? (
+              <Button
+                variant="outline"
+                onClick={handleCreateAccount}
+                disabled={isCreatingAccount}
+              >
+                {isCreatingAccount ? (
+                  <>
+                    <Loader2 aria-hidden="true" className="animate-spin" />
+                    {ACCOUNT_LABELS.createButtonPending}
+                  </>
+                ) : (
+                  <>
+                    <KeyRound aria-hidden="true" />
+                    {ACCOUNT_LABELS.createButtonIdle}
+                  </>
+                )}
+              </Button>
+            ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger
                 aria-label="Hành động khác"
@@ -570,6 +614,34 @@ export function EmployeeDetailView({
         isPending={isPending}
         onConfirm={handleTerminate}
       />
+
+      {/* Hop thoai hien mat khau tam MOT LAN DUY NHAT — dong roi khong hien
+          lai (T-02-10, prohibition). Khong luu `newAccount` vao dau ke ngoai
+          state cua chinh component nay. */}
+      <Dialog
+        open={newAccount !== null}
+        onOpenChange={(open) => {
+          if (!open) setNewAccount(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{ACCOUNT_LABELS.dialogTitle}</DialogTitle>
+            <DialogDescription>{ACCOUNT_LABELS.dialogDescription}</DialogDescription>
+          </DialogHeader>
+          {newAccount ? (
+            <div className="grid gap-3">
+              <InfoRow label={ACCOUNT_LABELS.emailLabel} value={newAccount.email} />
+              <InfoRow
+                label={ACCOUNT_LABELS.temporaryPasswordLabel}
+                value={newAccount.temporaryPassword}
+                numeric
+              />
+            </div>
+          ) : null}
+          <Button onClick={() => setNewAccount(null)}>{ACCOUNT_LABELS.closeButton}</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -59,6 +59,12 @@ export const employeeRowSchema = z
     invitation_sent: z.boolean(),
     can_view_payslip: z.boolean(),
     can_check_in_remotely: z.boolean(),
+    // Optional: cac cau truy van CU (vd `.select(EMPLOYEE_COLUMNS)` trong
+    // mutations/employees.ts) khong doc cot nay nen key co the vang mat
+    // trong dong tho — khong phai moi noi doc employees can biet trang thai
+    // tai khoan. Noi CAN biet chinh xac (GET /api/employees*, plan 02-10)
+    // luon `.select("*")` nen cot nay luon co mat o do.
+    user_id: z.string().nullable().optional(),
   })
   .transform((row) => ({
     id: row.id,
@@ -82,6 +88,9 @@ export const employeeRowSchema = z
     invitationSent: row.invitation_sent,
     canViewPayslip: row.can_view_payslip,
     canCheckInRemotely: row.can_check_in_remotely,
+    // (row.user_id ?? null): key vang mat (undefined) va gia tri `null`
+    // tuong minh deu co nghia "chua co tai khoan" -> false.
+    hasAccount: (row.user_id ?? null) !== null,
   }));
 
 /** Hinh dang `Employee` cua domain.ts — dung o ca hai dau (D-12d). */
@@ -107,6 +116,7 @@ export const employeeSchema = z.object({
   invitationSent: z.boolean(),
   canViewPayslip: z.boolean(),
   canCheckInRemotely: z.boolean(),
+  hasAccount: z.boolean(),
 });
 
 export const paginatedEmployeeSchema = z.object({

@@ -1,0 +1,150 @@
+"use server";
+
+import { randomBytes } from "node:crypto";
+
+import { getSessionContext, requireRole } from "@/lib/auth/session-context";
+import { logMutation } from "@/lib/data/audit";
+import { createAdminSupabase } from "@/lib/supabase/admin";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { employeeRowSchema } from "@/lib/validation/api/employees";
+
+/**
+ * Server Actions vong doi tai khoan nhan vien (plan 02-10):
+ * - `createEmployeeAccount` — quan tri tao tai khoan dang nhap + mat khau tam
+ *   cho mot nhan vien chua co tai khoan.
+ * - `completeForcedPasswordChange` (them o Task 2) — nguoi dung tu hoan tat
+ *   doi mat khau bat buoc lan dau.
+ *
+ * Khuon giong `mutations/employees.ts`: `getSessionContext()` -> kiem quyen
+ * -> doc/ghi voi `company_id` tu session -> `logMutation` NGAY TRONG cung
+ * ham (D-17). Khac biet: buoc tao nguoi dung dang nhap phai di qua
+ * `createAdminSupabase()` (Admin API, bo qua RLS) vi client cookie-bound
+ * khong co quyen goi `auth.admin.*`.
+ */
+
+export interface CreateEmployeeAccountResult {
+  email: string;
+  temporaryPassword: string;
+}
+
+/**
+ * Danh sach khoa nhay cam TUYET DOI khong duoc xuat hien trong bat ky anh
+ * chup audit nao — kiem tra bang mot assertion chay that (khong phai gia
+ * dinh) truoc khi ghi `audit_log`, dung theo yeu cau cua chinh <action> cua
+ * Task 1 (02-10-PLAN.md).
+ */
+const FORBIDDEN_AUDIT_KEY_NEEDLES = ["password", "secret", "token"];
+
+function assertNoSensitiveAuditKeys(row: Record<string, unknown>): void {
+  for (const key of Object.keys(row)) {
+    const lower = key.toLowerCase();
+    if (FORBIDDEN_AUDIT_KEY_NEEDLES.some((needle) => lower.includes(needle))) {
+      throw new Error(
+        `Ảnh chụp audit chứa trường có thể nhạy cảm, đã chặn ghi: ${key}`,
+      );
+    }
+  }
+}
+
+function generateTemporaryPassword(): string {
+  return randomBytes(18).toString("base64url");
+}
+
+/**
+ * Tao tai khoan dang nhap cho MOT nhan vien chua co tai khoan. Tra ve email
+ * va mat khau tam — day la LAN DUY NHAT mat khau tam roi khoi ham nay, khong
+ * bao gio ghi xuong audit_log, cot nao cua `employees`, hay log server.
+ */
+export async function createEmployeeAccount(
+  employeeId: string,
+): Promise<CreateEmployeeAccountResult> {
+  const { companyId, userId, role } = await getSessionContext();
+  requireRole(role, ["owner", "admin"]);
+
+  const supabase = await createServerSupabase();
+
+  // Doc nguyen dong TRUOC (co user_id) bang client cookie-bound — RLS van la
+  // lop phong thu thu hai, ranh gioi doanh nghiep den tu `.eq("company_id")`.
+  const { data: beforeRow, error: beforeError } = await supabase
+    .from("employees")
+    .select("*")
+    .eq("id", employeeId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (beforeError || !beforeRow) {
+    throw new Error("Không tìm thấy nhân viên.");
+  }
+
+  const beforeRecord = beforeRow as Record<string, unknown>;
+  if (beforeRecord.user_id) {
+    throw new Error("Nhân viên này đã có tài khoản đăng nhập.");
+  }
+
+  const employee = employeeRowSchema.parse(beforeRow);
+  const temporaryPassword = generateTemporaryPassword();
+
+  // Tu day tro di dung khoa bi mat -- moi kiem quyen (requireRole) va kiem
+  // ranh gioi doanh nghiep (.eq("company_id") o tren) da xong TRUOC khi cham
+  // toi Admin API, dung khuon "tu kiem quyen truoc" cua src/lib/supabase/admin.ts.
+  const admin = createAdminSupabase();
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email: employee.email,
+    password: temporaryPassword,
+    email_confirm: true, // D-14a: khong thi tai khoan ket o cho xac nhan email.
+    app_metadata: { must_change_password: true }, // D-16: nhanh server, client khong sua duoc.
+  });
+
+  if (createError || !created?.user) {
+    throw new Error("Không thể tạo tài khoản đăng nhập cho nhân viên này.");
+  }
+
+  const newUserId = created.user.id;
+
+  // Chen membership bang client cookie-bound (KHONG phai khoa bi mat) — RLS
+  // `memberships_insert_member` chi doi hoi CHINH NGUOI GOI (actor) la thanh
+  // vien active cua company_id, khong doi hoi user_id duoc chen phai trung
+  // actor, nen thao tac "tao ho" nay van qua duoc RLS nhu mot lop kiem thu hai.
+  const { error: membershipError } = await supabase.from("memberships").insert({
+    user_id: newUserId,
+    company_id: companyId,
+    role: employee.systemRole,
+    status: "active",
+    last_accessed_at: null,
+  });
+
+  if (membershipError) {
+    throw new Error("Không thể gán quyền truy cập cho tài khoản vừa tạo.");
+  }
+
+  const { data: afterRow, error: updateError } = await supabase
+    .from("employees")
+    .update({ user_id: newUserId })
+    .eq("id", employeeId)
+    .eq("company_id", companyId)
+    .select("*")
+    .single();
+
+  if (updateError || !afterRow) {
+    throw new Error("Không thể liên kết tài khoản với hồ sơ nhân viên.");
+  }
+
+  const afterRecord = afterRow as Record<string, unknown>;
+  // Assertion chay that (khong phai gia dinh): bang `employees` khong co cot
+  // mat khau, nhung van quet ca hai anh chup truoc khi ghi audit.
+  assertNoSensitiveAuditKeys(beforeRecord);
+  assertNoSensitiveAuditKeys(afterRecord);
+
+  await logMutation({
+    companyId,
+    actorUserId: userId,
+    action: "update",
+    entityTable: "employees",
+    entityId: employeeId,
+    before: beforeRow,
+    after: afterRow,
+    reason: null,
+  });
+
+  return { email: employee.email, temporaryPassword };
+}

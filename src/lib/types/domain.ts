@@ -134,6 +134,14 @@ export interface Employee {
   invitationSent: boolean;
   canViewPayslip: boolean;
   canCheckInRemotely: boolean;
+  /**
+   * Nhan vien da co tai khoan dang nhap lien ket (`employees.user_id`
+   * khong null) hay chua — suy tu duong tao tai khoan o plan 02-10, khong
+   * phai mot truong nguoi dung nhap. Optional (khong bat buoc) de cac
+   * object Employee dung o tang gia lap (`mock/seed.ts`, se go bo o 02-11)
+   * khong phai khai them truong nay.
+   */
+  hasAccount?: boolean;
 }
 
 export interface AttendanceRecord {

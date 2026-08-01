@@ -252,6 +252,7 @@ const employeeA1 = {
   invitationSent: false,
   canViewPayslip: false,
   canCheckInRemotely: false,
+  hasAccount: false,
 };
 
 // Trung ho ten voi employeeA1 -- id la tiebreaker on dinh (emp-b1 < emp-b2).
