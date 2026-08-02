@@ -116,7 +116,7 @@ Plans:
 
 ### Phase 3: Chấm công có bằng chứng
 
-**Goal**: Mỗi bản ghi chấm công mang theo bằng chứng kiểm chứng được — ảnh hiện trường chụp tại chỗ, toạ độ nằm trong bán kính điểm làm việc, giờ do server cấp.
+**Goal**: Mỗi bản ghi chấm công mang theo bằng chứng kiểm chứng được — ảnh hiện trường chụp tại chỗ, khoảng cách tới điểm làm việc do server đo và ghi lại, giờ do server cấp. *(Sửa 2026-08-02 khi lập kế hoạch — bản gốc viết "toạ độ **nằm trong** bán kính điểm làm việc", câu này còn sót lại từ trước D-20 và mâu thuẫn với chính tiêu chí 1 đã sửa. Theo D-20a phải nói đúng: GPS không còn chặn được ai, nó chỉ còn làm chứng; hệ thống **không** bảo đảm nhân viên có mặt trong bán kính.)*
 **Depends on**: Phase 2
 **Requirements**: ATT-01, ATT-02, ATT-03, ATT-04, ATT-05, ATT-06, ATT-07, ATT-08
 **Success Criteria** (what must be TRUE):
@@ -124,10 +124,34 @@ Plans:
   1. Quản trị khai được điểm làm việc gồm tên, toạ độ và bán kính cho phép; server tự tính khoảng cách và ghi vào bản ghi. Thiếu ảnh hoặc ngoài ca thì server **từ chối** và màn hình nói rõ lý do; ngoài bán kính thì **vẫn nhận** nhưng màn hình cảnh báo kèm khoảng cách thật và bản ghi mang cờ cho quản trị xem lại. *(Sửa 2026-08-02 — xem ghi chú ATT-02 trong REQUIREMENTS.md: GPS trong nhà xưởng sai 20–50m nên chặn cứng làm người đứng đúng chỗ không chấm được.)*
   2. Màn hình chấm công chỉ mở camera chụp trực tiếp, không có đường nào chọn ảnh có sẵn trong máy; thiếu ảnh thì không gửi được.
   3. Dấu thời gian trên bản ghi là giờ server — đổi đồng hồ thiết bị không đổi được giờ đã ghi.
-  4. Quản trị mở một bản ghi chấm công bất kỳ xem lại được ảnh và vị trí; ảnh chỉ mở qua liên kết ký hạn ngắn, người ở doanh nghiệp khác cầm đúng liên kết vẫn không xem được.
+  4. Quản trị mở một bản ghi chấm công bất kỳ xem lại được ảnh và vị trí; ảnh chỉ mở qua một đường đọc tự kiểm doanh nghiệp trên **mỗi lần gọi**, người ở doanh nghiệp khác cầm đúng liên kết vẫn không xem được. *(Sửa 2026-08-02 khi lập kế hoạch — bản gốc viết "chỉ mở qua liên kết ký hạn ngắn". Nghiên cứu phase xác định cơ chế đó **không thoả** chính vế sau của tiêu chí này: một liên kết ký của Supabase Storage, một khi đã phát hành, dùng được cho bất kỳ ai cầm nó tới lúc hết hạn và không tái kiểm quyền lần nào nữa. Vế "cầm đúng liên kết vẫn không xem được" giữ nguyên và là phần bắt buộc; cơ chế đổi thành broker Route Handler.)*
   5. Lần chấm công cách tâm điểm làm việc quá xa (ngưỡng cấu hình được, mặc định 5 lần bán kính) bị đánh dấu đáng ngờ và hiện ra trong danh sách quản trị cần xem lại. *(Sửa 2026-08-02 — xem ghi chú ATT-07: cách đo cũ theo tốc độ di chuyển hầu như không bao giờ kích hoạt, vì chuỗi chấm công luôn là vào → ra nên hai lần liên tiếp cách nhau trọn một ca.)*
 
-**Plans**: TBD
+**Plans:** 7 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Tracer: lát cắt bằng chứng đầu-cuối cho một lần vào ca (migration 0011 + `tf_distance_meters`, bucket riêng tư, broker Route Handler, Camera Sheet, Dialog ảnh của quản trị)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — Điểm làm việc: Route Handler đọc, Server Action ghi, màn hình khai báo (ATT-03)
+- [ ] 03-03-PLAN.md — Camera đủ nhánh lỗi, nén ảnh, ba lý do từ chối, banner ngoài bán kính (ATT-01, ATT-08)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-04-PLAN.md — Tan ca mang bằng chứng, chữ ký chấm công sạch mọi tham số thời gian (ATT-01, ATT-02, ATT-06, ATT-08)
+- [ ] 03-05-PLAN.md — Dialog quản trị xem lại đầy đủ: ảnh, toạ độ, khoảng cách kèm độ chính xác (ATT-04, ATT-05)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 03-06-PLAN.md — Quy tắc đáng ngờ và danh sách cần xem lại (ATT-07)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 03-07-PLAN.md — Cổng cuối phase: cô lập ảnh chứng minh qua HTTP thật, cổng chặn liên kết ký, QA camera/GPS trên thiết bị thật (ATT-01, ATT-05)
+
 **UI hint**: yes
 
 ### Phase 4: Quy tắc công do doanh nghiệp tự khai
