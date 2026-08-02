@@ -42,6 +42,21 @@ export type RequestType =
 
 export type RequestStatus = "pending" | "approved" | "rejected";
 
+/** Trang thai xem xet cua quan tri doi voi mot anh cham cong (khop enum photo_review_status) */
+export type PhotoReviewStatus = "pending" | "approved" | "rejected";
+
+/**
+ * Ba ly do server tu choi mot lan cham cong (D-20b). Gia tri enum giu tieng
+ * Anh theo quy uoc du an; nhan tieng Viet nam o `ATTENDANCE_REJECTION_LABEL`
+ * trong `constants.ts`. Ngoai ban kinh KHONG nam trong danh sach nay —
+ * D-20/D-20a: ngoai ban kinh la mot ghi chu duoc chap nhan, khong phai mot
+ * ly do tu choi.
+ */
+export type AttendanceRejectionReason =
+  | "missing_photo"
+  | "outside_shift"
+  | "network_error";
+
 export type SystemRole = "owner" | "admin" | "manager" | "employee";
 
 export type CompanyRole = "owner" | "admin" | "manager" | "employee";
@@ -163,6 +178,48 @@ export interface AttendanceRecord {
   /** Ban ghi can nhan vien bo sung thong tin */
   needsSupplement: boolean;
   note: string | null;
+}
+
+export interface WorkSite {
+  id: string;
+  companyId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  radiusMeters: number;
+  isActive: boolean;
+  /** ISO date-time */
+  createdAt: string;
+}
+
+/**
+ * Bang chung mot lan cham cong (ATT-01/ATT-02/ATT-04/ATT-06). KHONG khai
+ * truong nao chua URL anh — anh chi den qua duong `/api/attendance-photos/{id}`
+ * (broker Route Handler, tiêu chí 4 cua ROADMAP).
+ */
+export interface AttendancePhoto {
+  id: string;
+  companyId: string;
+  attendanceRecordId: string;
+  kind: "check_in" | "check_out";
+  /** ISO date-time, luon la tf_server_now() cua chinh lan goi (D-19/ATT-06) */
+  capturedAt: string;
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
+  workSiteId: string | null;
+  workSiteName: string | null;
+  /** met, do server tinh qua tf_distance_meters() — khong bao gio tu client */
+  distanceMeters: number | null;
+  reviewStatus: PhotoReviewStatus;
+}
+
+/** Nhung gi client gui kem khi cham cong — thu client TU KHAI, chua phai bang chung cho toi khi server tu do lai */
+export interface PunchEvidence {
+  photo: Blob;
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number;
 }
 
 export interface WorkRequest {
@@ -311,6 +368,8 @@ export type EmployeeInput = Omit<Employee, "id" | "companyId">;
 export type DepartmentInput = Omit<Department, "id" | "companyId">;
 
 export type ShiftInput = Omit<Shift, "id" | "companyId">;
+
+export type WorkSiteInput = Omit<WorkSite, "id" | "companyId" | "createdAt">;
 
 export type WorkRequestInput = Pick<
   WorkRequest,

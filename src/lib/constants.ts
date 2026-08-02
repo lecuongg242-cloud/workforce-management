@@ -1,4 +1,5 @@
 import type {
+  AttendanceRejectionReason,
   AttendanceStatus,
   CompanyRole,
   CompanySize,
@@ -6,6 +7,7 @@ import type {
   DepartmentStatus,
   EmployeeStatus,
   Gender,
+  PhotoReviewStatus,
   RequestStatus,
   RequestType,
   ShiftStatus,
@@ -260,3 +262,118 @@ export const WORK_LOCATION_OPTIONS: Option<string>[] = [
   { value: "Kho Long An", label: "Kho Long An" },
   { value: "Làm việc từ xa", label: "Làm việc từ xa" },
 ];
+
+/* -------------------------------------------------------------------------- */
+/* Chấm công có bằng chứng (Phase 3) — TOÀN BỘ chữ tiếng Việt của phase tập   */
+/* trung ở đây trong plan 03-01 (tracer) để các plan wave sau (03-02..03-07)  */
+/* chạy song song mà không tranh cùng một file. Nguồn: 03-UI-SPEC.md          */
+/* §"Copywriting Contract" và §"UI Considerations", chép nguyên văn.          */
+/* -------------------------------------------------------------------------- */
+
+/** Ba lý do server từ chối một lần chấm công (D-20b) — mỗi lý do có tiêu đề + phần thân. */
+export const ATTENDANCE_REJECTION_LABEL: Record<
+  AttendanceRejectionReason,
+  { title: string; body: string }
+> = {
+  missing_photo: {
+    title: "Thiếu ảnh chấm công",
+    body: "Máy chủ từ chối vì không có ảnh đính kèm. Hãy chụp lại và gửi.",
+  },
+  outside_shift: {
+    title: "Ngoài giờ ca làm",
+    body: "Bạn đang chấm công ngoài khung giờ ca được phân. Liên hệ quản lý nếu đây là nhầm lẫn.",
+  },
+  network_error: {
+    title: "Mất kết nối mạng",
+    body: "Không gửi được chấm công. Vui lòng kiểm tra mạng và chạm để gửi lại.",
+  },
+} as const;
+
+/**
+ * Chữ dùng trong Camera Sheet (`camera-sheet.tsx`) — mọi trạng thái từ mở
+ * camera tới gửi chấm công. Nhánh nào chưa được nối dây ở plan tracer này
+ * (no-camera-device, camera-in-use, ngoài bán kính, từ chối quyền vị trí)
+ * vẫn khai chữ ở đây ngay từ bây giờ để plan 03-03 chỉ điền nhánh, không
+ * phải sửa file dùng chung này lần thứ hai.
+ */
+export const ATTENDANCE_EVIDENCE_LABEL = {
+  // Loading — mo camera (khong de mot khung den cam khong kem chu)
+  cameraOpening: "Đang mở camera…",
+  // Loading — dinh vi GPS
+  gpsAcquiring: "Đang lấy vị trí…",
+  gpsAcquired: "Vị trí: đã xác định",
+  // Nut hanh dong
+  submitIdle: "Gửi chấm công",
+  submitPending: "Đang gửi…",
+  submitRetry: "Gửi lại",
+  retake: "Chụp lại",
+  retry: "Thử lại",
+  acknowledge: "Đã hiểu",
+  // Tu choi quyen camera (NotAllowedError) — hien thuc day du o plan nay
+  cameraPermissionDeniedTitle: "Không có quyền dùng camera",
+  cameraPermissionDeniedBody:
+    "TimeFlow cần quyền camera để chấm công. Vào cài đặt trình duyệt để cấp quyền, sau đó thử lại.",
+  // Tu choi quyen vi tri — cong client-side truoc khi gui, khong phai mot
+  // trong ba ly do tu choi cua server (D-20b), nen tach rieng khoi
+  // ATTENDANCE_REJECTION_LABEL de khong bia them ly do thu tu
+  locationPermissionDeniedTitle: "Cần quyền truy cập vị trí",
+  locationPermissionDeniedBody:
+    "TimeFlow cần vị trí để đối chiếu với điểm làm việc. Cấp quyền vị trí trong cài đặt trình duyệt rồi thử lại.",
+  // Khong co thiet bi camera (NotFoundError/OverconstrainedError) — khong co
+  // duong lui trong phase nay (ATT-01 cam thay the bang thu vien anh)
+  noCameraDeviceTitle: "Không tìm thấy camera",
+  noCameraDeviceBody:
+    "Thiết bị này không có camera hoặc trình duyệt không truy cập được camera. Không thể chấm công trên thiết bị này.",
+  // Camera dang duoc dung o noi khac (NotReadableError) — backstop, hiem gap
+  cameraInUseTitle: "Không mở được camera",
+  cameraInUseBody:
+    "Camera có thể đang được dùng ở nơi khác. Đóng ứng dụng khác rồi thử lại.",
+  // Da ghi nhan nhung ngoai ban kinh (D-20) — CHAP NHAN, khong phai loi.
+  // Phan {tenDiemLamViec}/{khoangCach} do component tu ghep tai noi goi
+  // (cung khuon voi tieu de ConfirmDialog dong trong ShiftsView), khong
+  // dung mot ham dinh dang o day de giu constants.ts thuan du lieu tinh.
+  outsideRadiusTitle: "Đã ghi nhận — cách xa điểm làm việc",
+  outsideRadiusBodyPrefix: "Bạn cách",
+  outsideRadiusBodySuffix: "khoảng cách này. Quản trị sẽ xem lại bản ghi này.",
+} as const;
+
+/** Nhãn/rỗng cho `/admin/work-sites` (điểm làm việc) */
+export const WORK_SITE_LABEL = {
+  emptyTitle: "Chưa có điểm làm việc nào",
+  emptyBody:
+    "Khai báo điểm làm việc đầu tiên để hệ thống tính được khoảng cách khi nhân viên chấm công.",
+  addButton: "Thêm điểm làm việc",
+  // Tieu de Dialog xac nhan ngung su dung duoc GHEP tai noi goi bang
+  // template literal (`Ngừng sử dụng ${site.name}?`), giong het khuon
+  // archive cua ShiftsView — khong luu san mot chuoi co cho trong o day.
+  archiveConfirmLabel: "Ngừng sử dụng",
+  archiveConfirmBody:
+    "Nhân viên chấm công sẽ không còn được tính khoảng cách theo điểm này nữa.",
+} as const;
+
+/** Danh sách "cần xem lại" của quản trị — trạng thái rỗng lành mạnh, không phải ngõ cụt */
+export const ATTENDANCE_REVIEW_LABEL = {
+  emptyTitle: "Không có bản ghi nào cần xem lại",
+  emptyBody:
+    "Mọi lần chấm công gần đây đều nằm trong hoặc gần bán kính điểm làm việc.",
+  reviewAction: "Đánh dấu đã xem xét",
+} as const;
+
+export const PHOTO_REVIEW_STATUS_LABEL: Record<PhotoReviewStatus, string> = {
+  pending: "Chờ xem xét",
+  approved: "Đã xem xét",
+  rejected: "Đã từ chối",
+};
+
+export const PHOTO_REVIEW_STATUS_TONE: Record<PhotoReviewStatus, SemanticTone> = {
+  pending: "warning",
+  approved: "success",
+  rejected: "danger",
+};
+
+/** Ô ảnh (`AttendancePhotoDialog`) — bản ghi không có ảnh / ảnh tải lỗi */
+export const ATTENDANCE_PHOTO_DIALOG_LABEL = {
+  noPhoto: "Bản ghi này không có ảnh đính kèm.",
+  loadError: "Không tải được ảnh — liên kết đã hết hạn.",
+  reload: "Tải lại ảnh",
+} as const;

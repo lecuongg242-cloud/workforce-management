@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "db:push": "node --env-file=.env.local scripts/db.mjs push",
     "db:seed": "node --env-file=.env.local scripts/db.mjs seed",
+    "db:bucket": "node --env-file=.env.local scripts/storage-bucket.mjs",
     "test:rls": "node --env-file=.env.local scripts/db.mjs test",
     "test:db": "node --env-file=.env.local scripts/db.mjs testdb",
     "check:secrets": "node scripts/check-bundle-secrets.mjs",

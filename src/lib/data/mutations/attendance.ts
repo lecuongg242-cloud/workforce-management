@@ -4,9 +4,11 @@ import { randomUUID } from "node:crypto";
 
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
 import { logMutation } from "@/lib/data/audit";
+import { ATTENDANCE_PHOTO_BUCKET, buildAttendancePhotoPath } from "@/lib/storage/attendance-photos";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { attendanceRecordSchema } from "@/lib/validation/api/attendance";
-import type { AttendanceRecord } from "@/lib/types/domain";
+import { punchEvidenceSchema } from "@/lib/validation/api/attendance-photos";
+import type { AttendanceRecord, AttendanceRejectionReason, PunchEvidence } from "@/lib/types/domain";
 
 const ATTENDANCE_COLUMNS =
   "id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at, worked_minutes, late_minutes, early_leave_minutes, status, location, needs_supplement, note";
@@ -29,6 +31,34 @@ interface RawShiftRow {
   late_tolerance_minutes: number;
 }
 
+interface RawWorkSiteRow {
+  id: string;
+  latitude: number;
+  longitude: number;
+}
+
+interface RawAttendancePhotoRow {
+  id: string;
+  attendance_record_id: string;
+  kind: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Lỗi cham cong bi tu choi vi thieu bang chung (D-20b). `reason` khop
+ * `AttendanceRejectionReason` de tang goi (Camera Sheet, plan 03-03) phan
+ * biet duoc voi loi mang tinh he thong chung (mat mang, DB loi...).
+ */
+export class AttendanceEvidenceError extends Error {
+  constructor(
+    public readonly reason: AttendanceRejectionReason,
+    message: string,
+  ) {
+    super(message);
+    this.name = "AttendanceEvidenceError";
+  }
+}
+
 /**
  * `checkIn`/`checkOut` giu NGUYEN chu ky cu tu `mock/service.ts` (call site
  * o Task 3 khong phai sua). Diem khac biet CAN BAT BUOC voi khuon
@@ -45,12 +75,26 @@ interface RawShiftRow {
  * gio tu tinh gio-tru-gio o tang ung dung, vi do la dung lai chinh dieu ma
  * <prohibitions> cua 02-08-PLAN.md cam (mot quy uoc mui gio/thoi gian thu
  * hai) va se lech voi database mot ngay nao do.
+ *
+ * ATT-01/ATT-02/ATT-04/ATT-06 (Phase 3, plan 03-01): them tham so `evidence`
+ * (anh + toa do). `evidence` la OPTIONAL O MUC KIEU (khong phai o muc hanh
+ * vi) chi vi mot ly do co chu dich, khong phai so xot: Task 2 cua plan nay
+ * KHONG duoc phep sua `src/app/employee/employee-home-view.tsx` (file do
+ * thuoc pham vi Task 3 — noi Camera Sheet duoc noi day), nhung call site cu
+ * cua Task 3 (`checkInService(companyId, employeeId, today, time)`, 4 tham
+ * so) van con nguyen cho toi khi Task 3 chay. Giu `evidence` optional o kieu
+ * la cach DUY NHAT de `npm run typecheck` xanh cho CA HAI task ma khong phai
+ * sua truoc mot file ngoai pham vi Task 2. VE HANH VI, `evidence` la BAT
+ * BUOC: thieu no (undefined hoac khong qua duoc `punchEvidenceSchema`) nem
+ * `AttendanceEvidenceError("missing_photo", ...)` TRUOC KHI cham Storage hay
+ * ghi bat ky dong nao — khong co nhanh nao coi "khong co anh" la hop le.
  */
 export async function checkIn(
   companyId: string,
   employeeId: string,
   date: string,
   time: string,
+  evidence?: PunchEvidence,
 ): Promise<AttendanceRecord> {
   void companyId;
   void time;
@@ -69,6 +113,17 @@ export async function checkIn(
   if (!isAdminRole && employeeId !== sessionEmployeeId) {
     throw new ForbiddenError();
   }
+
+  // ATT-01/T-03-06: khong co bang chung hop le thi tu choi NGAY, TRUOC khi
+  // cham Storage hay ghi bat ky dong nao (kiem tra re nhat, chay som nhat).
+  const evidenceResult = punchEvidenceSchema.safeParse(evidence);
+  if (!evidenceResult.success) {
+    throw new AttendanceEvidenceError(
+      "missing_photo",
+      "Thiếu ảnh chấm công. Vui lòng chụp lại và gửi.",
+    );
+  }
+  const punchEvidence = evidenceResult.data;
 
   const supabase = await createServerSupabase();
 
@@ -213,6 +268,139 @@ export async function checkIn(
     entityId: resultRow.id,
     before,
     after: resultRow,
+    reason: null,
+  });
+
+  // ATT-02/ATT-07/D-20/D-20a: khoang cach do SERVER tinh qua tf_distance_meters(),
+  // khong bao gio nhan tu tham so client. Doc moi work_sites dang is_active
+  // cua doanh nghiep, giu diem GAN NHAT. Doanh nghiep chua khai diem lam
+  // viec nao van cham cong duoc — ca hai gia tri de null va di tiep.
+  // KHONG CO NHANH NAO so sanh khoang cach roi nem loi o duoi day: ngoai ban
+  // kinh la mot ghi chu duoc chap nhan (D-20), khong phai dieu kien chan.
+  const { data: workSiteRows, error: workSitesError } = await supabase
+    .from("work_sites")
+    .select("id, latitude, longitude")
+    .eq("company_id", activeCompanyId)
+    .eq("is_active", true);
+  if (workSitesError) {
+    throw new Error("Không thể tải danh sách điểm làm việc.");
+  }
+
+  let nearestWorkSiteId: string | null = null;
+  let nearestDistanceMeters: number | null = null;
+  for (const site of (workSiteRows ?? []) as RawWorkSiteRow[]) {
+    const { data: distance, error: distanceError } = await supabase.rpc(
+      "tf_distance_meters",
+      {
+        p_lat1: punchEvidence.latitude,
+        p_lng1: punchEvidence.longitude,
+        p_lat2: site.latitude,
+        p_lng2: site.longitude,
+      },
+    );
+    if (distanceError || distance === null) {
+      throw new Error("Không thể tính khoảng cách tới điểm làm việc.");
+    }
+    if (nearestDistanceMeters === null || (distance as number) < nearestDistanceMeters) {
+      nearestDistanceMeters = distance as number;
+      nearestWorkSiteId = site.id;
+    }
+  }
+
+  // T-03-06/ATT-01: anh chi den tu khung hinh truc tiep (Blob dung canh
+  // duoc kiem boi punchEvidenceSchema) — khong co duong nao khac de doc
+  // duoc mot Blob tai day. photoId la uuid, KHONG PHAI so thu tu, de khong
+  // ai liet ke duoc anh bang cach doan URL.
+  const photoId = randomUUID();
+  const storagePath = buildAttendancePhotoPath({
+    companyId: activeCompanyId,
+    employeeId,
+    photoId,
+    kind: "check_in",
+  });
+
+  const { error: uploadError } = await supabase.storage
+    .from(ATTENDANCE_PHOTO_BUCKET)
+    .upload(storagePath, punchEvidence.photo, {
+      contentType: punchEvidence.photo.type,
+      upsert: false,
+    });
+  if (uploadError) {
+    // Tai len that bai thi KHONG duoc de lai mot dong attendance_photos mo
+    // coi — dong do chi duoc ghi SAU buoc nay, nen khong ghi gi ca la dung.
+    throw new Error("Không thể tải ảnh chấm công lên máy chủ.");
+  }
+
+  // Cham vao lan thu hai trong cung (attendance_record_id, kind) cap nhat
+  // dong dang co thay vi tao dong thu hai — rang buoc `unique` cua database
+  // la lop hai, cung khuon doc-truoc-insert-hoac-update nhu attendance_records
+  // o tren.
+  const { data: existingPhoto, error: existingPhotoError } = await supabase
+    .from("attendance_photos")
+    .select("id")
+    .eq("attendance_record_id", resultRow.id)
+    .eq("kind", "check_in")
+    .eq("company_id", activeCompanyId)
+    .maybeSingle();
+  if (existingPhotoError) {
+    throw new Error("Không thể kiểm tra ảnh chấm công.");
+  }
+
+  const photoWriteRow = {
+    captured_at: nowIso,
+    latitude: punchEvidence.latitude,
+    longitude: punchEvidence.longitude,
+    accuracy_meters: punchEvidence.accuracyMeters,
+    work_site_id: nearestWorkSiteId,
+    distance_meters: nearestDistanceMeters,
+  };
+
+  let photoRow: RawAttendancePhotoRow;
+  let photoAuditAction: "insert" | "update";
+
+  if (existingPhoto) {
+    photoAuditAction = "update";
+    const { data: updatedPhoto, error: updatePhotoError } = await supabase
+      .from("attendance_photos")
+      .update({ storage_path: storagePath, ...photoWriteRow })
+      .eq("id", (existingPhoto as { id: string }).id)
+      .eq("company_id", activeCompanyId)
+      .select()
+      .single();
+    if (updatePhotoError || !updatedPhoto) {
+      throw new Error("Không thể ghi nhận ảnh chấm công.");
+    }
+    photoRow = updatedPhoto as RawAttendancePhotoRow;
+  } else {
+    photoAuditAction = "insert";
+    const { data: insertedPhoto, error: insertPhotoError } = await supabase
+      .from("attendance_photos")
+      .insert({
+        id: photoId,
+        company_id: activeCompanyId,
+        attendance_record_id: resultRow.id,
+        kind: "check_in",
+        storage_path: storagePath,
+        ...photoWriteRow,
+      })
+      .select()
+      .single();
+    if (insertPhotoError || !insertedPhoto) {
+      throw new Error("Không thể ghi nhận ảnh chấm công.");
+    }
+    photoRow = insertedPhoto as RawAttendancePhotoRow;
+  }
+
+  // D-18a: `after` chi la duong dan va sieu du lieu cua dong attendance_photos
+  // vua ghi — TUYET DOI khong phai byte anh hay chuoi base64 cua anh.
+  await logMutation({
+    companyId: activeCompanyId,
+    actorUserId: userId,
+    action: photoAuditAction,
+    entityTable: "attendance_photos",
+    entityId: photoRow.id,
+    before: null,
+    after: photoRow,
     reason: null,
   });
 
