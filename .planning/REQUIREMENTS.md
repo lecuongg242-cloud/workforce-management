@@ -48,7 +48,7 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
   > trở thành một **ghi chú**. GPS không còn chặn được ai — nó chỉ còn làm chứng. Lớp phát hiện
   > gian lận chính chuyển sang ATT-07.
 
-- [ ] **ATT-03**: Quản trị khai báo được điểm làm việc: tên, toạ độ, bán kính cho phép
+- [x] **ATT-03**: Quản trị khai báo được điểm làm việc: tên, toạ độ, bán kính cho phép
 - [x] **ATT-04**: Quản trị xem lại được ảnh và vị trí của từng bản ghi chấm công
 - [x] **ATT-05**: Ảnh chấm công lưu ở bucket riêng tư; chỉ người có quyền trong cùng doanh nghiệp mở được, qua liên kết ký hạn ngắn
 - [x] **ATT-06**: Dấu thời gian của bản ghi chấm công do server cấp, không lấy từ đồng hồ thiết bị
@@ -163,7 +163,7 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | AUTH-06 | Phase 1 | Complete (phạm vi thu hẹp — chỉ vế client bundle) |
 | ATT-01 | Phase 3 | Complete |
 | ATT-02 | Phase 3 | Complete |
-| ATT-03 | Phase 3 | Pending |
+| ATT-03 | Phase 3 | Complete |
 | ATT-04 | Phase 3 | Complete |
 | ATT-05 | Phase 3 | Complete |
 | ATT-06 | Phase 3 | Complete |

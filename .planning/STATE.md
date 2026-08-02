@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: ch-m-c-ng-c-b-ng-ch-ng
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-08-02T09:47:13.714Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-08-02T10:04:29.119Z"
 last_activity: 2026-08-02
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 24
-  completed_plans: 18
+  completed_plans: 19
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 03 (ch-m-c-ng-c-b-ng-ch-ng) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-08-02 — Phase 03 execution started
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 79%
 
 ## Performance Metrics
 
@@ -72,6 +72,7 @@ Progress: [████████░░] 75%
 | Phase 02 P08 | 100min | 3 tasks | 20 files |
 | Phase 02 P09 | 55min | 2 tasks | 10 files |
 | Phase 03 P01 | 67min | 3 tasks | 23 files |
+| Phase 03 P02 | 42min | 2 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -122,6 +123,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 03-01: checkpoint bucket/duong dan Storage xac nhan boi chu du an - option-a, attendance-photos/{company_id}/{employee_id}/{photo_id}.jpg, uu tien xoa-theo-nhan-vien cho PRIV V3
 - [Phase ?]: 03-01: checkIn() evidence optional o MUC KIEU (bat buoc o hanh vi) de giu call site 4-tham-so cu compile duoc giua Task 2 va Task 3, tranh sua employee-home-view.tsx hai lan
 - [Phase ?]: 03-01: npm run test:db chay qua TF_ALLOW_CLOUD_TESTS=1 nham thang Supabase dev that vi Docker khong co san trong moi truong thuc thi - don sach 4 dong fixture pgTAP ngay sau khi chay, theo tien le 02-02-SUMMARY.md
+- [Phase ?]: 03-02: workSiteFormSchema (dialog) chi 4 truong, khong co isActive - bat/tat la hanh dong archiveWorkSite rieng tren card, khong phai o nhap trong form
+- [Phase ?]: 03-02: BREADCRUMB_LABELS phai khai tuong minh cho moi segment co dau '-' (vd work-sites) - thieu entry se bi fallback nham thanh 'Chi tiet' (admin-topbar.tsx dong 43-44)
 
 ### Pending Todos
 
@@ -150,6 +153,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T09:47:13.209Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-08-02T10:04:29.093Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: None

@@ -127,7 +127,7 @@ Plans:
   4. Quản trị mở một bản ghi chấm công bất kỳ xem lại được ảnh và vị trí; ảnh chỉ mở qua một đường đọc tự kiểm doanh nghiệp trên **mỗi lần gọi**, người ở doanh nghiệp khác cầm đúng liên kết vẫn không xem được. *(Sửa 2026-08-02 khi lập kế hoạch — bản gốc viết "chỉ mở qua liên kết ký hạn ngắn". Nghiên cứu phase xác định cơ chế đó **không thoả** chính vế sau của tiêu chí này: một liên kết ký của Supabase Storage, một khi đã phát hành, dùng được cho bất kỳ ai cầm nó tới lúc hết hạn và không tái kiểm quyền lần nào nữa. Vế "cầm đúng liên kết vẫn không xem được" giữ nguyên và là phần bắt buộc; cơ chế đổi thành broker Route Handler.)*
   5. Lần chấm công cách tâm điểm làm việc quá xa (ngưỡng cấu hình được, mặc định 5 lần bán kính) bị đánh dấu đáng ngờ và hiện ra trong danh sách quản trị cần xem lại. *(Sửa 2026-08-02 — xem ghi chú ATT-07: cách đo cũ theo tốc độ di chuyển hầu như không bao giờ kích hoạt, vì chuỗi chấm công luôn là vào → ra nên hai lần liên tiếp cách nhau trọn một ca.)*
 
-**Plans:** 1/7 plans executed
+**Plans:** 2/7 plans executed
 
 Plans:
 **Wave 1**
@@ -136,7 +136,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — Điểm làm việc: Route Handler đọc, Server Action ghi, màn hình khai báo (ATT-03)
+- [x] 03-02-PLAN.md — Điểm làm việc: Route Handler đọc, Server Action ghi, màn hình khai báo (ATT-03)
 - [ ] 03-03-PLAN.md — Camera đủ nhánh lỗi, nén ảnh, ba lý do từ chối, banner ngoài bán kính (ATT-01, ATT-08)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -209,7 +209,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Nền dữ liệu và cô lập doanh nghiệp | 6/6 | In Progress|  |
 | 2. Phiên thật và cắt tầng dữ liệu giả | 11/11 | Complete    | 2026-08-02 |
-| 3. Chấm công có bằng chứng | 1/7 | In Progress|  |
+| 3. Chấm công có bằng chứng | 2/7 | In Progress|  |
 | 4. Quy tắc công do doanh nghiệp tự khai | 0/TBD | Not started | - |
 | 5. Duyệt yêu cầu và chốt kỳ công | 0/TBD | Not started | - |
 | 6. Super admin và hỗ trợ nhiều doanh nghiệp | 0/TBD | Not started | - |
