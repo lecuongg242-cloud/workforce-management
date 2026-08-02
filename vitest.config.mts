@@ -33,6 +33,11 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "jsdom",
       globals: false,
+      // 20s (mac dinh 5s) — test tich hop tren Postgres/Storage dev THAT
+      // (route.test.ts, attendance-evidence.test.ts, plan 03-04) goi nhieu
+      // vong RPC/Storage tuan tu qua mang that, co the vuot 5s tren ket noi
+      // cham; khong anh huong toc do cac test thuan mock (chi la mot tran).
+      testTimeout: 20000,
       setupFiles: ["./vitest.setup.ts"],
       include: [
         "src/**/*.test.ts",

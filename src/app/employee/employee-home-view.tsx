@@ -126,11 +126,8 @@ export function EmployeeHomeView({
    * mà không phải chụp lại (D-23), thay vì hiện một toast trùng lặp ở đây
    * rồi lại một toast khác ở Camera Sheet.
    *
-   * `time` (tham số thứ tư của `checkIn`) truyền chuỗi rỗng: tham số này bị
-   * `void time;` bỏ qua hoàn toàn bên trong `checkIn` (xem
-   * `src/lib/data/mutations/attendance.ts`) — không có giá trị thật nào để
-   * gửi, và tính một giá trị "thật" ở đây sẽ phải đọc đồng hồ client, vi
-   * phạm D-19a ở một file KHÔNG nằm trong danh sách miễn trừ.
+   * `checkIn(employeeId, evidence)` — chữ ký cuối cùng sau ATT-06 (plan
+   * 03-04): không còn tham số ngày/giờ nào để bỏ qua nữa.
    */
   /**
    * Tra ve `PunchSubmitResult` (plan 03-03, Task 3) de Camera Sheet tu
@@ -145,13 +142,7 @@ export function EmployeeHomeView({
   ): Promise<PunchSubmitResult> => {
     setIsPending(true);
     try {
-      const result = await checkInService(
-        session.companyId,
-        employeeId,
-        today,
-        "",
-        evidence,
-      );
+      const result = await checkInService(employeeId, evidence);
       setDemoState(null);
       invalidate();
       if (!result.isOutsideRadius) {
@@ -171,17 +162,27 @@ export function EmployeeHomeView({
     }
   };
 
+  /**
+   * `checkOut(recordId, evidence)` — plan 03-04, Task 2 đã xoá tham số
+   * `time` khỏi chữ ký. `handleCheckOut(time: string)` giữ nguyên tham số
+   * đầu vào (vẫn nhận `clock` từ `attendance-status-card.tsx`) và bản thân
+   * KHÔNG dùng nó cho đường ghi (không còn chỗ nào để dùng) — Task 3 (cùng
+   * plan) mới nối "Tan ca" đi qua Camera Sheet thật, đường ghi thật chờ Task
+   * đó. `evidence` optional Ở MỨC KIỂU (như `checkIn` ở 03-01) để lời gọi
+   * này compile được ngay sau Task 2 mà không phải sửa file này lần nữa;
+   * thiếu evidence khiến `checkOut` ném `missing_photo` ngay lập tức.
+   */
   const handleCheckOut = async (time: string): Promise<void> => {
     if (!displayRecord || displayRecord.id === "demo") {
       toast.info("Đây là dữ liệu minh họa, không thể tan ca.");
       return;
     }
+    void time;
     setIsPending(true);
     try {
-      await checkOutService(displayRecord.id, time);
+      await checkOutService(displayRecord.id);
       setDemoState(null);
       invalidate();
-      toast.success(`Đã ghi nhận giờ tan ca lúc ${time}.`);
     } catch (cause) {
       toast.error(
         cause instanceof Error ? cause.message : "Không ghi nhận được giờ ra.",

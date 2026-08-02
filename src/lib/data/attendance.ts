@@ -5,6 +5,12 @@ import {
 } from "@/lib/validation/api/attendance";
 import type { AttendanceQuery, AttendanceRecord, MonthlySummary } from "@/lib/types/domain";
 
+/**
+ * checkIn(employeeId, evidence) / checkOut(recordId, evidence) — chu ky cuoi
+ * cung sau ATT-06 (plan 03-04): khong con tham so ngay hay gio nao. Moi dau
+ * thoi gian den tu tf_server_now() cua database, khong bao gio tu tham so
+ * client (D-19).
+ */
 export { checkIn, checkOut } from "@/lib/data/mutations/attendance";
 
 /**
