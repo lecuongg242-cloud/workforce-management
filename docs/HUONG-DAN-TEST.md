@@ -1,7 +1,10 @@
 # Hướng dẫn kiểm thử TimeFlow
 
-Tài liệu này mô tả cách kiểm chứng hệ thống **sau Phase 2** — thời điểm ứng dụng lần đầu
-chạy trên Postgres thật với phiên đăng nhập thật.
+Tài liệu này mô tả cách kiểm chứng hệ thống **sau Phase 3** — thời điểm mỗi lần chấm công
+mang theo bằng chứng (ảnh chụp trực tiếp + toạ độ GPS), và quản trị có màn hình xem lại.
+
+> **Chỉ muốn đi một vòng xem có gì?** Nhảy thẳng xuống [§0](#0-đi-một-vòng-nhanh).
+> Phần còn lại là kiểm thử chi tiết, đọc khi cần.
 
 > **Thay đổi lớn so với bản trước.** Ở V1, dữ liệu nằm trong bộ nhớ và đăng nhập là giả
 > lập: email đúng định dạng cộng mật khẩu sáu ký tự là vào được, phiên lưu ở
@@ -26,6 +29,88 @@ Kiểm thử chia làm ba lớp, chạy theo đúng thứ tự:
 
 ---
 
+## 0. Đi một vòng nhanh
+
+Phần này để trả lời đúng một câu hỏi: **hệ thống hiện có những chức năng gì?** Khoảng
+20–30 phút, không cần đọc gì thêm.
+
+### 0.1 Dựng môi trường (một lần)
+
+```bash
+npm run db:push          # Ap migration (hien co 12 migration)
+npm run db:seed          # Nap du lieu mau hai doanh nghiep
+npm run db:bucket        # Tao bucket Storage rieng tu cho anh cham cong
+npm run seed:auth        # Tao 10 tai khoan dang nhap that
+npm run reset:passwords  # In bang mat khau tam — CHI HIEN MOT LAN, luu lai ngay
+npm run dev
+```
+
+Đọc dòng `Local:` trong output để biết cổng thật (Next tự nhảy cổng khi 3000 bận).
+
+### 0.2 Vòng quản trị — máy tính
+
+Đăng nhập `nv001@ngocphat.test` (owner). Lần đầu sẽ **bị ép đổi mật khẩu** — đó là đúng.
+
+| Thứ tự | Màn hình | Bạn sẽ thấy chức năng gì |
+|---|---|---|
+| 1 | `/admin/dashboard` | KPI, biểu đồ chấm công 7 ngày, hoạt động hôm nay, yêu cầu chờ duyệt |
+| 2 | `/admin/employees` | Danh sách 28 nhân viên: tìm không dấu, lọc phòng ban/trạng thái, chọn nhiều dòng đổi phòng ban hàng loạt |
+| 3 | `/admin/employees/<id>` | Hồ sơ 5 tab. **Tab chấm công có chấm tròn nhỏ ở dòng nào có ảnh** — bấm vào mở dialog xem lại bằng chứng |
+| 4 | `/admin/employees/new` | Tạo nhân viên; thử tạo trùng mã để xem cổng chặn |
+| 5 | `/admin/departments` | Thêm / sửa / xóa phòng ban |
+| 6 | `/admin/shifts` | 4 ca, có ca đêm qua ngày; nhân bản rồi sửa bản sao |
+| 7 | `/admin/work-sites` | **Mới ở phase 3** — khai báo điểm làm việc: toạ độ + bán kính cho phép |
+| 8 | `/admin/attendance/review` | **Mới ở phase 3** — danh sách lần chấm công cần người xem lại |
+
+Ba mục `/admin/attendance`, `/admin/payroll`, `/admin/settings` hiện nhãn *"Sắp ra mắt"*
+và cố ý không đi đâu cả.
+
+### 0.3 Vòng nhân viên — điện thoại
+
+Mở DevTools → Toggle device toolbar → chọn iPhone. Đăng nhập `nv004@ngocphat.test`.
+
+| Thứ tự | Màn hình | Bạn sẽ thấy chức năng gì |
+|---|---|---|
+| 1 | `/employee` | Thẻ trạng thái hôm nay, nút **Vào ca** / **Tan ca**, tóm tắt tháng, lối tắt |
+| 2 | `/employee` → bấm **Vào ca** | **Trọng tâm phase 3**: mở Camera Sheet, xin quyền camera + vị trí, chụp ảnh trực tiếp, gửi kèm toạ độ |
+| 3 | `/employee` → bấm **Tan ca** | Đi qua đúng Camera Sheet đó — lần ra cũng mang bằng chứng như lần vào |
+| 4 | `/employee/history` | Lịch sử theo tháng, lùi được tháng trước |
+| 5 | `/employee/requests` | Tạo yêu cầu: nghỉ phép, bổ sung công, điều chỉnh giờ, tăng ca |
+| 6 | `/employee/profile` | Hồ sơ cá nhân của đúng người đang đăng nhập |
+
+**Lưu ý khi test camera trên trình duyệt máy tính:** camera cần HTTPS hoặc `localhost`.
+Trên `localhost` thì chạy được. Webcam máy tính sẽ đóng vai camera điện thoại — đủ để
+xem luồng, nhưng **không thay được kiểm thử trên thiết bị thật** (mục 3.9.4).
+
+### 0.4 Xem cô lập hai doanh nghiệp có thật không
+
+Đây là lời hứa lõi của sản phẩm, và có một lệnh chứng minh nó qua HTTP thật:
+
+```bash
+npm run test:e2e-photo -- nv001@ngocphat.test '<mk>' bm001@binhminh.test '<mk>'
+```
+
+Kỳ vọng `8 pass, 0 fail`. Nó đăng nhập thật bằng ba tài khoản rồi kiểm: chủ doanh nghiệp
+A xem được ảnh của A (200), doanh nghiệp B xin đúng ảnh đó nhận **404** (không phải 403 —
+không được để lộ rằng ảnh có tồn tại), nhân viên thường cùng doanh nghiệp nhận 403, không
+cookie nhận 401.
+
+### 0.5 Bản đồ chức năng theo phase
+
+| Nhóm | Trạng thái |
+|---|---|
+| Đăng nhập, đổi mật khẩu bắt buộc, chọn doanh nghiệp, tạo doanh nghiệp | ✓ Phase 1–2 |
+| Nhân viên, phòng ban, ca làm việc, dashboard | ✓ Phase 1–2 |
+| Cô lập dữ liệu giữa hai doanh nghiệp (RLS + tầng ứng dụng) | ✓ Phase 2, mở rộng sang ảnh ở Phase 3 |
+| Chấm công vào/ra kèm ảnh trực tiếp + GPS | ✓ Phase 3 |
+| Điểm làm việc (toạ độ, bán kính) | ✓ Phase 3 |
+| Đánh dấu lần chấm công đáng ngờ + màn hình xem lại | ✓ Phase 3 |
+| Xem lại ảnh bằng chứng phía quản trị | ✓ Phase 3 |
+| Duyệt yêu cầu phía quản trị, chốt kỳ công, cài đặt doanh nghiệp | ○ Phase sau |
+| Tính lương, phiếu lương | ○ V3 |
+
+---
+
 ## 1. Cổng tự động
 
 ### 1.1 Chạy nhanh sau mỗi lần sửa code
@@ -41,7 +126,7 @@ npm run lint         # ESLint, gom rule cam doc gio may trong client component
 npm run test              # Vitest — tang du lieu, cong chan route, chuoi doi mat khau
 npm run build             # Next.js production build
 npm run check:secrets     # Quet .next/ tim khoa bi mat lot xuong client bundle
-npm run check:assertions  # Dem assertion pgTAP, san toi thieu 170
+npm run check:assertions  # Dem assertion pgTAP, san toi thieu 199
 ```
 
 ### 1.3 Cổng chạm cơ sở dữ liệu
@@ -49,8 +134,25 @@ npm run check:assertions  # Dem assertion pgTAP, san toi thieu 170
 ```bash
 npm run db:push      # Ap migration len Postgres
 npm run db:seed      # Nap lai du lieu nghiep vu hai doanh nghiep (GHI DE du lieu hien co)
+npm run db:bucket    # Tao/kiem bucket Storage rieng tu cho anh cham cong
 npm run test:rls     # pgTAP: co lap giua hai doanh nghiep
 ```
+
+### 1.3b Cổng chạy qua HTTP thật
+
+Hai lệnh này cần `npm run dev` đang chạy ở terminal khác, và cần mật khẩu tạm:
+
+```bash
+npm run test:e2e         # Dang nhap, doi mat khau, co lap giua hai doanh nghiep
+npm run test:e2e-photo -- <email-A> <mk-A> <email-B> <mk-B>   # Co lap ANH cham cong
+```
+
+`test:e2e-photo` là **cách duy nhất trong repo** phát hiện được lỗi RLS ở tầng
+`storage.objects`. Mọi test tích hợp trong `npm run test` đều mock `createServerSupabase()`
+để trả về client dùng secret key, mà client đó **bỏ qua RLS** — nên chúng không bao giờ
+chạm tới lớp ấy. Bài học này không phải lý thuyết: chính `test:e2e-photo` đã tìm ra bucket
+`attendance-photos` không có policy RLS nào, tức là mọi thao tác Storage của người dùng
+thật đều bị chặn im lặng, trong khi toàn bộ 200+ test vẫn xanh.
 
 ### 1.4 Từng cổng chứng minh điều gì
 
@@ -60,6 +162,8 @@ npm run test:rls     # pgTAP: co lap giua hai doanh nghiep
 | `npm run test:rls` | Tài khoản doanh nghiệp A không đọc/ghi được một dòng nào của B, kiểm **theo từng bảng** chứ không phải một khẳng định chung |
 | `npm run check:assertions` | Số assertion pgTAP không âm thầm giảm khi ai đó sửa bộ test |
 | `npm run check:secrets` | Không khóa bí mật nào lọt vào client bundle. Cổng này đã được chứng minh có răng bằng thủ tục phá-rồi-hoàn |
+| `npm run test:e2e-photo` | Ảnh chấm công **thật sự** cô lập giữa hai doanh nghiệp, kiểm qua HTTP thật với cookie phiên thật — không mock chỗ nào |
+| `src/__tests__/no-signed-url.test.ts` (trong `npm run test`) | Không ai lén đưa signed URL / `getPublicUrl` quay lại `src/`. Ảnh chỉ được đi qua broker route |
 | `npm run check:signup` | Đăng ký công khai đã tắt **ở endpoint thật**, không tin `config.toml` |
 | `npm run lint` | Không client component nào đọc `new Date()` / `Date.now()` ở lần vẽ đầu — nguồn gốc lỗi hydration |
 
@@ -241,6 +345,59 @@ dưới cùng có 4 tab, **không che nội dung**, mỗi nút cao tối thiểu
 - **Không chỉ dựa vào màu:** mọi badge trạng thái đều có **icon + chữ**, không chỉ chấm màu.
 - **Nút biểu tượng** đều có nhãn cho trình đọc màn hình.
 
+### 3.9 Chấm công có bằng chứng — phần mới của Phase 3
+
+#### 3.9.1 Khai báo điểm làm việc
+
+| # | Thao tác | Kỳ vọng |
+|---|---|---|
+| 35 | Owner mở `/admin/work-sites` | Danh sách điểm làm việc; rỗng thì có empty state tử tế |
+| 36 | Tạo một điểm: tên, toạ độ, bán kính | Lưu được, hiện ngay trong danh sách |
+| 37 | Sửa bán kính rồi lưu | Giá trị mới hiện đúng |
+| 38 | Đăng nhập `cty-02`, mở `/admin/work-sites` | **Chỉ thấy điểm của Bình Minh**, không thấy của Ngọc Phát |
+
+#### 3.9.2 Chấm công kèm ảnh và GPS
+
+| # | Thao tác | Kỳ vọng |
+|---|---|---|
+| 39 | Nhân viên bấm **Vào ca** | Camera Sheet mở, xin quyền camera và vị trí |
+| 40 | Chụp ảnh rồi gửi | Chấm công thành công; **giờ là giờ máy chủ**, không phải giờ máy người dùng |
+| 41 | Bấm **Tan ca**, chụp ảnh | Lần ra cũng đi qua đúng Camera Sheet đó |
+| 42 | Từ chối quyền camera | Hiện thông báo rõ ràng, không treo, không màn hình trắng |
+| 43 | Từ chối quyền vị trí | Thông báo riêng, phân biệt được với lỗi camera |
+| 44 | Bật chế độ máy bay rồi gửi | Báo mất kết nối, cho gửi lại |
+| 45 | Chấm công ở xa hơn 5× bán kính điểm gần nhất | Vẫn **nhận**, nhưng hiện banner "đã ghi nhận, sẽ được xem lại" |
+
+Bước 45 là quy tắc D-21 và nó cố ý **không chặn**: GPS trong nhà xưởng sai 20–50m, nhân
+viên có thể đang công tác, hoặc toạ độ điểm làm việc bị khai sai. Vượt ngưỡng chỉ có
+nghĩa "cần người xem lại", không có nghĩa "gian lận".
+
+#### 3.9.3 Quản trị xem lại bằng chứng
+
+| # | Thao tác | Kỳ vọng |
+|---|---|---|
+| 46 | Owner mở `/admin/attendance/review` | Danh sách lần chấm công vượt ngưỡng |
+| 47 | Mở một dòng | Dialog: hai ô ảnh (vào/ra) độc lập, khoảng cách **luôn đi kèm độ chính xác GPS**, toạ độ thô, link mở Google Maps |
+| 48 | Bấm **Đánh dấu đã xem xét** | Trạng thái đổi; `reviewed_at` là giờ máy chủ |
+| 49 | Mở hồ sơ nhân viên → tab chấm công | Dòng nào có ảnh thì có chấm tròn nhỏ; bấm mở đúng dialog trên |
+| 50 | DevTools → Network, chặn request tới broker route | Ô ảnh hiện trạng thái lỗi + nút thử lại, phần còn lại của dialog vẫn dùng được |
+
+#### 3.9.4 Kiểm trên thiết bị thật — **chưa chạy**
+
+> **Chưa ai làm những bước này.** Chúng cần điện thoại thật và không tự động hoá được.
+> Ghi ở đây để không rơi vào quên lãng.
+
+| # | Thao tác | Kỳ vọng |
+|---|---|---|
+| 51 | Mở app trên **Android**, bấm Vào ca | Chỉ mở camera **mặt sau**, không có đường vào thư viện ảnh |
+| 52 | Mở app trên **iOS**, bấm Vào ca | Như trên |
+| 53 | Đo thời gian bắt GPS, 3 lần, tại văn phòng thật | Ghi lại con số; quá lâu thì cần chỉnh timeout |
+| 54 | Từ chối quyền trên thiết bị thật rồi cấp lại | Phục hồi được, không phải cài lại app |
+| 55 | Bật chế độ máy bay trên thiết bị thật giữa lúc gửi | Báo lỗi đúng, gửi lại được sau khi có mạng |
+
+Bước 51–52 là điều **chỉ thiết bị thật mới trả lời được**: trình duyệt máy tính luôn cho
+chọn webcam, nên không chứng minh được gì về ràng buộc "chỉ camera sau, không thư viện".
+
 ---
 
 ## 4. Sự cố đã gặp trong dự án này
@@ -269,6 +426,12 @@ tài khoản hợp lệ.
 `supabase.co` / `.com` / `.in`. Bất biến "uuid tổng hợp không bao giờ chạm cloud" từ chỗ
 là quy ước đã thành thứ cưỡng chế được bằng máy.
 
+> **Sự cố này đã tái diễn hai lần trong Phase 3**, cả hai lần đều vì có người đặt
+> `TF_ALLOW_CLOUD_TESTS=1` để lách cổng chặn khi máy không có Docker. Cổng chặn đúng,
+> nhưng **cửa thoát hiểm quá dễ mở và không tự dọn**. Nếu bạn định dùng cờ đó, hãy coi
+> việc chạy đoạn SQL dọn bên dưới là **phần bắt buộc của cùng một thao tác**, không phải
+> việc để lúc khác. Cân nhắc bỏ hẳn cờ này, hoặc bắt nó tự dọn sau khi chạy.
+
 **Nếu vẫn dính** (ví dụ ai đó đặt `TF_ALLOW_CLOUD_TESTS=1`), dọn bằng:
 
 ```sql
@@ -282,7 +445,18 @@ where id in (
 and encrypted_password is null;   -- lop chan thu hai: tai khoan that khong bao gio NULL o cot nay
 ```
 
-Rồi `npm run seed:auth` để nối lại `memberships` và `employees.user_id`.
+**Phải chạy bằng `psql`, không dùng được Supabase Admin API.** `admin.deleteUser()` phải
+đọc dòng user trước khi xóa, mà chính thao tác đọc đó đang là thứ bị hỏng — nên nó thất
+bại với lỗi rỗng. Trên Windows `psql` thường không nằm sẵn trên PATH; nó ở
+`C:\Program Files\PostgreSQL\<phiên bản>\bin\psql.exe`, và chuỗi kết nối là biến
+`POSTGRES_URL_NON_POOLING` trong `.env.local`.
+
+Bốn dòng fixture còn được tham chiếu từ `platform_admins`, `memberships`,
+`employees.user_id` và `audit_log.actor_user_id`. Nếu khóa ngoại chặn lệnh `delete`, gỡ
+các tham chiếu đó trước rồi xóa lại.
+
+Rồi `npm run seed:auth` để nối lại `memberships` và `employees.user_id`, và
+`npm run reset:passwords` để có mật khẩu dùng được.
 
 ### 4.2 Mất mật khẩu tạm
 
@@ -415,6 +589,8 @@ Thay `3000` bằng cổng thật trong output của `npm run dev`.
 | Chi tiết nhân viên | `/admin/employees/<id>` |
 | Phòng ban | `/admin/departments` |
 | Ca làm việc | `/admin/shifts` |
+| Điểm làm việc | `/admin/work-sites` |
+| Chấm công cần xem lại | `/admin/attendance/review` |
 
 ### Bắt buộc đăng nhập — nhân viên, thiết kế cho điện thoại
 
@@ -439,9 +615,16 @@ trên sidebar và cố ý không điều hướng. Gõ thẳng đường link ra
 
 Không phải lỗi — nằm ngoài phạm vi hiện tại:
 
-**Sẽ làm ở các phase sau của V2:** chấm công kèm ảnh hiện trường và GPS · cấu hình điểm
-làm việc · trang cài đặt doanh nghiệp (giờ làm, ngày lễ, hệ số tăng ca) · duyệt yêu cầu
-từ phía quản trị (hiện chỉ xem được danh sách chờ) · chốt kỳ công · màn hình super admin.
+**Sẽ làm ở các phase sau của V2:** trang cài đặt doanh nghiệp (giờ làm, ngày lễ, hệ số
+tăng ca) · duyệt yêu cầu từ phía quản trị (hiện chỉ xem được danh sách chờ) · chốt kỳ
+công · màn hình super admin · màn hình chấm công tổng hợp `/admin/attendance`.
+
+**Đã xong ở Phase 3** (trước đây nằm trong danh sách này): chấm công kèm ảnh hiện trường
+và GPS · cấu hình điểm làm việc · đánh dấu lần chấm công đáng ngờ · xem lại ảnh bằng
+chứng phía quản trị.
+
+**Ngưỡng đáng ngờ hiện là hằng số** (5× bán kính điểm làm việc gần nhất), chưa đọc từ cấu
+hình doanh nghiệp — sẽ chuyển ở Phase 4 khi trang cài đặt ra đời.
 
 **Hoãn sang V3:** tính lương đầy đủ, phiếu lương, thuế và bảo hiểm.
 
@@ -460,7 +643,9 @@ mặt · thanh toán gói SaaS · mời thành viên qua email/SMS · đa ngôn 
 | `npm run build` · `npm run check:secrets` | Trước khi giao |
 | `npm run db:push` | Sau khi thêm migration |
 | `npm run db:seed` | Nạp lại dữ liệu mẫu (ghi đè dữ liệu nghiệp vụ) |
+| `npm run db:bucket` | Tạo/kiểm bucket Storage riêng tư cho ảnh chấm công |
 | `npm run test:rls` | Kiểm cô lập giữa hai doanh nghiệp |
+| `npm run test:e2e-photo` | Kiểm cô lập **ảnh chấm công** qua HTTP thật (cần `npm run dev`) |
 | `npm run check:assertions` | Kiểm số assertion pgTAP không tụt |
 | `npm run seed:auth` | Tạo 10 tài khoản thật (chạy lại được) |
 | `npm run reset:passwords` | Lấy lại mật khẩu tạm khi đã mất |
