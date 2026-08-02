@@ -1,11 +1,16 @@
 ---
-status: testing
+status: deferred
 phase: 02-phi-n-th-t-v-c-t-t-ng-d-li-u-gi
 source: [02-VERIFICATION.md]
 started: 2026-08-02
 updated: 2026-08-02
 closed_with_debt: true
-closed_by: "chu du an yeu cau dong phase truoc khi nghiem thu tay hoan tat"
+closed_by: "chu du an yeu cau dong phase truoc, tu kiem tra tay mot luot sau"
+deferred_at: 2026-08-02
+deferred_note: >
+  Phase 2 da duoc danh dau Complete ngay 2026-08-02 theo quyet dinh cua chu du an,
+  voi bon muc duoi day CHUA duoc nghiem thu. Chung khong bi xoa va khong bi coi la
+  da xong — van la `pending`. Chay `/gsd-verify-work 2` khi nao tien de ghi ket qua.
 ---
 
 # Phase 2 — Nghiệm thu tay còn tồn

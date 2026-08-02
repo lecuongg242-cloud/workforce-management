@@ -25,7 +25,7 @@ sớm có màn hình chạy được.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Nền dữ liệu và cô lập doanh nghiệp** - Schema Postgres, RLS trên mọi bảng, test rò rỉ xuyên doanh nghiệp, cổng CI, chặn khóa bí mật lọt client bundle
-- [ ] **Phase 2: Phiên thật và cắt tầng dữ liệu giả** - Supabase Auth qua cookie, phân quyền bốn vai trò, toàn bộ `service.ts` chạy trên Postgres, xóa mock
+- [x] **Phase 2: Phiên thật và cắt tầng dữ liệu giả** - Supabase Auth qua cookie, phân quyền bốn vai trò, toàn bộ `service.ts` chạy trên Postgres, xóa mock (completed 2026-08-02)
 - [ ] **Phase 3: Chấm công có bằng chứng** - Ảnh hiện trường chụp trực tiếp, GPS kiểm ở server theo bán kính điểm làm việc, màn hình quản trị xem lại
 - [ ] **Phase 4: Quy tắc công do doanh nghiệp tự khai** - Trang cài đặt: giờ làm, ân hạn, ngày lễ, hệ số tăng ca; phân loại công theo quy tắc đang hiệu lực
 - [ ] **Phase 5: Duyệt yêu cầu và chốt kỳ công** - Duyệt/từ chối có lý do, tác động đúng vào dữ liệu kỳ, lịch sử xử lý, thông báo, chốt kỳ có ghi vết
@@ -70,7 +70,7 @@ Plans:
   4. Quản trị tạo được tài khoản cho nhân viên kèm mật khẩu tạm; nhân viên đăng nhập lần đầu buộc phải đổi mật khẩu mới đi tiếp được.
   5. Mọi màn hình V1 chạy trên dữ liệu Postgres thật theo ngày giờ thật (không còn `REFERENCE_DATE`), `mock/db.ts` và `mock/seed.ts` đã bị xóa, và mỗi thao tác ghi để lại một dòng audit log truy ngược được ai / làm gì / lúc nào / trước / sau.
 
-**Plans:** 7/11 plans executed
+**Plans:** 11/11 plans complete
 
 Plans:
 **Wave 1**
@@ -83,11 +83,11 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 02-03-PLAN.md — 10 credential thật qua Admin API, 30 nhân viên không tài khoản, tắt đăng ký công khai
+- [x] 02-03-PLAN.md — 10 credential thật qua Admin API, 30 nhân viên không tài khoản, tắt đăng ký công khai
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 02-04-PLAN.md — Lát cắt xuyên suốt: phiên cookie thật, cổng `middleware.ts`, Route Handler đọc và Server Action ghi đầu tiên
+- [x] 02-04-PLAN.md — Lát cắt xuyên suốt: phiên cookie thật, cổng `middleware.ts`, Route Handler đọc và Server Action ghi đầu tiên
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -108,11 +108,11 @@ Plans:
 
 **Wave 9** *(blocked on Wave 8 completion)*
 
-- [ ] 02-10-PLAN.md — AUTH-04: quản trị tạo tài khoản kèm mật khẩu tạm, cổng buộc đổi mật khẩu lần đầu
+- [x] 02-10-PLAN.md — AUTH-04: quản trị tạo tài khoản kèm mật khẩu tạm, cổng buộc đổi mật khẩu lần đầu
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
-- [ ] 02-11-PLAN.md — Rule ESLint cưỡng chế quy ước thời gian, xóa tầng dữ liệu giả, nghiệm thu toàn phase
+- [x] 02-11-PLAN.md — Rule ESLint cưỡng chế quy ước thời gian, xóa tầng dữ liệu giả, nghiệm thu toàn phase
 
 ### Phase 3: Chấm công có bằng chứng
 
@@ -208,7 +208,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Nền dữ liệu và cô lập doanh nghiệp | 6/6 | In Progress|  |
-| 2. Phiên thật và cắt tầng dữ liệu giả | 7/11 | In Progress|  |
+| 2. Phiên thật và cắt tầng dữ liệu giả | 11/11 | Complete    | 2026-08-02 |
 | 3. Chấm công có bằng chứng | 0/TBD | Not started | - |
 | 4. Quy tắc công do doanh nghiệp tự khai | 0/TBD | Not started | - |
 | 5. Duyệt yêu cầu và chốt kỳ công | 0/TBD | Not started | - |

@@ -16,18 +16,18 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 - [x] **DATA-02**: Mọi bảng thuộc phạm vi doanh nghiệp đều bật RLS với policy xác định quyền qua bảng membership, không đọc `company_id` do client gửi lên
 - [x] **DATA-03**: Bộ test tự động chứng minh tài khoản của doanh nghiệp A không đọc/ghi được bất kỳ dòng nào của doanh nghiệp B, chạy trên chính hai bộ dữ liệu Ngọc Phát và Bình Minh
 - [x] **DATA-04**: Kiểm tra tự động chặn merge nếu có bảng mới không bật RLS hoặc bật RLS mà không có policy nào
-- [ ] **DATA-05**: Toàn bộ hàm trong `src/lib/mock/service.ts` được thay bằng truy vấn thật với chữ ký hàm giữ nguyên; `mock/db.ts` và `mock/seed.ts` bị xóa
-- [ ] **DATA-06**: Mọi thao tác thay đổi dữ liệu ghi lại vào audit log: ai, làm gì, lúc nào, giá trị trước và sau
+- [x] **DATA-05**: Toàn bộ hàm trong `src/lib/mock/service.ts` được thay bằng truy vấn thật với chữ ký hàm giữ nguyên; `mock/db.ts` và `mock/seed.ts` bị xóa
+- [x] **DATA-06**: Mọi thao tác thay đổi dữ liệu ghi lại vào audit log: ai, làm gì, lúc nào, giá trị trước và sau
 - [x] **DATA-07**: Giờ giấc lưu và tính toán nhất quán theo múi giờ Việt Nam (UTC+7); ca qua đêm cắt qua nửa đêm vẫn ra đúng tổng giờ
-- [ ] **DATA-08**: Hằng số `REFERENCE_DATE` bị gỡ bỏ, ứng dụng chạy theo thời gian thật mà không lỗi hydration
+- [x] **DATA-08**: Hằng số `REFERENCE_DATE` bị gỡ bỏ, ứng dụng chạy theo thời gian thật mà không lỗi hydration
 
 ### Xác thực và phân quyền (AUTH)
 
-- [ ] **AUTH-01**: Người dùng đăng nhập bằng Supabase Auth; phiên lưu ở cookie, không còn localStorage
-- [ ] **AUTH-02**: Route được bảo vệ ở `middleware.ts`; khách chưa đăng nhập không chạm được trang quản trị hay app nhân viên
-- [ ] **AUTH-03**: Phân quyền bốn vai trò — nhân viên, quản lý, quản trị, super admin — quyết định được xem gì và làm gì
-- [ ] **AUTH-04**: Quản trị tạo tài khoản cho nhân viên kèm mật khẩu tạm; nhân viên bắt buộc đổi mật khẩu ở lần đăng nhập đầu
-- [ ] **AUTH-05**: Người dùng thuộc nhiều doanh nghiệp chọn được doanh nghiệp làm việc; doanh nghiệp đang chọn lấy từ phiên phía server, không tin giá trị client gửi lên
+- [x] **AUTH-01**: Người dùng đăng nhập bằng Supabase Auth; phiên lưu ở cookie, không còn localStorage
+- [x] **AUTH-02**: Route được bảo vệ ở `middleware.ts`; khách chưa đăng nhập không chạm được trang quản trị hay app nhân viên
+- [x] **AUTH-03**: Phân quyền bốn vai trò — nhân viên, quản lý, quản trị, super admin — quyết định được xem gì và làm gì
+- [x] **AUTH-04**: Quản trị tạo tài khoản cho nhân viên kèm mật khẩu tạm; nhân viên bắt buộc đổi mật khẩu ở lần đăng nhập đầu
+- [x] **AUTH-05**: Người dùng thuộc nhiều doanh nghiệp chọn được doanh nghiệp làm việc; doanh nghiệp đang chọn lấy từ phiên phía server, không tin giá trị client gửi lên
 - [x] **AUTH-06**: Không khóa bí mật nào lọt xuống client bundle — `npm run check:secrets` quét `.next/static` và `.next/server/app` sau build, đối chiếu với giá trị thật của mọi biến không phải `NEXT_PUBLIC_` trong `.env.local` cộng tiền tố `sb_secret_`
 
   > **Thu hẹp phạm vi ngày 2026-07-31.** Yêu cầu này ban đầu gộp thêm vế "thu hồi và cấp lại
@@ -47,7 +47,6 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
   > **Hệ quả phải hiểu đúng, không được quên:** "trong bán kính" từ một **điều kiện bắt buộc**
   > trở thành một **ghi chú**. GPS không còn chặn được ai — nó chỉ còn làm chứng. Lớp phát hiện
   > gian lận chính chuyển sang ATT-07.
-
 
 - [ ] **ATT-03**: Quản trị khai báo được điểm làm việc: tên, toạ độ, bán kính cho phép
 - [ ] **ATT-04**: Quản trị xem lại được ảnh và vị trí của từng bản ghi chấm công
@@ -152,15 +151,15 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | DATA-02 | Phase 1 | Complete |
 | DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
-| DATA-05 | Phase 2 | Pending |
-| DATA-06 | Phase 2 | Pending |
+| DATA-05 | Phase 2 | Complete |
+| DATA-06 | Phase 2 | Complete |
 | DATA-07 | Phase 1 | Complete |
-| DATA-08 | Phase 2 | Pending |
-| AUTH-01 | Phase 2 | Pending |
-| AUTH-02 | Phase 2 | Pending |
-| AUTH-03 | Phase 2 | Pending |
-| AUTH-04 | Phase 2 | Pending |
-| AUTH-05 | Phase 2 | Pending |
+| DATA-08 | Phase 2 | Complete |
+| AUTH-01 | Phase 2 | Complete |
+| AUTH-02 | Phase 2 | Complete |
+| AUTH-03 | Phase 2 | Complete |
+| AUTH-04 | Phase 2 | Complete |
+| AUTH-05 | Phase 2 | Complete |
 | AUTH-06 | Phase 1 | Complete (phạm vi thu hẹp — chỉ vế client bundle) |
 | ATT-01 | Phase 3 | Pending |
 | ATT-02 | Phase 3 | Pending |

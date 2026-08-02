@@ -1,10 +1,32 @@
 ---
 phase: 02-phi-n-th-t-v-c-t-t-ng-d-li-u-gi
 verified: 2026-08-01T18:07:46Z
-status: human_needed
-score: 3/6 must-haves verified
+status: passed
+status_note: >
+  ĐÓNG BẰNG QUYẾT ĐỊNH CỦA CHỦ DỰ ÁN, KHÔNG PHẢI VÌ ĐÃ NGHIỆM THU ĐỦ.
+  Verifier trả `human_needed` ngày 2026-08-01: không truth nào sai, không gap nào
+  thất bại, nhưng 4 mục cần người quan sát chưa ai chạy. Chủ dự án yêu cầu đóng
+  phase ngày 2026-08-02 và sẽ kiểm một lượt sau. Bốn mục đó KHÔNG bị xoá — chúng
+  nằm ở 02-UAT.md và vẫn hiện trong /gsd-progress và /gsd-audit-uat.
+  Đọc `override` bên dưới trước khi tin con số `score`.
+score: 3/6 must-haves verified (3 present-but-behavior-unverified, 0 failed)
 behavior_unverified: 3
-overrides_applied: 0
+overrides_applied: 1
+override:
+  applied: 2026-08-02
+  by: "chu du an"
+  from_status: human_needed
+  reason: >
+    Chu du an quyet dinh dong phase truoc, tu kiem tra tay mot luot sau. Da duoc
+    canh bao ro hai lan rang phase chua nghiem thu day du va tooling tu choi dong;
+    van yeu cau dong. Day la quyet dinh cua nguoi so huu du an, khong phai suy dien
+    cua agent.
+  what_is_NOT_proven:
+    - "Giao dien quan tri co loe len truoc khi chuyen huong hay khong (AUTH-02)"
+    - "Phien con song sau khi tat han tien trinh trinh duyet (AUTH-01)"
+    - "Doi doanh nghiep khi thuoc nhieu noi, tren giao dien that (AUTH-05)"
+    - "13 man hinh V1 chay tren du lieu that, khong canh bao hydration (DATA-05, DATA-08)"
+  still_tracked_in: "02-UAT.md (status: deferred, 4 muc pending)"
 re_verification:
   previous_status: gaps_found
   previous_score: 2/6
