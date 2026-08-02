@@ -65,7 +65,7 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
   > phát hiện chính cho kiểu gian lận "nhờ đồng nghiệp chấm hộ" — kiểu mà ảnh hiện trường và
   > GPS đều không bắt được, vì ảnh không có mặt người để đối chiếu.
 
-- [ ] **ATT-08**: Nhân viên thấy rõ lý do khi chấm công bị từ chối (thiếu ảnh, ngoài ca, mất mạng), và thấy cảnh báo rõ khi chấm công được nhận nhưng **ở xa điểm làm việc**
+- [x] **ATT-08**: Nhân viên thấy rõ lý do khi chấm công bị từ chối (thiếu ảnh, ngoài ca, mất mạng), và thấy cảnh báo rõ khi chấm công được nhận nhưng **ở xa điểm làm việc**
 
   > **Sửa ngày 2026-08-02** cho khớp ATT-02: "ngoài bán kính" không còn là lý do từ chối nên
   > không thể nằm trong danh sách lý do từ chối. Nó chuyển thành **cảnh báo hiển thị** kèm
@@ -168,7 +168,7 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | ATT-05 | Phase 3 | Complete |
 | ATT-06 | Phase 3 | Complete |
 | ATT-07 | Phase 3 | Pending |
-| ATT-08 | Phase 3 | Pending |
+| ATT-08 | Phase 3 | Complete |
 | SET-01 | Phase 4 | Pending |
 | SET-02 | Phase 4 | Pending |
 | SET-03 | Phase 4 | Pending |

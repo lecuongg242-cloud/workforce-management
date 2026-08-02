@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: ch-m-c-ng-c-b-ng-ch-ng
 status: executing
-stopped_at: Completed 03-05-PLAN.md
-last_updated: "2026-08-02T10:30:44.609Z"
+stopped_at: Completed 03-03-PLAN.md
+last_updated: "2026-08-02T12:28:48.145Z"
 last_activity: 2026-08-02
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 24
-  completed_plans: 20
+  completed_plans: 21
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 03 (ch-m-c-ng-c-b-ng-ch-ng) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-08-02 — Phase 03 execution started
 
-Progress: [████████░░] 83%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -74,6 +74,7 @@ Progress: [████████░░] 83%
 | Phase 03 P01 | 67min | 3 tasks | 23 files |
 | Phase 03 P02 | 42min | 2 tasks | 12 files |
 | Phase 03 P05 | 27min | 2 tasks | 9 files |
+| Phase 03 P03 | 60min | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,10 @@ Recent decisions affecting current work:
 - [Phase ?]: 03-05: Test Task 1 dung khuon mock DB (khong phai Postgres that) vi markPhotoReviewed ghi audit_log.actor_user_id (FK toi auth.users) - userId gia lap se vi pham FK neu ghi that
 - [Phase ?]: 03-05: Import audit qua namespace (import * as auditLog) trong mutations/attendance-photos.ts de dap ung acceptance criteria grep -c logMutation == 1
 - [Phase ?]: 03-05: Go getAttendancePhotoForRecord (code chet) va chi thi use server khoi src/lib/data/attendance-photos.ts sau khi Dialog chuyen sang listAttendancePhotos qua Route Handler
+- [Phase ?]: checkpoint browser-image-compression@2.0.2 phe duyet boi chu du an — repo/tai xac nhan, khong postinstall
+- [Phase ?]: [Rule 2] checkIn() tra them distanceMeters/workSiteName/isOutsideRadius de banner D-20 dung du lieu that; onSubmit cua CameraSheet doi sang Promise<PunchSubmitResult>
+- [Phase ?]: Nguong dang ngo D-21 (5x ban kinh) khai tam trong attendance.ts cho banner tuc thi; 03-06 se hop nhat thanh cau hinh doanh nghiep chinh thuc
+- [Phase ?]: Phan loai loi Server Action bang kiem hinh dang (truong reason), khong dung instanceof — chuan bi cho isAttendanceRejection() cua 03-04
 
 ### Pending Todos
 
@@ -157,6 +162,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T10:30:44.581Z
-Stopped at: Completed 03-05-PLAN.md
+Last session: 2026-08-02T12:28:48.118Z
+Stopped at: Completed 03-03-PLAN.md
 Resume file: None
