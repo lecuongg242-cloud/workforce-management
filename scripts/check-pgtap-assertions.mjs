@@ -12,20 +12,23 @@
  * muc mot lan, con so se lech dung 4 (so assertion cua 00_rls_coverage.sql)
  * so voi thuc te chay.
  *
- * MIN_ASSERTIONS = 170 la con so do duoc ngay 2026-07-31 tren cay Phase 1
- * (truoc plan 02-02): 4 (00_rls_coverage.sql chay rieng) + 4 (00_rls_coverage.sql
- * qua run-all.sql) + 18 (01_isolation_companies.sql) + 53 (02_time_overnight.sql)
- * + 41 (03_isolation_core.sql) + 15 (04_isolation_v2.sql) + 35
- * (05_seed_fixture.sql) = 170. Moc nay CHI DUOC NANG LEN, khong bao gio ha
- * xuong — ha moc la cach am tham bien mot bo test dang co lai thanh mot
- * cong van bao xanh (xem <prohibitions> cua 02-02-PLAN.md).
+ * MIN_ASSERTIONS = 199 la con so do duoc ngay 2026-08-02 tren cay Phase 3
+ * (plan 03-01 Task 1, sau khi them 09_attendance_evidence.sql): 4
+ * (00_rls_coverage.sql chay rieng) + 4 (00_rls_coverage.sql qua run-all.sql)
+ * + 18 (01_isolation_companies.sql) + 53 (02_time_overnight.sql) + 41
+ * (03_isolation_core.sql) + 15 (04_isolation_v2.sql) + 35 (05_seed_fixture.sql)
+ * + 8 (06_platform_admins.sql) + 6 (07_search_normalize.sql) + 7
+ * (08_role_write_scope.sql) + 8 (09_attendance_evidence.sql) = 199. Moc nay
+ * CHI DUOC NANG LEN, khong bao gio ha xuong — ha moc la cach am tham bien
+ * mot bo test dang co lai thanh mot cong van bao xanh (xem <prohibitions>
+ * cua 02-02-PLAN.md).
  */
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const MIN_ASSERTIONS = 170;
+const MIN_ASSERTIONS = 199;
 
 const TESTS_DIR = path.join("supabase", "tests");
 const RUN_ALL_PATH = path.join(TESTS_DIR, "run-all.sql");

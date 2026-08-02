@@ -16,3 +16,4 @@
 \ir 06_platform_admins.sql
 \ir 07_search_normalize.sql
 \ir 08_role_write_scope.sql
+\ir 09_attendance_evidence.sql
