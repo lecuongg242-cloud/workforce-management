@@ -33,12 +33,13 @@ export function AttendanceStatusCard({
   shift: Shift | null;
   isPending: boolean;
   /**
-   * Khong con nhan tham so `time`: bam "Vào ca" chi MO Camera Sheet (plan
-   * 03-01) — dau thoi gian that su do server cap TRONG luc gui bang chung,
-   * khong phai do dong ho client tai thoi diem bam nut.
+   * Khong con nhan tham so `time`: bam "Vào ca"/"Tan ca" deu CHI MO Camera
+   * Sheet (plan 03-01 cho vao ca, 03-04 Task 3 cho tan ca) — dau thoi gian
+   * that su do server cap TRONG luc gui bang chung, khong phai do dong ho
+   * client tai thoi diem bam nut.
    */
   onCheckIn: () => void;
-  onCheckOut: (time: string) => void;
+  onCheckOut: () => void;
   canCheckInRemotely: boolean;
 }): React.ReactElement {
   const [now, setNow] = React.useState<Date | null>(null);
@@ -129,7 +130,7 @@ export function AttendanceStatusCard({
           variant="destructive"
           className="mt-5"
           disabled={isPending}
-          onClick={() => onCheckOut(clock)}
+          onClick={onCheckOut}
         >
           <LogOut aria-hidden="true" />
           {isPending ? "Đang ghi nhận…" : "Tan ca"}

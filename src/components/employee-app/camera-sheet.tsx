@@ -30,6 +30,7 @@ import {
   compressPhoto,
   openCamera,
 } from "@/lib/attendance/camera";
+import { isAttendanceRejection } from "@/lib/attendance/rejection";
 import {
   ATTENDANCE_EVIDENCE_LABEL,
   ATTENDANCE_REJECTION_LABEL,
@@ -118,36 +119,21 @@ export interface PunchSubmitResult {
   isOutsideRadius: boolean;
 }
 
-function isRejectionReason(value: unknown): value is AttendanceRejectionReason {
-  return (
-    value === "missing_photo" ||
-    value === "outside_shift" ||
-    value === "network_error"
-  );
-}
-
 /**
- * Phan loai loi tu `onSubmit` (Server Action `checkIn` qua ranh gioi
- * RSC/Server Action). Kiem theo HINH DANG (co truong `reason` hop le),
- * KHONG dung `instanceof` — mot loi nem tu Server Action co the mat nguyen
- * mau khi toi client (tai lieu Next.js: chi `message` chac chan duoc chuyen
- * tiep qua ranh gioi nay, cac truong tuy bien khac co the khong con). Cung
- * huong tiep can voi `isAttendanceRejection()` ma plan 03-04 se dinh nghia
- * chinh thuc trong `src/lib/attendance/rejection.ts` (03-04 phu thuoc 03-03,
- * chua chay o thoi diem plan nay thuc thi). Khong co truong `reason` hop le
- * -> phan loai la `network_error`, phan loai DUY NHAT client tu quyet dinh
- * (D-20b: hai ly do con lai do SERVER quyet).
+ * Phan loai loi tu `onSubmit` (Server Action `checkIn`/`checkOut` qua ranh
+ * gioi RSC/Server Action) bang `isAttendanceRejection()` chinh thuc
+ * (`src/lib/attendance/rejection.ts`, plan 03-04) — kiem theo HINH DANG (co
+ * truong `reason` hop le), KHONG dung `instanceof`: mot loi nem tu Server
+ * Action co the mat nguyen mau khi toi client (tai lieu Next.js: chi
+ * `message` chac chan duoc chuyen tiep qua ranh gioi nay). Truoc 03-04, ham
+ * nay tu viet lai chinh logic kiem hinh dang nay (03-03); gio goi thang
+ * `isAttendanceRejection()` de chi con MOT noi dinh nghia "the nao la mot
+ * loi tu choi hop le". Khong phai mot loi tu choi hop le -> phan loai la
+ * `network_error`, phan loai DUY NHAT client tu quyet dinh (D-20b: hai ly do
+ * con lai do SERVER quyet).
  */
 function classifyRejection(cause: unknown): AttendanceRejectionReason {
-  if (
-    cause &&
-    typeof cause === "object" &&
-    "reason" in cause &&
-    isRejectionReason((cause as { reason: unknown }).reason)
-  ) {
-    return (cause as { reason: AttendanceRejectionReason }).reason;
-  }
-  return "network_error";
+  return isAttendanceRejection(cause) ? cause.reason : "network_error";
 }
 
 const REJECTION_ICON: Record<AttendanceRejectionReason, LucideIcon> = {
@@ -183,10 +169,19 @@ export function CameraSheet({
   open,
   onOpenChange,
   onSubmit,
+  punchKind,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (evidence: PunchEvidence) => Promise<PunchSubmitResult>;
+  /**
+   * Phan biet vao ca / tan ca (plan 03-04, Task 3) — CHI dung cho tieu de
+   * sr-only cua Sheet (trinh doc man hinh) va la duy nhat khac biet giua hai
+   * loai o component nay. Nhan nut gui va noi dung ba khoi tu choi/banner
+   * GIU NGUYEN chung cho ca hai loai, dung UI-SPEC "Gửi chấm công" — may
+   * trang thai khong doi theo prop nay.
+   */
+  punchKind: "check_in" | "check_out";
 }): React.ReactElement {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const [state, setState] = React.useState<CameraState>("idle");
@@ -410,7 +405,11 @@ export function CameraSheet({
         showCloseButton={false}
         className="inset-0 h-full w-full max-w-none border-0 bg-black p-0 sm:max-w-none"
       >
-        <SheetTitle className="sr-only">Chấm công bằng camera</SheetTitle>
+        <SheetTitle className="sr-only">
+          {punchKind === "check_out"
+            ? ATTENDANCE_EVIDENCE_LABEL.sheetTitleCheckOut
+            : ATTENDANCE_EVIDENCE_LABEL.sheetTitleCheckIn}
+        </SheetTitle>
 
         <div className="relative flex h-full w-full flex-col">
           {/* Nut dong — nho, goc tren, khong canh tranh voi nut chup */}

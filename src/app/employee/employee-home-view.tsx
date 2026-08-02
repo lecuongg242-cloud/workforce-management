@@ -3,6 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 
+import { isAttendanceRejection } from "@/lib/attendance/rejection";
 import { ErrorState } from "@/components/common/error-state";
 import { AttendanceStatusCard } from "@/components/employee-app/attendance-status-card";
 import { CameraSheet } from "@/components/employee-app/camera-sheet";
@@ -39,6 +40,15 @@ export function EmployeeHomeView({
   const employeeId = session.user.employeeId;
   const [isPending, setIsPending] = React.useState(false);
   const [cameraOpen, setCameraOpen] = React.useState(false);
+  /**
+   * Khong null nghia la Camera Sheet dang mo o CHE DO TAN CA cho ban ghi
+   * nay (plan 03-04, Task 3) — null nghia la che do vao ca (mac dinh). Mot
+   * Camera Sheet DUY NHAT phuc vu ca hai nut "Vào ca"/"Tan ca", phan biet
+   * bang state nay thay vi dung hai Sheet rieng.
+   */
+  const [pendingCheckOutRecordId, setPendingCheckOutRecordId] = React.useState<
+    string | null
+  >(null);
 
   /**
    * Trang thai demo do nguoi dung chon o thanh cuoi trang.
@@ -112,81 +122,94 @@ export function EmployeeHomeView({
   }, [demoState, data, session.companyId, employeeId, shift, today]);
 
   /**
-   * "Vào ca" giờ CHỈ mở Camera Sheet (ATT-01) — không còn gửi chấm công
-   * trực tiếp. Server Action thật sự chạy trong `handlePunchSubmit`, nhận
-   * bằng chứng (ảnh + toạ độ) từ chính Camera Sheet.
+   * "Vào ca" giờ CHỈ mở Camera Sheet ở chế độ vào ca (ATT-01) — không còn
+   * gửi chấm công trực tiếp. Server Action thật sự chạy trong
+   * `handlePunchSubmit`, nhận bằng chứng (ảnh + toạ độ) từ chính Camera
+   * Sheet.
    */
   const handleOpenCamera = (): void => {
+    setPendingCheckOutRecordId(null);
     setCameraOpen(true);
   };
 
   /**
-   * KHÔNG bắt lỗi ở đây — để lỗi lan ngược lên `CameraSheet.handleSubmit`,
-   * nơi giữ lại ảnh + toạ độ đã chụp trong bộ nhớ và cho người dùng gửi lại
-   * mà không phải chụp lại (D-23), thay vì hiện một toast trùng lặp ở đây
-   * rồi lại một toast khác ở Camera Sheet.
-   *
-   * `checkIn(employeeId, evidence)` — chữ ký cuối cùng sau ATT-06 (plan
-   * 03-04): không còn tham số ngày/giờ nào để bỏ qua nữa.
+   * "Tan ca" (plan 03-04, Task 3) mở CÙNG Camera Sheet nhưng ở chế độ tan
+   * ca — ghi lại `recordId` cần tan ca TRƯỚC khi mở Sheet, vì `checkOut`
+   * (khác `checkIn`) cần biết đang tan ca cho bản ghi nào. Giữ nguyên kiểm
+   * tra "dữ liệu minh hoạ" đã có từ trước 03-04: không mở camera cho một
+   * bản ghi demo không tồn tại thật.
    */
+  const handleOpenCheckOut = (): void => {
+    if (!displayRecord || displayRecord.id === "demo") {
+      toast.info("Đây là dữ liệu minh họa, không thể tan ca.");
+      return;
+    }
+    setPendingCheckOutRecordId(displayRecord.id);
+    setCameraOpen(true);
+  };
+
   /**
-   * Tra ve `PunchSubmitResult` (plan 03-03, Task 3) de Camera Sheet tu
-   * quyet co hien banner "da ghi nhan nhung o xa" (D-20) hay khong bang du
-   * lieu THAT server vua tinh — khong doan o client. Khi bi danh dau
-   * (`isOutsideRadius`), KHONG toast o day: Camera Sheet se hien banner cham
-   * "Da hieu" thay the, tranh hai thong bao chong nhau cho cung mot su
-   * kien.
+   * Đóng Sheet ở BẤT KỲ chế độ nào đều xoá `pendingCheckOutRecordId` — nếu
+   * không, lần mở Camera Sheet TIẾP THEO (qua "Vào ca") sẽ vô tình kế thừa
+   * chế độ tan ca của lần trước.
+   */
+  const handleCameraOpenChange = (nextOpen: boolean): void => {
+    setCameraOpen(nextOpen);
+    if (!nextOpen) setPendingCheckOutRecordId(null);
+  };
+
+  /**
+   * KHÔNG bắt lỗi để hiện toast riêng ở đây — để lỗi lan ngược lên
+   * `CameraSheet.handleSubmit`, nơi giữ lại ảnh + toạ độ đã chụp trong bộ
+   * nhớ và cho người dùng gửi lại mà không phải chụp lại (D-23), thay vì
+   * hiện một toast trùng lặp ở đây rồi lại một khối banner khác ở Camera
+   * Sheet cho CÙNG một sự kiện. `isAttendanceRejection(cause)` chỉ dùng để
+   * LOG (không toast, không chặn lan lỗi) khi lỗi KHÔNG PHẢI một lần từ
+   * chối đã biết — một tín hiệu debug rẻ cho lỗi hạ tầng thật sự (DB lỗi,
+   * mất kết nối RPC) mà không đụng tới đường hiển thị đã chứng minh của
+   * Camera Sheet.
+   *
+   * Dùng CHUNG cho cả vào ca lẫn tan ca — `pendingCheckOutRecordId` (state)
+   * quyết định gọi `checkInService` hay `checkOutService`, cùng một
+   * `PunchSubmitResult` trả về cho Camera Sheet quyết định có hiện banner
+   * "đã ghi nhận nhưng ở xa" (D-20) hay không bằng dữ liệu THẬT server vừa
+   * tính — không đoán ở client.
    */
   const handlePunchSubmit = async (
     evidence: PunchEvidence,
   ): Promise<PunchSubmitResult> => {
     setIsPending(true);
     try {
-      const result = await checkInService(employeeId, evidence);
+      const result = pendingCheckOutRecordId
+        ? await checkOutService(pendingCheckOutRecordId, evidence)
+        : await checkInService(employeeId, evidence);
       setDemoState(null);
       invalidate();
       if (!result.isOutsideRadius) {
-        toast.success(
-          result.checkIn
-            ? `Đã ghi nhận giờ vào ca lúc ${result.checkIn}.`
-            : "Đã ghi nhận giờ vào ca.",
-        );
+        if (pendingCheckOutRecordId) {
+          toast.success(
+            result.checkOut
+              ? `Đã ghi nhận giờ tan ca lúc ${result.checkOut}.`
+              : "Đã ghi nhận giờ tan ca.",
+          );
+        } else {
+          toast.success(
+            result.checkIn
+              ? `Đã ghi nhận giờ vào ca lúc ${result.checkIn}.`
+              : "Đã ghi nhận giờ vào ca.",
+          );
+        }
       }
       return {
         distanceMeters: result.distanceMeters,
         workSiteName: result.workSiteName,
         isOutsideRadius: result.isOutsideRadius,
       };
-    } finally {
-      setIsPending(false);
-    }
-  };
-
-  /**
-   * `checkOut(recordId, evidence)` — plan 03-04, Task 2 đã xoá tham số
-   * `time` khỏi chữ ký. `handleCheckOut(time: string)` giữ nguyên tham số
-   * đầu vào (vẫn nhận `clock` từ `attendance-status-card.tsx`) và bản thân
-   * KHÔNG dùng nó cho đường ghi (không còn chỗ nào để dùng) — Task 3 (cùng
-   * plan) mới nối "Tan ca" đi qua Camera Sheet thật, đường ghi thật chờ Task
-   * đó. `evidence` optional Ở MỨC KIỂU (như `checkIn` ở 03-01) để lời gọi
-   * này compile được ngay sau Task 2 mà không phải sửa file này lần nữa;
-   * thiếu evidence khiến `checkOut` ném `missing_photo` ngay lập tức.
-   */
-  const handleCheckOut = async (time: string): Promise<void> => {
-    if (!displayRecord || displayRecord.id === "demo") {
-      toast.info("Đây là dữ liệu minh họa, không thể tan ca.");
-      return;
-    }
-    void time;
-    setIsPending(true);
-    try {
-      await checkOutService(displayRecord.id);
-      setDemoState(null);
-      invalidate();
     } catch (cause) {
-      toast.error(
-        cause instanceof Error ? cause.message : "Không ghi nhận được giờ ra.",
-      );
+      if (!isAttendanceRejection(cause)) {
+        console.error("Punch submit error (non-rejection):", cause);
+      }
+      throw cause;
     } finally {
       setIsPending(false);
     }
@@ -228,7 +251,7 @@ export function EmployeeHomeView({
             shift={shift}
             isPending={isPending}
             onCheckIn={handleOpenCamera}
-            onCheckOut={handleCheckOut}
+            onCheckOut={handleOpenCheckOut}
             canCheckInRemotely={data.employee?.canCheckInRemotely ?? false}
           />
 
@@ -242,8 +265,9 @@ export function EmployeeHomeView({
 
       <CameraSheet
         open={cameraOpen}
-        onOpenChange={setCameraOpen}
+        onOpenChange={handleCameraOpenChange}
         onSubmit={handlePunchSubmit}
+        punchKind={pendingCheckOutRecordId ? "check_out" : "check_in"}
       />
     </div>
   );

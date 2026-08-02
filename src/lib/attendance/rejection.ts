@@ -39,12 +39,15 @@ function isValidRejectionReason(
 /**
  * Ve si kieu KIEM THEO HINH DANG (co truong `reason` hop le), KHONG dung
  * `instanceof` — mot loi nem tu Server Action co the mat nguyen mau khi toi
- * client qua ranh gioi RSC (tai lieu Next.js: chi `message` chac chan duoc
- * chuyen tiep qua ranh gioi nay, cac truong tuy bien khac cua mot class loi
- * co the khong con). Dung o CA HAI dau: giao dien (`camera-sheet.tsx`,
- * `employee-home-view.tsx`) BAT BUOC kiem hinh dang; noi bo Server Action
- * (`mutations/attendance.ts`) van dung duoc vi cung mot tien trinh, nhung
- * dung chung mot ham thay vi viet hai lan.
+ * client qua ranh gioi RSC (tai lieu Next.js: CHI `message` chac chan duoc
+ * chuyen tiep qua ranh gioi nay; moi truong tuy bien khac cua mot class loi,
+ * KE CA `name`, co the khong con). Vi vay ham nay CHI kiem su co mat cua mot
+ * truong `reason` hop le — KHONG doi hoi `name === "AttendanceRejectedError"`
+ * (mot phien ban truoc cua ham nay co doi hoi do va da vo tinh tu choi dung
+ * chinh hinh dang serialize qua ranh gioi Server Action thuc te). Dung o CA
+ * HAI dau: giao dien (`camera-sheet.tsx`, `employee-home-view.tsx`) BAT BUOC
+ * kiem hinh dang; noi bo Server Action (`mutations/attendance.ts`) van dung
+ * duoc vi cung mot tien trinh, nhung dung chung mot ham thay vi viet hai lan.
  */
 export function isAttendanceRejection(
   cause: unknown,
@@ -52,8 +55,6 @@ export function isAttendanceRejection(
   return (
     typeof cause === "object" &&
     cause !== null &&
-    "name" in cause &&
-    (cause as { name: unknown }).name === "AttendanceRejectedError" &&
     "reason" in cause &&
     isValidRejectionReason((cause as { reason: unknown }).reason)
   );

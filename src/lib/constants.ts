@@ -297,6 +297,11 @@ export const ATTENDANCE_REJECTION_LABEL: Record<
  * phải sửa file dùng chung này lần thứ hai.
  */
 export const ATTENDANCE_EVIDENCE_LABEL = {
+  // Tieu de sr-only cua Sheet — phan biet theo loai cham (plan 03-04, Task 3)
+  // de trinh doc man hinh noi dung viec dang lam, khong doi nut gui/banner
+  // (UI-SPEC chot "Gửi chấm công" la chu chung cho ca hai loai).
+  sheetTitleCheckIn: "Chấm công vào ca bằng camera",
+  sheetTitleCheckOut: "Chấm công tan ca bằng camera",
   // Loading — mo camera (khong de mot khung den cam khong kem chu)
   cameraOpening: "Đang mở camera…",
   // Loading — dinh vi GPS
