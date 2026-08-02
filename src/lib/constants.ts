@@ -376,12 +376,33 @@ export const WORK_SITE_LABEL = {
   radiusHelp: "không phải điều kiện chặn chấm công",
 } as const;
 
-/** Danh sách "cần xem lại" của quản trị — trạng thái rỗng lành mạnh, không phải ngõ cụt */
+/**
+ * Danh sách "cần xem lại" của quản trị (D-21/ATT-07, `/admin/attendance/review`,
+ * plan 03-06) — trạng thái rỗng lành mạnh, không phải ngõ cụt. Chữ tiêu đề/mô
+ * tả trên trang MỜI người đọc kiểm tra, không kết luận thay họ: khoảng cách
+ * lớn có thể là GPS đo sai, có thể là đi công tác, có thể là điểm làm việc
+ * khai sai toạ độ — không bao giờ dùng từ ngữ buộc tội (T-03-06-06).
+ */
 export const ATTENDANCE_REVIEW_LABEL = {
+  pageTitle: "Cần xem lại",
+  pageDescriptionPrefix: "Đang có",
+  pageDescriptionSuffix:
+    "bản ghi chấm công cách xa điểm làm việc bất thường. Khoảng cách lớn có thể do GPS đo sai, nhân viên đi công tác, hoặc điểm làm việc khai sai toạ độ — hãy xem chi tiết để kiểm tra, không tự kết luận.",
   emptyTitle: "Không có bản ghi nào cần xem lại",
   emptyBody:
     "Mọi lần chấm công gần đây đều nằm trong hoặc gần bán kính điểm làm việc.",
   reviewAction: "Đánh dấu đã xem xét",
+  detailAction: "Xem chi tiết",
+  employeeColumn: "Nhân viên",
+  workSiteColumn: "Điểm làm việc",
+  distanceColumn: "Khoảng cách",
+  capturedAtColumn: "Thời điểm",
+  reviewStatusColumn: "Trạng thái xem xét",
+  actionColumn: "Hành động",
+  // "gấp {số} lần bán kính" — ghép tại nơi gọi cùng con số bội số đã tính ở server.
+  multiplierPrefix: "gấp",
+  multiplierSuffix: "lần bán kính",
+  accuracyPrefix: "Độ chính xác GPS",
 } as const;
 
 export const PHOTO_REVIEW_STATUS_LABEL: Record<PhotoReviewStatus, string> = {

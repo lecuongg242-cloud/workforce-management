@@ -8,6 +8,7 @@ import {
   MapPin,
   Network,
   Settings,
+  ShieldAlert,
   User,
   Users,
   Wallet,
@@ -32,6 +33,11 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     href: "/admin/attendance",
     icon: Clock3,
     comingSoon: true,
+  },
+  {
+    label: "Cần xem lại",
+    href: "/admin/attendance/review",
+    icon: ShieldAlert,
   },
   { label: "Bảng lương", href: "/admin/payroll", icon: Wallet, comingSoon: true },
   { label: "Cài đặt", href: "/admin/settings", icon: Settings, comingSoon: true },
@@ -62,6 +68,7 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   // (xem admin-topbar.tsx dong 43-44) — phai khai tuong minh.
   "work-sites": "Điểm làm việc",
   attendance: "Chấm công",
+  review: "Cần xem lại",
   payroll: "Bảng lương",
   settings: "Cài đặt",
 };
