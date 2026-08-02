@@ -26,7 +26,6 @@ import { listShifts } from "@/lib/data/shifts";
 import { formatFullDate, getShortName } from "@/lib/format";
 import { useDataStore } from "@/lib/data/store";
 import type { AttendanceRecord, CheckInState, PunchEvidence } from "@/lib/types/domain";
-import { DemoStateSwitcher } from "@/components/employee-app/demo-state-switcher";
 
 export function EmployeeHomeView({
   today,
@@ -49,12 +48,6 @@ export function EmployeeHomeView({
   const [pendingCheckOutRecordId, setPendingCheckOutRecordId] = React.useState<
     string | null
   >(null);
-
-  /**
-   * Trang thai demo do nguoi dung chon o thanh cuoi trang.
-   * `null` nghia la lay theo du lieu that trong kho mock.
-   */
-  const [demoState, setDemoState] = React.useState<CheckInState | null>(null);
 
   const { data, isLoading, error, reload } = useDataQuery(
     async () => {
@@ -85,41 +78,8 @@ export function EmployeeHomeView({
       ? "finished"
       : "working";
 
-  const state = demoState ?? realState;
-
-  /** Ban ghi hien thi — khi demo can du lieu gia lap thi dung ban mau */
-  const displayRecord: AttendanceRecord | null = React.useMemo(() => {
-    if (!demoState || !data) return data?.todayRecord ?? null;
-    if (demoState === "not_started") return null;
-
-    const base: AttendanceRecord = data.todayRecord ?? {
-      id: "demo",
-      companyId: session.companyId,
-      employeeId,
-      date: today,
-      shiftId: shift?.id ?? "",
-      checkIn: "07:52",
-      checkOut: null,
-      workedMinutes: 0,
-      lateMinutes: 0,
-      earlyLeaveMinutes: 0,
-      status: "on_time",
-      location: data.employee?.workLocation ?? "Văn phòng chính",
-      needsSupplement: false,
-      note: null,
-    };
-
-    if (demoState === "working") {
-      return { ...base, checkIn: base.checkIn ?? "07:52", checkOut: null };
-    }
-    return {
-      ...base,
-      checkIn: base.checkIn ?? "07:52",
-      checkOut: base.checkOut ?? "17:34",
-      workedMinutes: base.workedMinutes > 0 ? base.workedMinutes : 492,
-      status: base.checkOut ? base.status : "on_time",
-    };
-  }, [demoState, data, session.companyId, employeeId, shift, today]);
+  /** Ban ghi hien thi */
+  const displayRecord: AttendanceRecord | null = data?.todayRecord ?? null;
 
   /**
    * "Vào ca" giờ CHỈ mở Camera Sheet ở chế độ vào ca (ATT-01) — không còn
@@ -135,15 +95,10 @@ export function EmployeeHomeView({
   /**
    * "Tan ca" (plan 03-04, Task 3) mở CÙNG Camera Sheet nhưng ở chế độ tan
    * ca — ghi lại `recordId` cần tan ca TRƯỚC khi mở Sheet, vì `checkOut`
-   * (khác `checkIn`) cần biết đang tan ca cho bản ghi nào. Giữ nguyên kiểm
-   * tra "dữ liệu minh hoạ" đã có từ trước 03-04: không mở camera cho một
-   * bản ghi demo không tồn tại thật.
+   * (khác `checkIn`) cần biết đang tan ca cho bản ghi nào.
    */
   const handleOpenCheckOut = (): void => {
-    if (!displayRecord || displayRecord.id === "demo") {
-      toast.info("Đây là dữ liệu minh họa, không thể tan ca.");
-      return;
-    }
+    if (!displayRecord) return;
     setPendingCheckOutRecordId(displayRecord.id);
     setCameraOpen(true);
   };
@@ -183,7 +138,6 @@ export function EmployeeHomeView({
       const result = pendingCheckOutRecordId
         ? await checkOutService(pendingCheckOutRecordId, evidence)
         : await checkInService(employeeId, evidence);
-      setDemoState(null);
       invalidate();
       if (!result.isOutsideRadius) {
         if (pendingCheckOutRecordId) {
@@ -246,7 +200,7 @@ export function EmployeeHomeView({
           />
 
           <AttendanceStatusCard
-            state={state}
+            state={realState}
             record={displayRecord}
             shift={shift}
             isPending={isPending}
@@ -258,8 +212,6 @@ export function EmployeeHomeView({
           <MonthSummary summary={data.summary} />
 
           <QuickActions />
-
-          <DemoStateSwitcher value={demoState} onChange={setDemoState} />
         </>
       )}
 
