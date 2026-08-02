@@ -16,12 +16,13 @@ import { createServerSupabase } from "@/lib/supabase/server";
  * `dynamic` va `GET`.
  *
  * TUYET DOI KHONG dung ham tao lien ket ky (signed URL) cua Supabase Storage
- * va khong dua bat ky URL nao cua mien `*.supabase.co` vao phan hoi: mot lien
- * ket ky, mot khi da phat hanh, dung duoc cho BAT KY AI cam no cho toi luc
- * het han va KHONG tai kiem quyen lan nao nua (Pitfall 2, RESEARCH.md — xac
- * nhan qua thao luan chinh thuc cua Supabase). Duong duy nhat loai tru duoc
- * rui ro do la doc byte anh bang `.download()` NGAY O SERVER nay roi tra
- * thang byte, tren MOI lan goi.
+ * va khong dua bat ky URL nao cua mien luu tru nha cung cap vao phan hoi: mot
+ * lien ket ky, mot khi da phat hanh, dung duoc cho BAT KY AI cam no cho toi
+ * luc het han va KHONG tai kiem quyen lan nao nua (Pitfall 2, RESEARCH.md —
+ * xac nhan qua thao luan chinh thuc cua Supabase). Duong duy nhat loai tru
+ * duoc rui ro do la doc byte anh bang `.download()` NGAY O SERVER nay roi tra
+ * thang byte, tren MOI lan goi. (Cong co hoc chan kieu ro ri nay quay lai:
+ * `src/__tests__/no-signed-url.test.ts`, plan 03-07.)
  */
 export const dynamic = "force-dynamic";
 

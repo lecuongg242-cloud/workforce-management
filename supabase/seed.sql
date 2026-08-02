@@ -648,21 +648,36 @@ insert into work_sites (id, company_id, name, latitude, longitude, radius_meters
 /* dan bat dau bang chinh company_id (CHECK cua bang buoc dieu nay). 'check_in' */
 /* tren att-02a la FK that cho test ghi cheo kind='check_out' cua             */
 /* 04_isolation_v2.sql (khong trung unique(attendance_record_id, kind)).      */
+/* latitude/longitude LUON co gia tri tren MOI anh that (punchEvidenceSchema  */
+/* bat buoc GPS o tang client, xem plan 03-01/03-07) — seed gan dung toa do   */
+/* CUA CHINH work_site tuong ung (ws-01/ws-02) de khop bat bien do, khong de  */
+/* null (attendancePhotoRowSchema.latitude/longitude khong nullable, dung    */
+/* voi thuc te khong anh nao thieu GPS tung lot qua checkIn()).              */
 /* -------------------------------------------------------------------------- */
 
-insert into attendance_photos (company_id, attendance_record_id, kind, storage_path, captured_at)
+insert into attendance_photos (
+  company_id, attendance_record_id, kind, storage_path, captured_at,
+  latitude, longitude, accuracy_meters, work_site_id, distance_meters
+)
 select 'cty-01', 'att-01a', 'check_in', 'cty-01/nv-01a/att-01a-check_in.jpg',
-  (anchor.d + s.start_time - interval '3 minutes') at time zone public.tf_tz()
+  (anchor.d + s.start_time - interval '3 minutes') at time zone public.tf_tz(),
+  ws.latitude, ws.longitude, 8, ws.id, 0
 from (select public.tf_work_date(now()) as d) anchor
 join employees e on e.id = 'nv-01a'
-join shifts s on s.id = e.shift_id;
+join shifts s on s.id = e.shift_id
+join work_sites ws on ws.id = 'ws-01';
 
-insert into attendance_photos (company_id, attendance_record_id, kind, storage_path, captured_at)
+insert into attendance_photos (
+  company_id, attendance_record_id, kind, storage_path, captured_at,
+  latitude, longitude, accuracy_meters, work_site_id, distance_meters
+)
 select 'cty-02', 'att-02a', 'check_in', 'cty-02/nv-02a/att-02a-check_in.jpg',
-  (anchor.d + s.start_time - interval '3 minutes') at time zone public.tf_tz()
+  (anchor.d + s.start_time - interval '3 minutes') at time zone public.tf_tz(),
+  ws.latitude, ws.longitude, 8, ws.id, 0
 from (select public.tf_work_date(now()) as d) anchor
 join employees e on e.id = 'nv-02a'
-join shifts s on s.id = e.shift_id;
+join shifts s on s.id = e.shift_id
+join work_sites ws on ws.id = 'ws-02';
 
 /* -------------------------------------------------------------------------- */
 /* holidays — CO Y de rong o ca hai cong ty; khong chen dong nao o day.       */
