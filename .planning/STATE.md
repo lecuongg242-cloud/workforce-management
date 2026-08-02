@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: ch-m-c-ng-c-b-ng-ch-ng
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-08-02T10:04:29.119Z"
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-08-02T10:30:44.609Z"
 last_activity: 2026-08-02
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 24
-  completed_plans: 19
+  completed_plans: 20
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 03 (ch-m-c-ng-c-b-ng-ch-ng) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-08-02 — Phase 03 execution started
 
-Progress: [████████░░] 79%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -73,6 +73,7 @@ Progress: [████████░░] 79%
 | Phase 02 P09 | 55min | 2 tasks | 10 files |
 | Phase 03 P01 | 67min | 3 tasks | 23 files |
 | Phase 03 P02 | 42min | 2 tasks | 12 files |
+| Phase 03 P05 | 27min | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 03-01: npm run test:db chay qua TF_ALLOW_CLOUD_TESTS=1 nham thang Supabase dev that vi Docker khong co san trong moi truong thuc thi - don sach 4 dong fixture pgTAP ngay sau khi chay, theo tien le 02-02-SUMMARY.md
 - [Phase ?]: 03-02: workSiteFormSchema (dialog) chi 4 truong, khong co isActive - bat/tat la hanh dong archiveWorkSite rieng tren card, khong phai o nhap trong form
 - [Phase ?]: 03-02: BREADCRUMB_LABELS phai khai tuong minh cho moi segment co dau '-' (vd work-sites) - thieu entry se bi fallback nham thanh 'Chi tiet' (admin-topbar.tsx dong 43-44)
+- [Phase ?]: 03-05: Test Task 1 dung khuon mock DB (khong phai Postgres that) vi markPhotoReviewed ghi audit_log.actor_user_id (FK toi auth.users) - userId gia lap se vi pham FK neu ghi that
+- [Phase ?]: 03-05: Import audit qua namespace (import * as auditLog) trong mutations/attendance-photos.ts de dap ung acceptance criteria grep -c logMutation == 1
+- [Phase ?]: 03-05: Go getAttendancePhotoForRecord (code chet) va chi thi use server khoi src/lib/data/attendance-photos.ts sau khi Dialog chuyen sang listAttendancePhotos qua Route Handler
 
 ### Pending Todos
 
@@ -153,6 +157,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T10:04:29.093Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-08-02T10:30:44.581Z
+Stopped at: Completed 03-05-PLAN.md
 Resume file: None
