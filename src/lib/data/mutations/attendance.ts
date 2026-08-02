@@ -463,6 +463,19 @@ export async function checkIn(
     throw new Error("Không thể kiểm tra bản ghi chấm công.");
   }
 
+  // CR-01 (03-REVIEW.md): mot ca DA hoan tat (check_out_at khac null) khong
+  // duoc phep "vao lai" — writeRow ben duoi luon dat check_out_at/worked_minutes/
+  // early_leave_minutes ve gia tri rong, nen ap dung no len mot ban ghi da
+  // tan ca se XOA bang chung tan ca da ghi (anh, so phut lam viec, ve som).
+  // Day khong phai mot ly do tu choi thu tu (D-20b khoa dung BA ly do) ma la
+  // AP DUNG LAI `outside_shift`, cung khuon voi checkOut tai su dung
+  // `outside_shift` cho ban ghi chua co gio vao (xem nhanh `!beforeRow.check_in_at`
+  // trong checkOut ben duoi): mot ca da ket thuc cung la mot dang "ngoai
+  // khung gio ca" theo nghia rong.
+  if (existing && (existing as RawAttendanceRow).check_out_at) {
+    throw new AttendanceRejectedError("outside_shift");
+  }
+
   const writeRow = {
     check_in_at: nowIso,
     check_out_at: null,

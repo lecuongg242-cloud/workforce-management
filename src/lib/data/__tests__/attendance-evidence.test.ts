@@ -531,4 +531,49 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
       expect(result.isOutsideRadius).toBe(true);
     });
   });
+
+  describe("checkIn — CR-01 (03-REVIEW.md): không được ghi đè một ca đã tan ca", () => {
+    it("16. checkIn lại trên bản ghi ĐÃ có check_out_at (từ vòng đời test 4→10 của EMP_EVI) -> AttendanceRejectedError(outside_shift), check_out_at/worked_minutes/early_leave_minutes cũ được giữ nguyên", async () => {
+      const { data: beforeRow, error: beforeError } = await admin
+        .from("attendance_records")
+        .select("check_out_at, worked_minutes, early_leave_minutes")
+        .eq("id", lifecycleRecordId)
+        .single();
+      expect(beforeError).toBeNull();
+      const before = beforeRow as {
+        check_out_at: string | null;
+        worked_minutes: number;
+        early_leave_minutes: number;
+      };
+      // Vòng đời test 4→10 đã tan ca cho lifecycleRecordId — bản ghi PHẢI
+      // đã có check_out_at trước khi test này chạy, nếu không phép so sánh
+      // "giữ nguyên" bên dưới sẽ vô nghĩa (so 2 giá trị null với nhau).
+      expect(before.check_out_at).not.toBeNull();
+
+      vi.mocked(getSessionContext).mockResolvedValue(ownerSession());
+      let caught: unknown;
+      try {
+        await checkIn(EMP_EVI, makeEvidence(10.7823, 106.6958));
+      } catch (cause) {
+        caught = cause;
+      }
+      expect(caught).toBeInstanceOf(AttendanceRejectedError);
+      expect((caught as AttendanceRejectedError).reason).toBe("outside_shift");
+
+      const { data: afterRow, error: afterError } = await admin
+        .from("attendance_records")
+        .select("check_out_at, worked_minutes, early_leave_minutes")
+        .eq("id", lifecycleRecordId)
+        .single();
+      expect(afterError).toBeNull();
+      const after = afterRow as {
+        check_out_at: string | null;
+        worked_minutes: number;
+        early_leave_minutes: number;
+      };
+      expect(after.check_out_at).toBe(before.check_out_at);
+      expect(after.worked_minutes).toBe(before.worked_minutes);
+      expect(after.early_leave_minutes).toBe(before.early_leave_minutes);
+    });
+  });
 });
