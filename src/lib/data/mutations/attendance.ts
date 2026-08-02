@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
 import { AttendanceRejectedError } from "@/lib/attendance/rejection";
+import { SUSPICIOUS_DISTANCE_MULTIPLIER } from "@/lib/attendance/suspicious";
 import { logMutation } from "@/lib/data/audit";
 import { ATTENDANCE_PHOTO_BUCKET, buildAttendancePhotoPath } from "@/lib/storage/attendance-photos";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -64,10 +65,16 @@ export interface CheckInResult extends AttendanceRecord, PunchEvidenceResult {}
  */
 export interface CheckOutResult extends AttendanceRecord, PunchEvidenceResult {}
 
-/** D-21: nguong danh dau dang ngo, mac dinh 5 lan ban kinh work_site. Khai
- * MOT cho o day (dung rieng cho banner tuc thi cua Camera Sheet); plan 03-06
- * la noi so huu chinh thuc cua hang so nay cho danh sach can xem lai. */
-const SUSPICIOUS_DISTANCE_MULTIPLIER = 5;
+/**
+ * D-21/03-06: nguong danh dau dang ngo (mac dinh 5 lan ban kinh work_site)
+ * gio DUNG chung mot nguon voi danh sach "can xem lai" cua quan tri —
+ * `src/lib/attendance/suspicious.ts` la noi so huu CHINH THUC DUY NHAT cua
+ * hang so nay trong toan repo. File nay CHI import lai de tinh banner tuc
+ * thi (`isOutsideRadius`) ngay sau khi cham cong; KHONG con tu khai mot ban
+ * sao cuc bo nua (ban sao cu cua 03-01/03-03 da bi go — nguon dung chung
+ * moi dam bao Phase 4 chi doi nguong o MOT noi khi chuyen sang cau hinh
+ * doanh nghiep, xem comment tai dinh nghia hang so).
+ */
 
 /**
  * D-20b/T-03-04-01: biên độ nới rộng hai đầu khung giờ ca khi kiểm "ngoài
