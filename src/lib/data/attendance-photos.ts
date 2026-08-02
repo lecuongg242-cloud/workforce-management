@@ -1,9 +1,32 @@
 "use server";
 
 import { getSessionContext, requireRole } from "@/lib/auth/session-context";
+import { fetchJson } from "@/lib/data/fetch-json";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { attendancePhotoRowSchema } from "@/lib/validation/api/attendance-photos";
+import {
+  attendancePhotoListResponseSchema,
+  attendancePhotoRowSchema,
+} from "@/lib/validation/api/attendance-photos";
 import type { AttendancePhoto } from "@/lib/types/domain";
+
+export { markPhotoReviewed } from "@/lib/data/mutations/attendance-photos";
+
+/**
+ * Dung boi `AttendancePhotoDialog` (plan 03-05) — doc TOAN BO sieu du lieu
+ * anh cua mot ban ghi cham cong (toi da hai phan tu: check_in/check_out) qua
+ * `GET /api/attendance-photos`. Khac voi `getAttendancePhotoForRecord` ben
+ * duoi (Server Action goi thang mot lan cham), ham nay di qua Route Handler
+ * vi Dialog can CA hai lan cham cung luc, khong phai tung lan rieng le.
+ */
+export async function listAttendancePhotos(
+  attendanceRecordId: string,
+): Promise<AttendancePhoto[]> {
+  const params = new URLSearchParams({ attendanceRecordId });
+  return fetchJson(
+    `/api/attendance-photos?${params.toString()}`,
+    attendancePhotoListResponseSchema,
+  );
+}
 
 /**
  * [Rule 2 — bo sung chuc nang thieu] File nay KHONG nam trong danh sach

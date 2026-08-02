@@ -91,3 +91,30 @@ export const attendancePhotoSchema = z.object({
   distanceMeters: z.number().nullable(),
   reviewStatus: photoReviewStatusSchema,
 });
+
+/**
+ * Tham so truy van cua `GET /api/attendance-photos` (plan 03-05) — dung
+ * MOT truong duy nhat: dinh danh ban ghi cham cong. KHONG khai dinh danh
+ * doanh nghiep (D-12b) — pham vi luon den tu `getSessionContext()`.
+ */
+export const attendancePhotoQuerySchema = z.object({
+  attendanceRecordId: z.string().min(1, "Thiếu tham số bản ghi chấm công."),
+});
+
+/**
+ * Phan hoi cua `GET /api/attendance-photos` — mang toi da hai phan tu (mot
+ * cho `check_in`, mot cho `check_out`, rang buoc `unique(attendance_record_id,
+ * kind)` cua database dam bao dieu nay), KHONG mang bat ky truong nao dan
+ * chieu toi mien luu tru (T-03-05-04).
+ */
+export const attendancePhotoListResponseSchema = z.array(attendancePhotoSchema);
+
+/**
+ * Dau vao cua hanh dong danh dau xem xet (`markPhotoReviewed`) — CHI nhan
+ * trang thai. `reviewed_by`/`reviewed_at` luon do server cap tu phien va tu
+ * dong ho database (`tf_server_now()`), khong bao gio la mot truong dau vao
+ * (T-03-05-06).
+ */
+export const photoReviewInputSchema = z.object({
+  status: photoReviewStatusSchema,
+});
