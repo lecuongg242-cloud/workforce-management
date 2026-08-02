@@ -121,11 +121,11 @@ Plans:
 **Requirements**: ATT-01, ATT-02, ATT-03, ATT-04, ATT-05, ATT-06, ATT-07, ATT-08
 **Success Criteria** (what must be TRUE):
 
-  1. Quản trị khai được điểm làm việc gồm tên, toạ độ và bán kính cho phép; nhân viên đứng ngoài bán kính bấm chấm công thì server từ chối và màn hình nói rõ lý do (ngoài bán kính, thiếu ảnh, ngoài ca).
+  1. Quản trị khai được điểm làm việc gồm tên, toạ độ và bán kính cho phép; server tự tính khoảng cách và ghi vào bản ghi. Thiếu ảnh hoặc ngoài ca thì server **từ chối** và màn hình nói rõ lý do; ngoài bán kính thì **vẫn nhận** nhưng màn hình cảnh báo kèm khoảng cách thật và bản ghi mang cờ cho quản trị xem lại. *(Sửa 2026-08-02 — xem ghi chú ATT-02 trong REQUIREMENTS.md: GPS trong nhà xưởng sai 20–50m nên chặn cứng làm người đứng đúng chỗ không chấm được.)*
   2. Màn hình chấm công chỉ mở camera chụp trực tiếp, không có đường nào chọn ảnh có sẵn trong máy; thiếu ảnh thì không gửi được.
   3. Dấu thời gian trên bản ghi là giờ server — đổi đồng hồ thiết bị không đổi được giờ đã ghi.
   4. Quản trị mở một bản ghi chấm công bất kỳ xem lại được ảnh và vị trí; ảnh chỉ mở qua liên kết ký hạn ngắn, người ở doanh nghiệp khác cầm đúng liên kết vẫn không xem được.
-  5. Hai lần chấm liên tiếp ở hai nơi xa nhau tới mức không thể di chuyển kịp bị đánh dấu đáng ngờ và hiện ra trong danh sách quản trị cần xem lại.
+  5. Lần chấm công cách tâm điểm làm việc quá xa (ngưỡng cấu hình được, mặc định 5 lần bán kính) bị đánh dấu đáng ngờ và hiện ra trong danh sách quản trị cần xem lại. *(Sửa 2026-08-02 — xem ghi chú ATT-07: cách đo cũ theo tốc độ di chuyển hầu như không bao giờ kích hoạt, vì chuỗi chấm công luôn là vào → ra nên hai lần liên tiếp cách nhau trọn một ca.)*
 
 **Plans**: TBD
 **UI hint**: yes

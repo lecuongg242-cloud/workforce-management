@@ -37,13 +37,40 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 ### Chấm công có bằng chứng (ATT)
 
 - [ ] **ATT-01**: Nhân viên chấm công vào/ra bắt buộc kèm ảnh chụp trực tiếp bằng camera tại thời điểm chấm; không chọn được ảnh có sẵn trong máy
-- [ ] **ATT-02**: Nhân viên chấm công bắt buộc kèm toạ độ GPS; hệ thống kiểm tra phía server rằng toạ độ nằm trong bán kính điểm làm việc, client không tự quyết định hợp lệ hay không
+- [ ] **ATT-02**: Nhân viên chấm công bắt buộc kèm toạ độ GPS; **server** tính khoảng cách tới điểm làm việc và ghi lại kết quả cùng bản ghi, client không tự quyết định hợp lệ hay không. Ngoài bán kính **không chặn** — bản ghi vẫn được nhận nhưng mang cờ để quản trị xem lại (xem ghi chú thu hẹp bên dưới)
+
+  > **Sửa phạm vi ngày 2026-08-02.** Yêu cầu này ban đầu viết "server kiểm tra rằng toạ độ
+  > **nằm trong** bán kính", tức ngoài bán kính là bị từ chối. Chủ dự án quyết định đổi sau
+  > khi cân nhắc thực tế: GPS trong nhà xưởng sai 20–50m, có khi hơn, nên người đứng đúng chỗ
+  > vẫn có thể bị từ chối và không có cách nào chấm công được.
+  >
+  > **Hệ quả phải hiểu đúng, không được quên:** "trong bán kính" từ một **điều kiện bắt buộc**
+  > trở thành một **ghi chú**. GPS không còn chặn được ai — nó chỉ còn làm chứng. Lớp phát hiện
+  > gian lận chính chuyển sang ATT-07.
+
+
 - [ ] **ATT-03**: Quản trị khai báo được điểm làm việc: tên, toạ độ, bán kính cho phép
 - [ ] **ATT-04**: Quản trị xem lại được ảnh và vị trí của từng bản ghi chấm công
 - [ ] **ATT-05**: Ảnh chấm công lưu ở bucket riêng tư; chỉ người có quyền trong cùng doanh nghiệp mở được, qua liên kết ký hạn ngắn
 - [ ] **ATT-06**: Dấu thời gian của bản ghi chấm công do server cấp, không lấy từ đồng hồ thiết bị
-- [ ] **ATT-07**: Hệ thống đánh dấu bản ghi đáng ngờ khi hai lần chấm liên tiếp cách nhau một quãng đường không thể di chuyển kịp, để quản trị xem lại
-- [ ] **ATT-08**: Nhân viên thấy rõ lý do khi chấm công bị từ chối (ngoài bán kính, thiếu ảnh, ngoài ca)
+- [ ] **ATT-07**: Hệ thống đánh dấu bản ghi đáng ngờ khi lần chấm công **cách tâm điểm làm việc quá xa** (ngưỡng cấu hình được, mặc định 5 lần bán kính), để quản trị xem lại
+
+  > **Sửa cách đo ngày 2026-08-02.** Bản đầu viết "hai lần chấm liên tiếp cách nhau một quãng
+  > đường không thể di chuyển kịp". Cách đo đó **hầu như không bao giờ kích hoạt** với mô hình
+  > dữ liệu thật của TimeFlow: chuỗi chấm công luôn là vào → ra, nên hai lần liên tiếp cách nhau
+  > trọn một ca 8 tiếng — thừa thời gian đi bất cứ đâu trong Việt Nam. Một luật không bao giờ
+  > chạy thì tệ hơn không có luật, vì nó tạo cảm giác an toàn giả.
+  >
+  > Cách đo mới so mỗi lần chấm với **tâm điểm làm việc**, ăn khớp với ATT-02 sau khi sửa:
+  > lệch vài chục mét là GPS sai bình thường, lệch hàng chục km là chuyện khác. Đây là lớp
+  > phát hiện chính cho kiểu gian lận "nhờ đồng nghiệp chấm hộ" — kiểu mà ảnh hiện trường và
+  > GPS đều không bắt được, vì ảnh không có mặt người để đối chiếu.
+
+- [ ] **ATT-08**: Nhân viên thấy rõ lý do khi chấm công bị từ chối (thiếu ảnh, ngoài ca, mất mạng), và thấy cảnh báo rõ khi chấm công được nhận nhưng **ở xa điểm làm việc**
+
+  > **Sửa ngày 2026-08-02** cho khớp ATT-02: "ngoài bán kính" không còn là lý do từ chối nên
+  > không thể nằm trong danh sách lý do từ chối. Nó chuyển thành **cảnh báo hiển thị** kèm
+  > khoảng cách thật, để nhân viên biết bản ghi của mình sẽ bị quản trị xem lại.
 
 ### Cài đặt doanh nghiệp (SET)
 
