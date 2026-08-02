@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: ch-m-c-ng-c-b-ng-ch-ng
 status: executing
-stopped_at: Completed 03-04-PLAN.md
-last_updated: "2026-08-02T13:24:28.126Z"
+stopped_at: Completed 03-06-PLAN.md
+last_updated: "2026-08-02T13:44:19.786Z"
 last_activity: 2026-08-02
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 24
-  completed_plans: 22
+  completed_plans: 23
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 03 (ch-m-c-ng-c-b-ng-ch-ng) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-08-02 — Phase 03 execution started
 
-Progress: [█████████░] 92%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -76,6 +76,7 @@ Progress: [█████████░] 92%
 | Phase 03 P05 | 27min | 2 tasks | 9 files |
 | Phase 03 P03 | 60min | 3 tasks | 9 files |
 | Phase 03 P04 | 50min | 3 tasks | 10 files |
+| Phase 03 P06 | 55min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 03-04: checkOut cho ban ghi chua co gio vao tai dung phan loai outside_shift, khong bia them ly do thu tu (D-20b dung ba)
 - [Phase ?]: 03-04: [Rule 1] isAttendanceRejection() bo dieu kien name, chi kiem truong reason — name co the mat qua ranh gioi Server Action nhu moi truong tuy bien khac
 - [Phase ?]: 03-04: [Rule 3] evidence optional o muc kieu cho checkOut (nhu checkIn 03-01) de call site cu compile duoc ngay sau Task 2; test tich hop moi ep moi truong node (@vitest-environment) vi Blob jsdom khong tai len Storage that duoc
+- [Phase ?]: 03-06: SUSPICIOUS_DISTANCE_MULTIPLIER/isSuspiciousPunch()/suspiciousMultiplier() (src/lib/attendance/suspicious.ts) la nguon DUY NHAT cho nguong dang ngo D-21, mutations/attendance.ts (03-01/03-03) xoa ban sao cuc bo va import lai
+- [Phase ?]: 03-06: GET /api/attendance/review truy van hai buoc (attendance_photos join work_sites, roi attendance_records join employees) thay vi mot embed PostgREST ba tang, giam rui ro suy dien quan he lien ket sai
+- [Phase ?]: 03-06: co dang ngo tinh TAI THOI DIEM TRUY VAN qua isSuspiciousPunch(), khong doc tu cot boolean da luu - Phase 4 doi nguong sang cau hinh doanh nghiep chi can sua mot ham
 
 ### Pending Todos
 
@@ -167,6 +171,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T13:24:28.075Z
-Stopped at: Completed 03-04-PLAN.md
+Last session: 2026-08-02T13:44:19.753Z
+Stopped at: Completed 03-06-PLAN.md
 Resume file: None

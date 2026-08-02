@@ -52,7 +52,7 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 - [x] **ATT-04**: Quản trị xem lại được ảnh và vị trí của từng bản ghi chấm công
 - [x] **ATT-05**: Ảnh chấm công lưu ở bucket riêng tư; chỉ người có quyền trong cùng doanh nghiệp mở được, qua liên kết ký hạn ngắn
 - [x] **ATT-06**: Dấu thời gian của bản ghi chấm công do server cấp, không lấy từ đồng hồ thiết bị
-- [ ] **ATT-07**: Hệ thống đánh dấu bản ghi đáng ngờ khi lần chấm công **cách tâm điểm làm việc quá xa** (ngưỡng cấu hình được, mặc định 5 lần bán kính), để quản trị xem lại
+- [x] **ATT-07**: Hệ thống đánh dấu bản ghi đáng ngờ khi lần chấm công **cách tâm điểm làm việc quá xa** (ngưỡng cấu hình được, mặc định 5 lần bán kính), để quản trị xem lại
 
   > **Sửa cách đo ngày 2026-08-02.** Bản đầu viết "hai lần chấm liên tiếp cách nhau một quãng
   > đường không thể di chuyển kịp". Cách đo đó **hầu như không bao giờ kích hoạt** với mô hình
@@ -167,7 +167,7 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | ATT-04 | Phase 3 | Complete |
 | ATT-05 | Phase 3 | Complete |
 | ATT-06 | Phase 3 | Complete |
-| ATT-07 | Phase 3 | Pending |
+| ATT-07 | Phase 3 | Complete |
 | ATT-08 | Phase 3 | Complete |
 | SET-01 | Phase 4 | Pending |
 | SET-02 | Phase 4 | Pending |
