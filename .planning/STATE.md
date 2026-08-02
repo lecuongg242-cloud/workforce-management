@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: ch-m-c-ng-c-b-ng-ch-ng
 status: executing
-stopped_at: Completed 03-06-PLAN.md
-last_updated: "2026-08-02T13:44:19.786Z"
+stopped_at: 03-07 Task 1 xong (6a8a246); Task 2 checkpoint cho device UAT, blocked them boi su co auth.users
+last_updated: "2026-08-02T16:33:30.983Z"
 last_activity: 2026-08-02
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 24
-  completed_plans: 23
+  completed_plans: 24
 ---
 
 # Project State
@@ -77,6 +77,7 @@ Progress: [██████████] 96%
 | Phase 03 P03 | 60min | 3 tasks | 9 files |
 | Phase 03 P04 | 50min | 3 tasks | 10 files |
 | Phase 03 P06 | 55min | 3 tasks | 11 files |
+| Phase 03 P07 | 85min | 1 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -143,6 +144,8 @@ Recent decisions affecting current work:
 - [Phase ?]: 03-06: SUSPICIOUS_DISTANCE_MULTIPLIER/isSuspiciousPunch()/suspiciousMultiplier() (src/lib/attendance/suspicious.ts) la nguon DUY NHAT cho nguong dang ngo D-21, mutations/attendance.ts (03-01/03-03) xoa ban sao cuc bo va import lai
 - [Phase ?]: 03-06: GET /api/attendance/review truy van hai buoc (attendance_photos join work_sites, roi attendance_records join employees) thay vi mot embed PostgREST ba tang, giam rui ro suy dien quan he lien ket sai
 - [Phase ?]: 03-06: co dang ngo tinh TAI THOI DIEM TRUY VAN qua isSuspiciousPunch(), khong doc tu cot boolean da luu - Phase 4 doi nguong sang cau hinh doanh nghiep chi can sua mot ham
+- [Phase ?]: 03-07: RLS storage.objects thieu hoan toan cho bucket attendance-photos (broker route + checkIn/checkOut deu bi chan) -- them migration 0012, dung lai tf_is_member() qua split_part(name,'/',1)
+- [Phase ?]: 03-07: seed.sql attendance_photos fixture thieu GPS gay 500 tren metadata route -- them toa do that khop work_sites
 
 ### Pending Todos
 
@@ -160,6 +163,7 @@ None yet.
 - 01-05: git push to origin denied (403) - local identity LeeCuongg is not a collaborator on lecuongg242-cloud/workforce-management; human must push with an authorized account and confirm db CI workflow is green (WINDOWS.md entry 3, same root cause as entry 1)
 - 02-03/02-04: khong co SUMMARY.md tren dia mac du code da duoc feat()/test() commit va migration da push (chi 02-01/02-02/02-05 co SUMMARY trong thu muc phase 02) -- can mot lan finalize rieng (SUMMARY + docs commit) cho hai plan nay de dong bo STATE/ROADMAP.
 - 03-01: Xac nhan cuoi (UAT) con thieu — mot lan cham cong that qua trinh duyet that voi camera/GPS that (dung human_verify_mode: end-of-phase cua config.json, khong chan cac plan tiep theo cua phase 3).
+- 03-07: Task 1 xong (commit 6a8a246), Task 2 (checkpoint device UAT, gate=blocking) CHUA thuc hien. Blocker moi: npm run test:db chay trong phien nay nap fixture pgTAP vao auth.users cloud that, lam Admin API listUsers tra 500 -> npm run seed:auth khong chay duoc -> memberships rong -> app khong dung duoc du login token van hop le. Can chu du an xoa 4 tai khoan (owner1/owner2/dualmember/nomember@timeflow.test) qua Supabase Dashboard, roi chay seed:auth+reset:passwords, truoc khi lam Task 2. Chi tiet: 03-07-SUMMARY.md muc 'Blocker moi phat sinh'.
 
 ## Deferred Items
 
@@ -171,6 +175,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T13:44:19.753Z
-Stopped at: Completed 03-06-PLAN.md
-Resume file: None
+Last session: 2026-08-02T16:33:30.939Z
+Stopped at: 03-07 Task 1 xong (6a8a246); Task 2 checkpoint cho device UAT, blocked them boi su co auth.users
+Resume file: 03-07-SUMMARY.md
