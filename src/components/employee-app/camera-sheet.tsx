@@ -1,19 +1,27 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Camera, CameraOff, Check, Loader2, X } from "lucide-react";
+import { Camera, CameraOff, Check, Loader2, MapPinOff, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
+  CameraInUseError,
   CameraPermissionDeniedError,
+  LocationPermissionDeniedError,
+  LocationTimeoutError,
+  NoCameraDeviceError,
   acquireLocation,
   captureFrame,
   closeCamera,
+  compressPhoto,
   openCamera,
 } from "@/lib/attendance/camera";
-import { ATTENDANCE_EVIDENCE_LABEL } from "@/lib/constants";
+import { ATTENDANCE_EVIDENCE_LABEL, REQUEST_TYPE_LABEL } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { PunchEvidence } from "@/lib/types/domain";
 
 /**
@@ -33,11 +41,15 @@ import type { PunchEvidence } from "@/lib/types/domain";
  * tu server (`tf_server_now()`), khong mot dong nao trong file nay goi ham
  * dung de lay thoi diem hien tai cua trinh duyet.
  *
- * O plan tracer nay (03-01) hien thuc du duong hanh phuc cong nhanh tu choi
- * quyen camera (`NotAllowedError`). Ba nhanh loi camera con lai va nhanh tu
- * choi quyen vi tri deu duoc `src/lib/attendance/camera.ts` nem tiep nguyen
- * ban — o day chi xu ly toi thieu (toast + dong Sheet) de khong lam vo giao
- * dien; UI rieng cho tung nhanh do thuoc plan 03-03.
+ * Plan 03-03 (Task 2) them day du bon nhanh loi camera/vi tri con lai (03-01
+ * tracer moi chi xu ly `NotAllowedError`): khong co camera dung duoc
+ * (`NoCameraDeviceError` — dan sang duong bo sung cong, KHONG mo bo chon
+ * anh), camera dang bi ung dung khac giu (`CameraInUseError`), tu choi
+ * quyen vi tri (`LocationPermissionDeniedError` — cong client-side, KHONG
+ * phai ly do tu choi thu tu cua D-20b vi chua co toa do nao roi khoi thiet
+ * bi), va het gio cho GPS (`LocationTimeoutError` — chi doi chip trang thai,
+ * KHONG thay ca khung hinh vi khung hinh van dung duoc). Cong them
+ * `compressPhoto()` chen giua buoc chup va buoc gui.
  */
 
 type CameraState =
@@ -46,14 +58,48 @@ type CameraState =
   | "streaming"
   | "captured"
   | "submitting"
-  | "permission-denied";
+  | "permission-denied"
+  | "no-camera"
+  | "camera-in-use";
 
-type GpsStatus = "acquiring" | "acquired" | "error";
+type GpsStatus = "acquiring" | "acquired" | "timeout";
 
 interface Coords {
   latitude: number;
   longitude: number;
   accuracyMeters: number;
+}
+
+/** Cac trang thai chan-toan-bo-khung-hinh (khac chip GPS-timeout, KHONG thay
+ * khung hinh — xem comment o gpsStatus === "timeout" ben duoi). */
+type BlockingOverlay =
+  | "loading"
+  | "camera-permission-denied"
+  | "camera-no-device"
+  | "camera-in-use"
+  | "location-permission-denied";
+
+function FullScreenMessage({
+  icon: Icon,
+  iconClassName,
+  title,
+  body,
+  children,
+}: {
+  icon: LucideIcon;
+  iconClassName?: string;
+  title: string;
+  body: string;
+  children?: React.ReactNode;
+}): React.ReactElement {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-white">
+      <Icon aria-hidden="true" className={cn("size-8", iconClassName)} />
+      <p className="heading-sm text-white">{title}</p>
+      <p className="text-[13px] text-white/80">{body}</p>
+      {children}
+    </div>
+  );
 }
 
 export function CameraSheet({
@@ -69,6 +115,7 @@ export function CameraSheet({
   const [state, setState] = React.useState<CameraState>("idle");
   const [stream, setStream] = React.useState<MediaStream | null>(null);
   const [gpsStatus, setGpsStatus] = React.useState<GpsStatus>("acquiring");
+  const [locationDenied, setLocationDenied] = React.useState(false);
   const [coords, setCoords] = React.useState<Coords | null>(null);
   const [photoBlob, setPhotoBlob] = React.useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
@@ -88,26 +135,25 @@ export function CameraSheet({
           setState("permission-denied");
           return;
         }
-        // Ba nhanh loi con lai (thiet bi khong co camera, camera dang ban,
-        // rang buoc khong thoa man) chua co khoi UI rieng o plan nay (03-03
-        // se them) — xu ly toi thieu: bao loi va dong Sheet thay vi de man
-        // hinh dung im khong phan hoi.
-        console.error("Lỗi mở camera:", cause);
-        toast.error("Không mở được camera. Vui lòng thử lại.");
+        if (cause instanceof NoCameraDeviceError) {
+          setState("no-camera");
+          return;
+        }
+        if (cause instanceof CameraInUseError) {
+          setState("camera-in-use");
+          return;
+        }
+        // Loi la thuc su (khong khop bon lop da biet) chua co khoi UI rieng
+        // — bao loi va dong Sheet thay vi de man hinh dung im khong phan hoi.
+        console.error("Camera open error:", cause);
+        toast.error(ATTENDANCE_EVIDENCE_LABEL.cameraOpenErrorToast);
         onOpenChange(false);
       });
   }, [onOpenChange]);
 
-  // Mo camera + lay vi tri SONG SONG (khong noi tiep) ngay khi Sheet mo.
-  React.useEffect(() => {
-    if (!open) return;
-
-    setPhotoBlob(null);
-    setPreviewUrl(null);
-    setCoords(null);
+  const startLocation = React.useCallback((): (() => void) => {
     setGpsStatus("acquiring");
-    startCamera();
-
+    setLocationDenied(false);
     let cancelled = false;
     acquireLocation()
       .then((position) => {
@@ -121,17 +167,37 @@ export function CameraSheet({
       })
       .catch((cause) => {
         if (cancelled) return;
-        // Tu choi quyen vi tri chua co khoi UI rieng o plan nay (03-03 se
-        // them) — chip trang thai o duoi day se dung o "acquiring" mai mai,
-        // giu nut gui vo hieu thay vi gui toa do gia.
-        console.error("Lỗi lấy vị trí:", cause);
-        setGpsStatus("error");
+        if (cause instanceof LocationPermissionDeniedError) {
+          setLocationDenied(true);
+          return;
+        }
+        if (cause instanceof LocationTimeoutError) {
+          setGpsStatus("timeout");
+          return;
+        }
+        // Loi geolocation la khac (vi du POSITION_UNAVAILABLE) — cung dua
+        // ve nut thu lai thay vi treo vo han hoac lam vo giao dien.
+        setGpsStatus("timeout");
       });
-
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- startCamera on chua object reference qua onOpenChange, chi can chay lai khi `open` doi
+  }, []);
+
+  // Mo camera + lay vi tri SONG SONG (khong noi tiep) ngay khi Sheet mo.
+  React.useEffect(() => {
+    if (!open) return;
+
+    setPhotoBlob(null);
+    setPreviewUrl(null);
+    setCoords(null);
+    startCamera();
+    const cancelLocation = startLocation();
+
+    return () => {
+      cancelLocation();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- startCamera/startLocation on chua object reference qua onOpenChange, chi can chay lai khi `open` doi
   }, [open]);
 
   // Gan stream vao the <video> khi co
@@ -177,8 +243,8 @@ export function CameraSheet({
       setPreviewUrl(URL.createObjectURL(blob));
       setState("captured");
     } catch (cause) {
-      console.error("Lỗi chụp khung hình:", cause);
-      toast.error("Không thể chụp ảnh. Vui lòng thử lại.");
+      console.error("Capture frame error:", cause);
+      toast.error(ATTENDANCE_EVIDENCE_LABEL.captureErrorToast);
     }
   }
 
@@ -193,8 +259,11 @@ export function CameraSheet({
     if (!photoBlob || !coords) return;
     setState("submitting");
     try {
+      // Nen anh phia client TRUOC khi roi thiet bi (bien phap thu nhat
+      // chong loi vuot gioi han than Server Action — xem camera.ts).
+      const compressedPhoto = await compressPhoto(photoBlob);
       await onSubmit({
-        photo: photoBlob,
+        photo: compressedPhoto,
         latitude: coords.latitude,
         longitude: coords.longitude,
         accuracyMeters: coords.accuracyMeters,
@@ -205,10 +274,19 @@ export function CameraSheet({
       // lai (D-23) — quay ve "captured" thay vi ve "streaming"/"idle".
       setState("captured");
       toast.error(
-        cause instanceof Error ? cause.message : "Không gửi được chấm công.",
+        cause instanceof Error
+          ? cause.message
+          : ATTENDANCE_EVIDENCE_LABEL.submitErrorFallback,
       );
     }
   }
+
+  let overlay: BlockingOverlay | null = null;
+  if (state === "permission-denied") overlay = "camera-permission-denied";
+  else if (state === "no-camera") overlay = "camera-no-device";
+  else if (state === "camera-in-use") overlay = "camera-in-use";
+  else if (locationDenied) overlay = "location-permission-denied";
+  else if (state === "requesting") overlay = "loading";
 
   return (
     <Sheet
@@ -232,14 +310,14 @@ export function CameraSheet({
               variant="onDark"
               size="icon-mobile"
               onClick={handleClose}
-              aria-label="Đóng"
+              aria-label={ATTENDANCE_EVIDENCE_LABEL.closeButtonLabel}
             >
               <X aria-hidden="true" />
             </Button>
           </div>
 
           {/* --------------------------------------------- Dang mo camera */}
-          {state === "requesting" ? (
+          {overlay === "loading" ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 text-white">
               <Loader2 aria-hidden="true" className="size-8 animate-spin" />
               <p className="text-[15px]">{ATTENDANCE_EVIDENCE_LABEL.cameraOpening}</p>
@@ -247,15 +325,12 @@ export function CameraSheet({
           ) : null}
 
           {/* --------------------------------------------- Tu choi quyen camera */}
-          {state === "permission-denied" ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-white">
-              <CameraOff aria-hidden="true" className="size-8" />
-              <p className="heading-sm text-white">
-                {ATTENDANCE_EVIDENCE_LABEL.cameraPermissionDeniedTitle}
-              </p>
-              <p className="text-[13px] text-white/80">
-                {ATTENDANCE_EVIDENCE_LABEL.cameraPermissionDeniedBody}
-              </p>
+          {overlay === "camera-permission-denied" ? (
+            <FullScreenMessage
+              icon={CameraOff}
+              title={ATTENDANCE_EVIDENCE_LABEL.cameraPermissionDeniedTitle}
+              body={ATTENDANCE_EVIDENCE_LABEL.cameraPermissionDeniedBody}
+            >
               <Button
                 type="button"
                 variant="onDark"
@@ -265,11 +340,71 @@ export function CameraSheet({
               >
                 {ATTENDANCE_EVIDENCE_LABEL.retry}
               </Button>
-            </div>
+            </FullScreenMessage>
+          ) : null}
+
+          {/* --------------------------------------------- Khong co camera dung duoc */}
+          {overlay === "camera-no-device" ? (
+            <FullScreenMessage
+              icon={CameraOff}
+              title={ATTENDANCE_EVIDENCE_LABEL.noCameraDeviceTitle}
+              body={ATTENDANCE_EVIDENCE_LABEL.noCameraDeviceBody}
+            >
+              {/* Loi thoat DA CHOT: duong bo sung cong co nguoi duyet, cung
+                  lua chon voi mat mang (D-23). KHONG them nut chon anh tu
+                  thu vien — lam vay la go bo chinh ATT-01 (T-03-06). */}
+              <Button asChild variant="onDark" size="mobile" className="mt-2 max-w-64">
+                <Link href="/employee/requests?type=attendance_supplement">
+                  {REQUEST_TYPE_LABEL.attendance_supplement}
+                </Link>
+              </Button>
+            </FullScreenMessage>
+          ) : null}
+
+          {/* --------------------------------------------- Camera dang duoc dung o noi khac */}
+          {overlay === "camera-in-use" ? (
+            <FullScreenMessage
+              icon={CameraOff}
+              title={ATTENDANCE_EVIDENCE_LABEL.cameraInUseTitle}
+              body={ATTENDANCE_EVIDENCE_LABEL.cameraInUseBody}
+            >
+              <Button
+                type="button"
+                variant="onDark"
+                size="mobile"
+                className="mt-2 max-w-64"
+                onClick={startCamera}
+              >
+                {ATTENDANCE_EVIDENCE_LABEL.retry}
+              </Button>
+            </FullScreenMessage>
+          ) : null}
+
+          {/* --------------------------------------------- Tu choi quyen vi tri */}
+          {overlay === "location-permission-denied" ? (
+            <FullScreenMessage
+              icon={MapPinOff}
+              title={ATTENDANCE_EVIDENCE_LABEL.locationPermissionDeniedTitle}
+              body={ATTENDANCE_EVIDENCE_LABEL.locationPermissionDeniedBody}
+            >
+              {/* Cong CLIENT-SIDE truoc khi gui — KHONG phai ly do tu choi
+                  thu tu cua D-20b: chua co toa do nao roi khoi thiet bi o
+                  trang thai nay nen chua co yeu cau nao den server ca. */}
+              <Button
+                type="button"
+                variant="onDark"
+                size="mobile"
+                className="mt-2 max-w-64"
+                onClick={startLocation}
+              >
+                {ATTENDANCE_EVIDENCE_LABEL.retry}
+              </Button>
+            </FullScreenMessage>
           ) : null}
 
           {/* --------------------------------------------- Dang phat / da chup */}
-          {state === "streaming" || state === "captured" || state === "submitting" ? (
+          {overlay === null &&
+          (state === "streaming" || state === "captured" || state === "submitting") ? (
             <div className="relative flex-1 overflow-hidden bg-black">
               <video
                 ref={videoRef}
@@ -286,7 +421,7 @@ export function CameraSheet({
                 // eslint-disable-next-line @next/next/no-img-element -- Object URL cuc bo, khong hop voi optimizer cua next/image
                 <img
                   src={previewUrl}
-                  alt="Ảnh vừa chụp"
+                  alt={ATTENDANCE_EVIDENCE_LABEL.capturedPhotoAlt}
                   className="h-full w-full object-cover"
                 />
               ) : null}
@@ -295,23 +430,37 @@ export function CameraSheet({
               <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/70 to-transparent" />
 
               <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-4 px-6 pb-8">
-                {/* Chip trang thai vi tri */}
+                {/* Chip trang thai vi tri — GPS timeout (LocationTimeoutError)
+                    KHONG thay ca khung hinh (khung hinh van dung duoc, chi
+                    thieu toa do): chi mot minh chip nay doi thanh nut thu lai. */}
                 <div className="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-[13px] text-white">
                   {gpsStatus === "acquired" ? (
-                    <Check aria-hidden="true" className="size-3.5" />
+                    <>
+                      <Check aria-hidden="true" className="size-3.5" />
+                      {ATTENDANCE_EVIDENCE_LABEL.gpsAcquired}
+                    </>
+                  ) : gpsStatus === "timeout" ? (
+                    <button
+                      type="button"
+                      onClick={startLocation}
+                      className="flex items-center gap-1.5"
+                    >
+                      <MapPinOff aria-hidden="true" className="size-3.5" />
+                      {ATTENDANCE_EVIDENCE_LABEL.retry}
+                    </button>
                   ) : (
-                    <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                    <>
+                      <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
+                      {ATTENDANCE_EVIDENCE_LABEL.gpsAcquiring}
+                    </>
                   )}
-                  {gpsStatus === "acquired"
-                    ? ATTENDANCE_EVIDENCE_LABEL.gpsAcquired
-                    : ATTENDANCE_EVIDENCE_LABEL.gpsAcquiring}
                 </div>
 
                 {state === "streaming" ? (
                   <button
                     type="button"
                     onClick={handleCapture}
-                    aria-label="Chụp ảnh"
+                    aria-label={ATTENDANCE_EVIDENCE_LABEL.captureButtonLabel}
                     className="size-[72px] shrink-0 rounded-full border-4 border-white bg-white/20 transition-colors hover:bg-white/30 active:bg-white/40"
                   >
                     <Camera aria-hidden="true" className="mx-auto size-6 text-white" />

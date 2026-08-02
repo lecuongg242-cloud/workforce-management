@@ -309,6 +309,15 @@ export const ATTENDANCE_EVIDENCE_LABEL = {
   retake: "Chụp lại",
   retry: "Thử lại",
   acknowledge: "Đã hiểu",
+  // Nhan/alt/toast con lai cua Camera Sheet (plan 03-03, Task 2) — gom ve day
+  // de camera-sheet.tsx khong con chuoi tieng Viet viet thang nao (quy uoc
+  // "toan bo chu lay tu khoi hang so")
+  closeButtonLabel: "Đóng",
+  captureButtonLabel: "Chụp ảnh",
+  capturedPhotoAlt: "Ảnh vừa chụp",
+  cameraOpenErrorToast: "Không mở được camera. Vui lòng thử lại.",
+  captureErrorToast: "Không thể chụp ảnh. Vui lòng thử lại.",
+  submitErrorFallback: "Không gửi được chấm công.",
   // Tu choi quyen camera (NotAllowedError) — hien thuc day du o plan nay
   cameraPermissionDeniedTitle: "Không có quyền dùng camera",
   cameraPermissionDeniedBody:
@@ -332,9 +341,13 @@ export const ATTENDANCE_EVIDENCE_LABEL = {
   // Phan {tenDiemLamViec}/{khoangCach} do component tu ghep tai noi goi
   // (cung khuon voi tieu de ConfirmDialog dong trong ShiftsView), khong
   // dung mot ham dinh dang o day de giu constants.ts thuan du lieu tinh.
+  // outsideRadiusBodySuffix sua lai o plan 03-03 (Task 3) — ban goc cua
+  // 03-01 lam trung chu "khoang cach nay" khien cau ghep sai ngu phap; tach
+  // rieng outsideRadiusDistanceLabel de dat DUNG giua ten diem va con so.
   outsideRadiusTitle: "Đã ghi nhận — cách xa điểm làm việc",
   outsideRadiusBodyPrefix: "Bạn cách",
-  outsideRadiusBodySuffix: "khoảng cách này. Quản trị sẽ xem lại bản ghi này.",
+  outsideRadiusDistanceLabel: "khoảng",
+  outsideRadiusBodySuffix: "Quản trị sẽ xem lại bản ghi này.",
 } as const;
 
 /** Nhãn/rỗng cho `/admin/work-sites` (điểm làm việc) */
