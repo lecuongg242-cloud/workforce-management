@@ -349,6 +349,13 @@ export const WORK_SITE_LABEL = {
   archiveConfirmLabel: "Ngừng sử dụng",
   archiveConfirmBody:
     "Nhân viên chấm công sẽ không còn được tính khoảng cách theo điểm này nữa.",
+  statusActive: "Đang dùng",
+  statusInactive: "Đã ngừng sử dụng",
+  // Dong phu tren the: noi RO bien kinh la moc DE DO khoang cach, khong
+  // phai dieu kien chan cham cong (D-20) — tranh cam giac an toan gia D-21b
+  // canh bao.
+  radiusLabel: "Bán kính đo khoảng cách",
+  radiusHelp: "không phải điều kiện chặn chấm công",
 } as const;
 
 /** Danh sách "cần xem lại" của quản trị — trạng thái rỗng lành mạnh, không phải ngõ cụt */

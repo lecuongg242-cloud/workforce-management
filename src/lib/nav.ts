@@ -5,6 +5,7 @@ import {
   Clock3,
   Home,
   LayoutDashboard,
+  MapPin,
   Network,
   Settings,
   User,
@@ -25,6 +26,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "Nhân viên", href: "/admin/employees", icon: Users },
   { label: "Phòng ban", href: "/admin/departments", icon: Network },
   { label: "Ca làm việc", href: "/admin/shifts", icon: CalendarClock },
+  { label: "Điểm làm việc", href: "/admin/work-sites", icon: MapPin },
   {
     label: "Chấm công",
     href: "/admin/attendance",
@@ -56,6 +58,9 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   new: "Thêm nhân viên",
   departments: "Phòng ban",
   shifts: "Ca làm việc",
+  // Doan co dau "-" nen thieu entry se bi fallback nham thanh "Chi tiết"
+  // (xem admin-topbar.tsx dong 43-44) — phai khai tuong minh.
+  "work-sites": "Điểm làm việc",
   attendance: "Chấm công",
   payroll: "Bảng lương",
   settings: "Cài đặt",
