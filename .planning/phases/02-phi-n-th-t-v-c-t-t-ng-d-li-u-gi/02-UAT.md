@@ -72,12 +72,41 @@ requirement: DATA-05, DATA-08
 plan: 02-11 Task 4
 result: [pending]
 
+## Cập nhật 2026-08-02 — ba mục đã đóng bằng máy
+
+Chủ dự án yêu cầu tự nghiệm thu. Ba trong bốn mục **đã đóng**, bằng
+`npm run test:walkthrough` (`scripts/e2e-walkthrough.mjs`, commit `fae5ac1`) —
+21/21 assertion qua HTTP thật với cookie phiên thật.
+
+| # | Mục | Trạng thái | Bằng chứng |
+|---|---|---|---|
+| 1 | Không lóe giao diện | **passed** | Chứng minh bằng **cấu tạo**, chặt hơn nhìn mắt: `git grep` xác nhận không có redirect phía client nào tới `/login`; redirect duy nhất phát từ `middleware.ts:97` trước khi Server Component chạy. Thân phản hồi 307 chỉ **6 byte**, không chứa dấu vết giao diện quản trị. Trình duyệt không bao giờ nhận HTML quản trị để mà lóe. |
+| 2 | Phiên qua đóng/mở trình duyệt | **passed** | Phiên mang `expires_at` tường minh (`2026-08-02T05:52:40Z`) và `refresh_token` — không phải session cookie, nên trình duyệt giữ qua lần đóng theo đúng định nghĩa. |
+| 3 | Đổi doanh nghiệp | **passed** | `GET /api/companies` trả **cả hai** kèm vai trò và số nhân viên thật: Ngọc Phát (manager, 28) · Bình Minh (manager, 12). Đổi cookie `tf_active_company` thì dữ liệu đổi theo: **28 → 12**. |
+| 4 | 13 màn hình + hydration | **một phần** | 11 màn hình render 200 với dữ liệu thật. `/employee` trả *"Chào buổi sáng, Hương"* và *"Hôm nay, Chủ Nhật 02/08/2026"* **ngay trong HTML server render** — ngày thật ở server, không từ đồng hồ máy (D-19/DATA-08). **Cảnh báo hydration trong Console vẫn chưa kiểm được** — xem dưới. |
+
+### Vì sao mục 4 chưa đóng hẳn
+
+Cảnh báo lệch lần vẽ (hydration mismatch) là cảnh báo **phía client**, không nằm
+trong HTML server trả về, nên không script HTTP nào đọc được. Bằng chứng gián
+tiếp duy nhất là rule ESLint D-19a cấm `new Date()` / `Date.now()` trong client
+component — nó đang xanh. Đóng hẳn mục này cần một trình duyệt thật, hoặc một
+công cụ tự động hoá trình duyệt (Playwright) mà dự án chưa có.
+
+### Ba điều tìm ra khi dựng bộ kiểm — đều là kiến trúc chạy đúng
+
+- `nv003` thuộc hai doanh nghiệp nên mọi trang bị đẩy về `/select-company` khi
+  chưa chọn nơi làm việc. AUTH-05 đang chặn đúng.
+- `/select-company` chỉ render **vỏ** ở server; danh sách do client lấy qua
+  `/api/companies` (D-12 — đọc đi qua Route Handler). Kiểm HTML server là kiểm sai chỗ.
+- Nút "Vào ca" vẽ sau khi mount nên không có trong HTML từ server.
+
 ## Summary
 
 total: 4
-passed: 0
+passed: 3
 issues: 0
-pending: 4
+pending: 1
 skipped: 0
 blocked: 0
 
