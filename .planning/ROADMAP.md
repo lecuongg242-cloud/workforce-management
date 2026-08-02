@@ -127,7 +127,7 @@ Plans:
   4. Quản trị mở một bản ghi chấm công bất kỳ xem lại được ảnh và vị trí; ảnh chỉ mở qua một đường đọc tự kiểm doanh nghiệp trên **mỗi lần gọi**, người ở doanh nghiệp khác cầm đúng liên kết vẫn không xem được. *(Sửa 2026-08-02 khi lập kế hoạch — bản gốc viết "chỉ mở qua liên kết ký hạn ngắn". Nghiên cứu phase xác định cơ chế đó **không thoả** chính vế sau của tiêu chí này: một liên kết ký của Supabase Storage, một khi đã phát hành, dùng được cho bất kỳ ai cầm nó tới lúc hết hạn và không tái kiểm quyền lần nào nữa. Vế "cầm đúng liên kết vẫn không xem được" giữ nguyên và là phần bắt buộc; cơ chế đổi thành broker Route Handler.)*
   5. Lần chấm công cách tâm điểm làm việc quá xa (ngưỡng cấu hình được, mặc định 5 lần bán kính) bị đánh dấu đáng ngờ và hiện ra trong danh sách quản trị cần xem lại. *(Sửa 2026-08-02 — xem ghi chú ATT-07: cách đo cũ theo tốc độ di chuyển hầu như không bao giờ kích hoạt, vì chuỗi chấm công luôn là vào → ra nên hai lần liên tiếp cách nhau trọn một ca.)*
 
-**Plans:** 4/7 plans executed
+**Plans:** 5/7 plans executed
 
 Plans:
 **Wave 1**
@@ -141,7 +141,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 03-04-PLAN.md — Tan ca mang bằng chứng, chữ ký chấm công sạch mọi tham số thời gian (ATT-01, ATT-02, ATT-06, ATT-08)
+- [x] 03-04-PLAN.md — Tan ca mang bằng chứng, chữ ký chấm công sạch mọi tham số thời gian (ATT-01, ATT-02, ATT-06, ATT-08)
 - [x] 03-05-PLAN.md — Dialog quản trị xem lại đầy đủ: ảnh, toạ độ, khoảng cách kèm độ chính xác (ATT-04, ATT-05)
 
 **Wave 4** *(blocked on Wave 3 completion)*
@@ -209,7 +209,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Nền dữ liệu và cô lập doanh nghiệp | 6/6 | In Progress|  |
 | 2. Phiên thật và cắt tầng dữ liệu giả | 11/11 | Complete    | 2026-08-02 |
-| 3. Chấm công có bằng chứng | 4/7 | In Progress|  |
+| 3. Chấm công có bằng chứng | 5/7 | In Progress|  |
 | 4. Quy tắc công do doanh nghiệp tự khai | 0/TBD | Not started | - |
 | 5. Duyệt yêu cầu và chốt kỳ công | 0/TBD | Not started | - |
 | 6. Super admin và hỗ trợ nhiều doanh nghiệp | 0/TBD | Not started | - |

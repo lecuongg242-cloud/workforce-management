@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: ch-m-c-ng-c-b-ng-ch-ng
 status: executing
-stopped_at: Completed 03-03-PLAN.md
-last_updated: "2026-08-02T12:28:48.145Z"
+stopped_at: Completed 03-04-PLAN.md
+last_updated: "2026-08-02T13:24:28.126Z"
 last_activity: 2026-08-02
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 24
-  completed_plans: 21
+  completed_plans: 22
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 03 (ch-m-c-ng-c-b-ng-ch-ng) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-08-02 — Phase 03 execution started
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 92%
 
 ## Performance Metrics
 
@@ -75,6 +75,7 @@ Progress: [█████████░] 88%
 | Phase 03 P02 | 42min | 2 tasks | 12 files |
 | Phase 03 P05 | 27min | 2 tasks | 9 files |
 | Phase 03 P03 | 60min | 3 tasks | 9 files |
+| Phase 03 P04 | 50min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,10 @@ Recent decisions affecting current work:
 - [Phase ?]: [Rule 2] checkIn() tra them distanceMeters/workSiteName/isOutsideRadius de banner D-20 dung du lieu that; onSubmit cua CameraSheet doi sang Promise<PunchSubmitResult>
 - [Phase ?]: Nguong dang ngo D-21 (5x ban kinh) khai tam trong attendance.ts cho banner tuc thi; 03-06 se hop nhat thanh cau hinh doanh nghiep chinh thuc
 - [Phase ?]: Phan loai loi Server Action bang kiem hinh dang (truong reason), khong dung instanceof — chuan bi cho isAttendanceRejection() cua 03-04
+- [Phase ?]: 03-04: SHIFT_WINDOW_GRACE_MINUTES=120 phut moi dau khung gio ca (Claude's Discretion, khong co so cu the trong CONTEXT.md)
+- [Phase ?]: 03-04: checkOut cho ban ghi chua co gio vao tai dung phan loai outside_shift, khong bia them ly do thu tu (D-20b dung ba)
+- [Phase ?]: 03-04: [Rule 1] isAttendanceRejection() bo dieu kien name, chi kiem truong reason — name co the mat qua ranh gioi Server Action nhu moi truong tuy bien khac
+- [Phase ?]: 03-04: [Rule 3] evidence optional o muc kieu cho checkOut (nhu checkIn 03-01) de call site cu compile duoc ngay sau Task 2; test tich hop moi ep moi truong node (@vitest-environment) vi Blob jsdom khong tai len Storage that duoc
 
 ### Pending Todos
 
@@ -162,6 +167,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T12:28:48.118Z
-Stopped at: Completed 03-03-PLAN.md
+Last session: 2026-08-02T13:24:28.075Z
+Stopped at: Completed 03-04-PLAN.md
 Resume file: None
