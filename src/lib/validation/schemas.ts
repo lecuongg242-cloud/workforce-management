@@ -220,6 +220,36 @@ export const shiftSchema = z
 export type ShiftFormValues = z.infer<typeof shiftSchema>;
 
 /* -------------------------------------------------------------------------- */
+/* Diem lam viec                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Bieu mau chi co bon truong (ten, vi do, kinh do, ban kinh) — khong co
+ * `isActive` (bat/tat nam o hanh dong "Ngung su dung" rieng, khong phai mot
+ * o nhap trong form). Rang buoc so KHOP DUNG `workSiteInputSchema`
+ * (`src/lib/validation/api/work-sites.ts`) — hai schema trung nhau ve gia
+ * tri chap nhan, chi khac o hinh dang dau ra (form giu camelCase phang,
+ * input schema transform sang snake_case de ghi).
+ */
+export const workSiteFormSchema = z.object({
+  name: z.string().min(1, "Vui lòng nhập tên điểm làm việc."),
+  latitude: z
+    .number({ invalid_type_error: "Vui lòng nhập vĩ độ." })
+    .min(-90, "Vĩ độ phải từ -90 đến 90.")
+    .max(90, "Vĩ độ phải từ -90 đến 90."),
+  longitude: z
+    .number({ invalid_type_error: "Vui lòng nhập kinh độ." })
+    .min(-180, "Kinh độ phải từ -180 đến 180.")
+    .max(180, "Kinh độ phải từ -180 đến 180."),
+  radiusMeters: z
+    .number({ invalid_type_error: "Vui lòng nhập bán kính." })
+    .int("Bán kính phải là số nguyên (đơn vị mét).")
+    .positive("Bán kính phải lớn hơn 0."),
+});
+
+export type WorkSiteFormValues = z.infer<typeof workSiteFormSchema>;
+
+/* -------------------------------------------------------------------------- */
 /* Yeu cau cua nhan vien                                                       */
 /* -------------------------------------------------------------------------- */
 
