@@ -1,10 +1,19 @@
 ---
 phase: 03-ch-m-c-ng-c-b-ng-ch-ng
 verified: 2026-08-02T17:37:42Z
-status: human_needed
+status: passed
+status_before_override: human_needed
 score: 5/5 roadmap truths verified, 8/8 requirements satisfied
 behavior_unverified: 0
-overrides_applied: 0
+overrides_applied: 1
+overrides:
+  - id: OV-01
+    waives: "human_verification (5 muc UAT thiet bi that -- xem danh sach human_verification duoi day)"
+    granted_by: project-owner
+    granted_on: 2026-08-03
+    rationale: "Chu du an quyet dinh tu chay UAT thiet bi sau va yeu cau dong phase ngay. Verifier da bao human_needed dung; override nay KHONG bien 5 muc do thanh da-kiem -- chung van CHUA duoc thuc hien."
+    debt_tracked_in: [".planning/phases/03-ch-m-c-ng-c-b-ng-ch-ng/03-UAT.md", "docs/HUONG-DAN-TEST.md#394-kiem-tren-thiet-bi-that--chua-chay"]
+    risk_if_wrong: "Rang buoc 'chi camera sau, khong thu vien anh' (ATT-01) chua tung duoc quan sat tren thiet bi vat ly. Neu Safari iOS tu chen UI chon anh, nhan vien co the nop anh cu tu thu vien -- pha dung loi hua chong gian lan cua ca phase. Moc cho GPS 15 giay cung chua tung do thuc dia."
 human_verification:
   - test: "Camera trực tiếp trên Android thật: bấm Vào ca, xác nhận chỉ mở camera mặt sau, không có đường vào thư viện ảnh (hoặc tuỳ chọn thư viện không xuất hiện dưới bất kỳ hình thức nào)."
     expected: "Chỉ luồng MediaStream trực tiếp; không có input[type=file], không có bộ chọn ảnh nào xuất hiện."

@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: Nền dữ liệu và cô lập doanh nghiệp** - Schema Postgres, RLS trên mọi bảng, test rò rỉ xuyên doanh nghiệp, cổng CI, chặn khóa bí mật lọt client bundle
 - [x] **Phase 2: Phiên thật và cắt tầng dữ liệu giả** - Supabase Auth qua cookie, phân quyền bốn vai trò, toàn bộ `service.ts` chạy trên Postgres, xóa mock (completed 2026-08-02)
-- [ ] **Phase 3: Chấm công có bằng chứng** - Ảnh hiện trường chụp trực tiếp, GPS kiểm ở server theo bán kính điểm làm việc, màn hình quản trị xem lại
+- [x] **Phase 3: Chấm công có bằng chứng** - Ảnh hiện trường chụp trực tiếp, GPS kiểm ở server theo bán kính điểm làm việc, màn hình quản trị xem lại (completed 2026-08-03)
 - [ ] **Phase 4: Quy tắc công do doanh nghiệp tự khai** - Trang cài đặt: giờ làm, ân hạn, ngày lễ, hệ số tăng ca; phân loại công theo quy tắc đang hiệu lực
 - [ ] **Phase 5: Duyệt yêu cầu và chốt kỳ công** - Duyệt/từ chối có lý do, tác động đúng vào dữ liệu kỳ, lịch sử xử lý, thông báo, chốt kỳ có ghi vết
 - [ ] **Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp** - Danh sách toàn hệ thống, tra cứu sâu một doanh nghiệp, đường ghi riêng có kiểm soát
@@ -127,7 +127,7 @@ Plans:
   4. Quản trị mở một bản ghi chấm công bất kỳ xem lại được ảnh và vị trí; ảnh chỉ mở qua một đường đọc tự kiểm doanh nghiệp trên **mỗi lần gọi**, người ở doanh nghiệp khác cầm đúng liên kết vẫn không xem được. *(Sửa 2026-08-02 khi lập kế hoạch — bản gốc viết "chỉ mở qua liên kết ký hạn ngắn". Nghiên cứu phase xác định cơ chế đó **không thoả** chính vế sau của tiêu chí này: một liên kết ký của Supabase Storage, một khi đã phát hành, dùng được cho bất kỳ ai cầm nó tới lúc hết hạn và không tái kiểm quyền lần nào nữa. Vế "cầm đúng liên kết vẫn không xem được" giữ nguyên và là phần bắt buộc; cơ chế đổi thành broker Route Handler.)*
   5. Lần chấm công cách tâm điểm làm việc quá xa (ngưỡng cấu hình được, mặc định 5 lần bán kính) bị đánh dấu đáng ngờ và hiện ra trong danh sách quản trị cần xem lại. *(Sửa 2026-08-02 — xem ghi chú ATT-07: cách đo cũ theo tốc độ di chuyển hầu như không bao giờ kích hoạt, vì chuỗi chấm công luôn là vào → ra nên hai lần liên tiếp cách nhau trọn một ca.)*
 
-**Plans:** 7/7 plans executed
+**Plans:** 7/7 plans complete
 
 Plans:
 **Wave 1**
@@ -209,7 +209,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Nền dữ liệu và cô lập doanh nghiệp | 6/6 | In Progress|  |
 | 2. Phiên thật và cắt tầng dữ liệu giả | 11/11 | Complete    | 2026-08-02 |
-| 3. Chấm công có bằng chứng | 7/7 | In Progress|  |
+| 3. Chấm công có bằng chứng | 7/7 | Complete    | 2026-08-03 |
 | 4. Quy tắc công do doanh nghiệp tự khai | 0/TBD | Not started | - |
 | 5. Duyệt yêu cầu và chốt kỳ công | 0/TBD | Not started | - |
 | 6. Super admin và hỗ trợ nhiều doanh nghiệp | 0/TBD | Not started | - |
