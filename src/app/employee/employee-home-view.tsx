@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { ErrorState } from "@/components/common/error-state";
 import { AttendanceStatusCard } from "@/components/employee-app/attendance-status-card";
+import { CameraSheet } from "@/components/employee-app/camera-sheet";
 import { CurrentShiftCard } from "@/components/employee-app/current-shift-card";
 import { MonthSummary } from "@/components/employee-app/month-summary";
 import { QuickActions } from "@/components/employee-app/quick-actions";
@@ -22,7 +23,7 @@ import { getEmployee } from "@/lib/data/employees";
 import { listShifts } from "@/lib/data/shifts";
 import { formatFullDate, getShortName } from "@/lib/format";
 import { useDataStore } from "@/lib/data/store";
-import type { AttendanceRecord, CheckInState } from "@/lib/types/domain";
+import type { AttendanceRecord, CheckInState, PunchEvidence } from "@/lib/types/domain";
 import { DemoStateSwitcher } from "@/components/employee-app/demo-state-switcher";
 
 export function EmployeeHomeView({
@@ -36,6 +37,7 @@ export function EmployeeHomeView({
   const { invalidate } = useDataStore();
   const employeeId = session.user.employeeId;
   const [isPending, setIsPending] = React.useState(false);
+  const [cameraOpen, setCameraOpen] = React.useState(false);
 
   /**
    * Trang thai demo do nguoi dung chon o thanh cuoi trang.
@@ -108,16 +110,43 @@ export function EmployeeHomeView({
     };
   }, [demoState, data, session.companyId, employeeId, shift, today]);
 
-  const handleCheckIn = async (time: string): Promise<void> => {
+  /**
+   * "Vào ca" giờ CHỈ mở Camera Sheet (ATT-01) — không còn gửi chấm công
+   * trực tiếp. Server Action thật sự chạy trong `handlePunchSubmit`, nhận
+   * bằng chứng (ảnh + toạ độ) từ chính Camera Sheet.
+   */
+  const handleOpenCamera = (): void => {
+    setCameraOpen(true);
+  };
+
+  /**
+   * KHÔNG bắt lỗi ở đây — để lỗi lan ngược lên `CameraSheet.handleSubmit`,
+   * nơi giữ lại ảnh + toạ độ đã chụp trong bộ nhớ và cho người dùng gửi lại
+   * mà không phải chụp lại (D-23), thay vì hiện một toast trùng lặp ở đây
+   * rồi lại một toast khác ở Camera Sheet.
+   *
+   * `time` (tham số thứ tư của `checkIn`) truyền chuỗi rỗng: tham số này bị
+   * `void time;` bỏ qua hoàn toàn bên trong `checkIn` (xem
+   * `src/lib/data/mutations/attendance.ts`) — không có giá trị thật nào để
+   * gửi, và tính một giá trị "thật" ở đây sẽ phải đọc đồng hồ client, vi
+   * phạm D-19a ở một file KHÔNG nằm trong danh sách miễn trừ.
+   */
+  const handlePunchSubmit = async (evidence: PunchEvidence): Promise<void> => {
     setIsPending(true);
     try {
-      await checkInService(session.companyId, employeeId, today, time);
+      const result = await checkInService(
+        session.companyId,
+        employeeId,
+        today,
+        "",
+        evidence,
+      );
       setDemoState(null);
       invalidate();
-      toast.success(`Đã ghi nhận giờ vào ca lúc ${time}.`);
-    } catch (cause) {
-      toast.error(
-        cause instanceof Error ? cause.message : "Không ghi nhận được giờ vào.",
+      toast.success(
+        result.checkIn
+          ? `Đã ghi nhận giờ vào ca lúc ${result.checkIn}.`
+          : "Đã ghi nhận giờ vào ca.",
       );
     } finally {
       setIsPending(false);
@@ -179,7 +208,7 @@ export function EmployeeHomeView({
             record={displayRecord}
             shift={shift}
             isPending={isPending}
-            onCheckIn={handleCheckIn}
+            onCheckIn={handleOpenCamera}
             onCheckOut={handleCheckOut}
             canCheckInRemotely={data.employee?.canCheckInRemotely ?? false}
           />
@@ -191,6 +220,12 @@ export function EmployeeHomeView({
           <DemoStateSwitcher value={demoState} onChange={setDemoState} />
         </>
       )}
+
+      <CameraSheet
+        open={cameraOpen}
+        onOpenChange={setCameraOpen}
+        onSubmit={handlePunchSubmit}
+      />
     </div>
   );
 }

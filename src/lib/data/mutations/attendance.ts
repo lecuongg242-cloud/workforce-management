@@ -4,11 +4,12 @@ import { randomUUID } from "node:crypto";
 
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
 import { logMutation } from "@/lib/data/audit";
+import { AttendanceEvidenceError } from "@/lib/data/mutations/attendance-errors";
 import { ATTENDANCE_PHOTO_BUCKET, buildAttendancePhotoPath } from "@/lib/storage/attendance-photos";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { attendanceRecordSchema } from "@/lib/validation/api/attendance";
 import { punchEvidenceSchema } from "@/lib/validation/api/attendance-photos";
-import type { AttendanceRecord, AttendanceRejectionReason, PunchEvidence } from "@/lib/types/domain";
+import type { AttendanceRecord, PunchEvidence } from "@/lib/types/domain";
 
 const ATTENDANCE_COLUMNS =
   "id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at, worked_minutes, late_minutes, early_leave_minutes, status, location, needs_supplement, note";
@@ -44,20 +45,6 @@ interface RawAttendancePhotoRow {
   [key: string]: unknown;
 }
 
-/**
- * Lỗi cham cong bi tu choi vi thieu bang chung (D-20b). `reason` khop
- * `AttendanceRejectionReason` de tang goi (Camera Sheet, plan 03-03) phan
- * biet duoc voi loi mang tinh he thong chung (mat mang, DB loi...).
- */
-export class AttendanceEvidenceError extends Error {
-  constructor(
-    public readonly reason: AttendanceRejectionReason,
-    message: string,
-  ) {
-    super(message);
-    this.name = "AttendanceEvidenceError";
-  }
-}
 
 /**
  * `checkIn`/`checkOut` giu NGUYEN chu ky cu tu `mock/service.ts` (call site

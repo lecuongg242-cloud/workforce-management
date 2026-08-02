@@ -8,6 +8,7 @@ import {
   CalendarClock,
   ClipboardList,
   Clock,
+  ImageIcon,
   KeyRound,
   Loader2,
   Mail,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AttendancePhotoDialog } from "@/components/attendance/attendance-photo-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmployeeAvatar } from "@/components/common/employee-avatar";
 import { EmptyState } from "@/components/common/empty-state";
@@ -96,6 +98,7 @@ export function EmployeeDetailView({
     email: string;
     temporaryPassword: string;
   } | null>(null);
+  const [photoRecordId, setPhotoRecordId] = React.useState<string | null>(null);
 
   const { data, isLoading, error, reload } = useDataQuery(
     async () => {
@@ -434,6 +437,7 @@ export function EmployeeDetailView({
                       <TableHead>Tổng giờ</TableHead>
                       <TableHead>Trạng thái</TableHead>
                       <TableHead>Địa điểm</TableHead>
+                      <TableHead className="text-right">Ảnh</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -462,6 +466,17 @@ export function EmployeeDetailView({
                         </TableCell>
                         <TableCell className="text-ink-muted">
                           {record.location}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Xem ảnh chấm công"
+                            onClick={() => setPhotoRecordId(record.id)}
+                          >
+                            <ImageIcon aria-hidden="true" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -585,6 +600,13 @@ export function EmployeeDetailView({
           </section>
         </TabsContent>
       </Tabs>
+
+      <AttendancePhotoDialog
+        attendanceRecordId={photoRecordId}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setPhotoRecordId(null);
+        }}
+      />
 
       {/* Hop thoai chinh sua */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>

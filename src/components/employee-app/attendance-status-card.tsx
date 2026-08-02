@@ -32,7 +32,12 @@ export function AttendanceStatusCard({
   record: AttendanceRecord | null;
   shift: Shift | null;
   isPending: boolean;
-  onCheckIn: (time: string) => void;
+  /**
+   * Khong con nhan tham so `time`: bam "Vào ca" chi MO Camera Sheet (plan
+   * 03-01) — dau thoi gian that su do server cap TRONG luc gui bang chung,
+   * khong phai do dong ho client tai thoi diem bam nut.
+   */
+  onCheckIn: () => void;
   onCheckOut: (time: string) => void;
   canCheckInRemotely: boolean;
 }): React.ReactElement {
@@ -181,7 +186,7 @@ export function AttendanceStatusCard({
         size="mobile"
         className="mt-5"
         disabled={isPending || !now}
-        onClick={() => onCheckIn(clock)}
+        onClick={onCheckIn}
       >
         <LogIn aria-hidden="true" />
         {isPending ? "Đang ghi nhận…" : "Vào ca"}
