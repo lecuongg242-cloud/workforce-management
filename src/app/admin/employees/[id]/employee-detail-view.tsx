@@ -72,6 +72,7 @@ import {
   minutesBetween,
 } from "@/lib/format";
 import { getMonthlySummary, listAttendance } from "@/lib/data/attendance";
+import { listAttendancePhotos } from "@/lib/data/attendance-photos";
 import { listDepartments } from "@/lib/data/departments";
 import { getEmployee, listAllEmployees, updateEmployee } from "@/lib/data/employees";
 import { createEmployeeAccount } from "@/lib/data/mutations/accounts";
@@ -115,6 +116,31 @@ export function EmployeeDetailView({
           getMonthlySummary(session.companyId, employeeId, month),
         ]);
 
+      // Dau hieu nho "ban ghi co anh hay khong" cho bang lich su (03-05 Task
+      // 2b) — chi owner/admin xem duoc sieu du lieu anh (ATT-04); goi truoc
+      // se nem 403 va lam vo ca trang, nen chi thu khi dung vai tro. Gioi
+      // han o 20 dong dang hien thi (cung so voi `attendance.slice(0, 20)`
+      // ben duoi) — chap nhan duoc o quy mo 1-2 doanh nghiep cua du an,
+      // khong dung mot route gom nhieu ban ghi vi plan nay chua dinh nghia
+      // duong do (tranh mo rong pham vi thanh mot API moi).
+      const photoPresence = new Map<string, boolean>();
+      const canSeePhotos = session.role === "owner" || session.role === "admin";
+      if (canSeePhotos) {
+        try {
+          const entries = await Promise.all(
+            attendance.slice(0, 20).map(async (record) => {
+              const photos = await listAttendancePhotos(record.id);
+              return [record.id, photos.length > 0] as const;
+            }),
+          );
+          for (const [id, hasPhoto] of entries) {
+            photoPresence.set(id, hasPhoto);
+          }
+        } catch {
+          // Khong lam vo ca trang chi vi khong lay duoc dau hieu phu.
+        }
+      }
+
       return {
         employee,
         departments,
@@ -123,9 +149,10 @@ export function EmployeeDetailView({
         attendance,
         requests,
         summary,
+        photoPresence,
       };
     },
-    [employeeId, session.companyId, month],
+    [employeeId, session.companyId, session.role, month],
   );
 
   const handleCreateAccount = async (): Promise<void> => {
@@ -186,8 +213,16 @@ export function EmployeeDetailView({
     );
   }
 
-  const { employee, departments, shifts, allEmployees, attendance, requests, summary } =
-    data;
+  const {
+    employee,
+    departments,
+    shifts,
+    allEmployees,
+    attendance,
+    requests,
+    summary,
+    photoPresence,
+  } = data;
   const department = departments.find((item) => item.id === employee.departmentId);
   const shift = shifts.find((item) => item.id === employee.shiftId);
   const manager = allEmployees.find((item) => item.id === employee.managerId);
@@ -468,15 +503,28 @@ export function EmployeeDetailView({
                           {record.location}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label="Xem ảnh chấm công"
-                            onClick={() => setPhotoRecordId(record.id)}
-                          >
-                            <ImageIcon aria-hidden="true" />
-                          </Button>
+                          <div className="inline-flex items-center gap-1.5">
+                            {photoPresence.get(record.id) ? (
+                              <span
+                                aria-hidden="true"
+                                title="Bản ghi có ảnh đính kèm"
+                                className="inline-block size-1.5 rounded-full bg-brand"
+                              />
+                            ) : null}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={
+                                photoPresence.get(record.id)
+                                  ? "Xem ảnh chấm công"
+                                  : "Xem ảnh chấm công (chưa có ảnh)"
+                              }
+                              onClick={() => setPhotoRecordId(record.id)}
+                            >
+                              <ImageIcon aria-hidden="true" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

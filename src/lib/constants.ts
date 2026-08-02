@@ -378,9 +378,43 @@ export const PHOTO_REVIEW_STATUS_TONE: Record<PhotoReviewStatus, SemanticTone> =
   rejected: "danger",
 };
 
-/** Ô ảnh (`AttendancePhotoDialog`) — bản ghi không có ảnh / ảnh tải lỗi */
+/**
+ * `AttendancePhotoDialog` (plan 03-01 tao ban toi gian, 03-05 mo rong day
+ * du) — anh, toa do, khoang cach, do chinh xac, lien ket ban do, hanh dong
+ * xem xet. `loadError` KHONG con nhac "lien ket het han": kien truc da chot
+ * la broker Route Handler (khong phai signed URL), nen khong co lien ket
+ * nao tu mat hieu luc theo thoi gian — mot loi tai anh o day chi co the la
+ * loi mang hoac loi server, khong phai mot lien ket qua han.
+ */
 export const ATTENDANCE_PHOTO_DIALOG_LABEL = {
   noPhoto: "Bản ghi này không có ảnh đính kèm.",
-  loadError: "Không tải được ảnh — liên kết đã hết hạn.",
+  missingLeg: "Chưa có ảnh cho lần chấm công này.",
+  loadError: "Không tải được ảnh.",
   reload: "Tải lại ảnh",
+  fetchErrorReload: "Thử lại",
+  kindLabel: {
+    check_in: "Lần vào ca",
+    check_out: "Lần ra ca",
+  } as const,
+  capturedAtLabel: "Thời điểm chụp",
+  workSiteLabel: "Điểm làm việc",
+  noWorkSite: "Doanh nghiệp chưa khai điểm làm việc nên không có mốc để đo.",
+  distanceTowardsSitePrefix: "Cách",
+  distanceTowardsSiteSuffix: "khoảng",
+  accuracyLabel: "Độ chính xác GPS thiết bị khai",
+  // D-20: chinh cau nay la ly do "trong ban kinh" thoi la dieu kien chan
+  // cham cong — do chinh xac la ban kinh tin cay DO THIET BI TU KHAI, khong
+  // phai mot phep do cua he thong; nguoi doc can thay CA HAI con so de phan
+  // biet "GPS do sai" voi "dung xa that".
+  accuracyExplain:
+    "là bán kính vòng tròn tin cậy do chính thiết bị khai — vị trí thật có thể lệch tới ngần ấy mét theo bất kỳ hướng nào.",
+  coordinateLabel: "Toạ độ thô",
+  openMapLink: "Mở trong Google Maps",
+  reviewSuccessToast: "Đã đánh dấu ảnh là đã xem xét.",
+  reviewErrorToast: "Không thể cập nhật trạng thái xem xét.",
+  // Ghi chu pham vi bang chung — anh la anh hien truong, KHONG phai anh
+  // chan dung: no chung minh mot thiet bi da o dung noi, khong chung minh
+  // dung nguoi (PROJECT.md §Key Decisions).
+  scopeNote:
+    "Ảnh là ảnh hiện trường tại thời điểm chấm công, không dùng để đối chiếu khuôn mặt hay xác nhận danh tính người chấm công.",
 } as const;
