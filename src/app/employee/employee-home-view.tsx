@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ErrorState } from "@/components/common/error-state";
 import { AttendanceStatusCard } from "@/components/employee-app/attendance-status-card";
 import { CameraSheet } from "@/components/employee-app/camera-sheet";
+import type { PunchSubmitResult } from "@/components/employee-app/camera-sheet";
 import { CurrentShiftCard } from "@/components/employee-app/current-shift-card";
 import { MonthSummary } from "@/components/employee-app/month-summary";
 import { QuickActions } from "@/components/employee-app/quick-actions";
@@ -131,7 +132,17 @@ export function EmployeeHomeView({
    * gửi, và tính một giá trị "thật" ở đây sẽ phải đọc đồng hồ client, vi
    * phạm D-19a ở một file KHÔNG nằm trong danh sách miễn trừ.
    */
-  const handlePunchSubmit = async (evidence: PunchEvidence): Promise<void> => {
+  /**
+   * Tra ve `PunchSubmitResult` (plan 03-03, Task 3) de Camera Sheet tu
+   * quyet co hien banner "da ghi nhan nhung o xa" (D-20) hay khong bang du
+   * lieu THAT server vua tinh — khong doan o client. Khi bi danh dau
+   * (`isOutsideRadius`), KHONG toast o day: Camera Sheet se hien banner cham
+   * "Da hieu" thay the, tranh hai thong bao chong nhau cho cung mot su
+   * kien.
+   */
+  const handlePunchSubmit = async (
+    evidence: PunchEvidence,
+  ): Promise<PunchSubmitResult> => {
     setIsPending(true);
     try {
       const result = await checkInService(
@@ -143,11 +154,18 @@ export function EmployeeHomeView({
       );
       setDemoState(null);
       invalidate();
-      toast.success(
-        result.checkIn
-          ? `Đã ghi nhận giờ vào ca lúc ${result.checkIn}.`
-          : "Đã ghi nhận giờ vào ca.",
-      );
+      if (!result.isOutsideRadius) {
+        toast.success(
+          result.checkIn
+            ? `Đã ghi nhận giờ vào ca lúc ${result.checkIn}.`
+            : "Đã ghi nhận giờ vào ca.",
+        );
+      }
+      return {
+        distanceMeters: result.distanceMeters,
+        workSiteName: result.workSiteName,
+        isOutsideRadius: result.isOutsideRadius,
+      };
     } finally {
       setIsPending(false);
     }

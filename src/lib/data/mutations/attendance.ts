@@ -34,9 +34,32 @@ interface RawShiftRow {
 
 interface RawWorkSiteRow {
   id: string;
+  name: string;
   latitude: number;
   longitude: number;
+  radius_meters: number;
 }
+
+/**
+ * Ket qua checkIn tra ve THEM ba truong so voi `AttendanceRecord` (plan
+ * 03-03, Task 3) de man hinh nhan vien dung DUNG du lieu server da tinh cho
+ * banner "da ghi nhan nhung o xa" (D-20) — khong tu doan/gia dinh o client.
+ * `isOutsideRadius` dung nguong D-21 (mac dinh 5 lan ban kinh) CHI de quyet
+ * dinh banner ngay lap tuc nay; plan 03-06 se hop nhat thanh mot hang so cau
+ * hinh doanh nghiep dung chung cho danh sach "can xem lai" cua quan tri —
+ * hai noi tinh cung cong thuc cho hai nguoi xem khac nhau, khong phai hai
+ * quyet dinh mau thuan nhau.
+ */
+export interface CheckInResult extends AttendanceRecord {
+  distanceMeters: number | null;
+  workSiteName: string | null;
+  isOutsideRadius: boolean;
+}
+
+/** D-21: nguong danh dau dang ngo, mac dinh 5 lan ban kinh work_site. Khai
+ * MOT cho o day (dung rieng cho banner tuc thi cua Camera Sheet); plan 03-06
+ * la noi so huu chinh thuc cua hang so nay cho danh sach can xem lai. */
+const SUSPICIOUS_DISTANCE_MULTIPLIER = 5;
 
 interface RawAttendancePhotoRow {
   id: string;
@@ -82,7 +105,7 @@ export async function checkIn(
   date: string,
   time: string,
   evidence?: PunchEvidence,
-): Promise<AttendanceRecord> {
+): Promise<CheckInResult> {
   void companyId;
   void time;
 
@@ -266,7 +289,7 @@ export async function checkIn(
   // kinh la mot ghi chu duoc chap nhan (D-20), khong phai dieu kien chan.
   const { data: workSiteRows, error: workSitesError } = await supabase
     .from("work_sites")
-    .select("id, latitude, longitude")
+    .select("id, name, latitude, longitude, radius_meters")
     .eq("company_id", activeCompanyId)
     .eq("is_active", true);
   if (workSitesError) {
@@ -274,6 +297,8 @@ export async function checkIn(
   }
 
   let nearestWorkSiteId: string | null = null;
+  let nearestWorkSiteName: string | null = null;
+  let nearestWorkSiteRadiusMeters: number | null = null;
   let nearestDistanceMeters: number | null = null;
   for (const site of (workSiteRows ?? []) as RawWorkSiteRow[]) {
     const { data: distance, error: distanceError } = await supabase.rpc(
@@ -291,8 +316,20 @@ export async function checkIn(
     if (nearestDistanceMeters === null || (distance as number) < nearestDistanceMeters) {
       nearestDistanceMeters = distance as number;
       nearestWorkSiteId = site.id;
+      nearestWorkSiteName = site.name;
+      nearestWorkSiteRadiusMeters = site.radius_meters;
     }
   }
+
+  // D-21: danh dau dang ngo khi khoang cach vuot NGUONG (5 lan ban kinh mac
+  // dinh), khong phai vuot ban kinh tran (D-20a: "trong ban kinh" tu dieu
+  // kien bat buoc thanh ghi chu). CHI dung de quyet dinh banner tuc thi o
+  // day — KHONG chan cham cong o bat ky nhanh nao (D-20).
+  const isOutsideRadius =
+    nearestWorkSiteId !== null &&
+    nearestDistanceMeters !== null &&
+    nearestWorkSiteRadiusMeters !== null &&
+    nearestDistanceMeters > nearestWorkSiteRadiusMeters * SUSPICIOUS_DISTANCE_MULTIPLIER;
 
   // T-03-06/ATT-01: anh chi den tu khung hinh truc tiep (Blob dung canh
   // duoc kiem boi punchEvidenceSchema) — khong co duong nao khac de doc
@@ -391,7 +428,12 @@ export async function checkIn(
     reason: null,
   });
 
-  return attendanceRecordSchema.parse(resultRow);
+  return {
+    ...attendanceRecordSchema.parse(resultRow),
+    distanceMeters: nearestDistanceMeters,
+    workSiteName: nearestWorkSiteName,
+    isOutsideRadius,
+  };
 }
 
 export async function checkOut(

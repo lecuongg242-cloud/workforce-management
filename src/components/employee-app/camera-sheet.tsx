@@ -3,7 +3,17 @@
 import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Camera, CameraOff, Check, Loader2, MapPinOff, X } from "lucide-react";
+import {
+  AlertTriangle,
+  Camera,
+  CameraOff,
+  Check,
+  Clock,
+  Loader2,
+  MapPinOff,
+  WifiOff,
+  X,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -20,9 +30,14 @@ import {
   compressPhoto,
   openCamera,
 } from "@/lib/attendance/camera";
-import { ATTENDANCE_EVIDENCE_LABEL, REQUEST_TYPE_LABEL } from "@/lib/constants";
+import {
+  ATTENDANCE_EVIDENCE_LABEL,
+  ATTENDANCE_REJECTION_LABEL,
+  REQUEST_TYPE_LABEL,
+} from "@/lib/constants";
+import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { PunchEvidence } from "@/lib/types/domain";
+import type { AttendanceRejectionReason, PunchEvidence } from "@/lib/types/domain";
 
 /**
  * Sheet toan man hinh: viewfinder -> chup -> xem lai -> gui. Thay HAN thanh
@@ -50,6 +65,19 @@ import type { PunchEvidence } from "@/lib/types/domain";
  * bi), va het gio cho GPS (`LocationTimeoutError` — chi doi chip trang thai,
  * KHONG thay ca khung hinh vi khung hinh van dung duoc). Cong them
  * `compressPhoto()` chen giua buoc chup va buoc gui.
+ *
+ * Plan 03-03 (Task 3) them tang trinh bay KET QUA sau khi Server Action tra
+ * ve: ba ly do tu choi cua D-20b (`missing_photo`/`outside_shift` do SERVER
+ * quyet, `network_error` la phan loai DUY NHAT client tu quyet khi loi
+ * KHONG mang truong `reason` hop le — xem `classifyRejection`), va banner
+ * "da ghi nhan nhung o xa" (D-20) doi hoi mot nut cham "Da hieu" thay vi
+ * toast thoang qua. `onSubmit` doi tu `Promise<void>` sang
+ * `Promise<PunchSubmitResult>` — day la mot thay doi RULE 2 (chuc nang thieu
+ * quan trong) ngoai <files> goc cua Task 3: khong co kenh nao khac de
+ * `checkIn()` (Server Action) tra khoang cach/ten diem lam viec THAT ve cho
+ * banner, nen `src/lib/data/mutations/attendance.ts` va
+ * `src/app/employee/employee-home-view.tsx` cung duoc mo rong toi thieu
+ * trong commit nay — xem SUMMARY.md muc "Deviations".
  */
 
 type CameraState =
@@ -77,7 +105,56 @@ type BlockingOverlay =
   | "camera-permission-denied"
   | "camera-no-device"
   | "camera-in-use"
-  | "location-permission-denied";
+  | "location-permission-denied"
+  | "rejection"
+  | "flagged";
+
+/** Ket qua `onSubmit` phai tra ve (Task 3) — cho phep Camera Sheet tu quyet
+ * co hien banner "da ghi nhan nhung o xa" hay khong bang du lieu THAT tu
+ * server, khong phai gia dinh o client. */
+export interface PunchSubmitResult {
+  distanceMeters: number | null;
+  workSiteName: string | null;
+  isOutsideRadius: boolean;
+}
+
+function isRejectionReason(value: unknown): value is AttendanceRejectionReason {
+  return (
+    value === "missing_photo" ||
+    value === "outside_shift" ||
+    value === "network_error"
+  );
+}
+
+/**
+ * Phan loai loi tu `onSubmit` (Server Action `checkIn` qua ranh gioi
+ * RSC/Server Action). Kiem theo HINH DANG (co truong `reason` hop le),
+ * KHONG dung `instanceof` — mot loi nem tu Server Action co the mat nguyen
+ * mau khi toi client (tai lieu Next.js: chi `message` chac chan duoc chuyen
+ * tiep qua ranh gioi nay, cac truong tuy bien khac co the khong con). Cung
+ * huong tiep can voi `isAttendanceRejection()` ma plan 03-04 se dinh nghia
+ * chinh thuc trong `src/lib/attendance/rejection.ts` (03-04 phu thuoc 03-03,
+ * chua chay o thoi diem plan nay thuc thi). Khong co truong `reason` hop le
+ * -> phan loai la `network_error`, phan loai DUY NHAT client tu quyet dinh
+ * (D-20b: hai ly do con lai do SERVER quyet).
+ */
+function classifyRejection(cause: unknown): AttendanceRejectionReason {
+  if (
+    cause &&
+    typeof cause === "object" &&
+    "reason" in cause &&
+    isRejectionReason((cause as { reason: unknown }).reason)
+  ) {
+    return (cause as { reason: AttendanceRejectionReason }).reason;
+  }
+  return "network_error";
+}
+
+const REJECTION_ICON: Record<AttendanceRejectionReason, LucideIcon> = {
+  missing_photo: CameraOff,
+  outside_shift: Clock,
+  network_error: WifiOff,
+};
 
 function FullScreenMessage({
   icon: Icon,
@@ -109,7 +186,7 @@ export function CameraSheet({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (evidence: PunchEvidence) => Promise<void>;
+  onSubmit: (evidence: PunchEvidence) => Promise<PunchSubmitResult>;
 }): React.ReactElement {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const [state, setState] = React.useState<CameraState>("idle");
@@ -119,6 +196,12 @@ export function CameraSheet({
   const [coords, setCoords] = React.useState<Coords | null>(null);
   const [photoBlob, setPhotoBlob] = React.useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [rejection, setRejection] = React.useState<AttendanceRejectionReason | null>(
+    null,
+  );
+  const [flaggedResult, setFlaggedResult] = React.useState<PunchSubmitResult | null>(
+    null,
+  );
 
   const streamRef = React.useRef<MediaStream | null>(null);
   streamRef.current = stream;
@@ -191,6 +274,8 @@ export function CameraSheet({
     setPhotoBlob(null);
     setPreviewUrl(null);
     setCoords(null);
+    setRejection(null);
+    setFlaggedResult(null);
     startCamera();
     const cancelLocation = startLocation();
 
@@ -232,6 +317,8 @@ export function CameraSheet({
     }
     setStream(null);
     setState("idle");
+    setRejection(null);
+    setFlaggedResult(null);
     onOpenChange(false);
   }
 
@@ -252,37 +339,60 @@ export function CameraSheet({
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPhotoBlob(null);
     setPreviewUrl(null);
+    setRejection(null);
     setState("streaming");
   }
 
   async function handleSubmit(): Promise<void> {
     if (!photoBlob || !coords) return;
     setState("submitting");
+    setRejection(null);
     try {
       // Nen anh phia client TRUOC khi roi thiet bi (bien phap thu nhat
       // chong loi vuot gioi han than Server Action — xem camera.ts).
       const compressedPhoto = await compressPhoto(photoBlob);
-      await onSubmit({
+      const result = await onSubmit({
         photo: compressedPhoto,
         latitude: coords.latitude,
         longitude: coords.longitude,
         accuracyMeters: coords.accuracyMeters,
       });
+      // Da gui xong — camera khong con can chay nua bat ke ket qua thanh
+      // cong binh thuong hay bi danh dau, nhung chi DONG han Sheet o duong
+      // thanh cong binh thuong (D-20: ket qua bi danh dau can mot lan cham
+      // "Da hieu", khong phai bien mat ngay).
+      if (streamRef.current) {
+        closeCamera(streamRef.current);
+        setStream(null);
+      }
+      if (result.isOutsideRadius) {
+        setFlaggedResult(result);
+        setState("captured");
+        return;
+      }
       handleClose();
     } catch (cause) {
       // Giu lai anh + toa do da co trong bo nho de khong bat nguoi dung chup
       // lai (D-23) — quay ve "captured" thay vi ve "streaming"/"idle".
       setState("captured");
-      toast.error(
-        cause instanceof Error
-          ? cause.message
-          : ATTENDANCE_EVIDENCE_LABEL.submitErrorFallback,
-      );
+      setRejection(classifyRejection(cause));
     }
   }
 
+  /** Banner "da ghi nhan nhung o xa" chi dong khi nguoi dung CHAM "Da hieu"
+   * (D-20: thong tin can nho, khong phai toast thoang qua). */
+  function handleAcknowledgeFlagged(): void {
+    setFlaggedResult(null);
+    handleClose();
+  }
+
+  // Uu tien cao nhat: ket qua cua lan gui vua roi (flagged/rejection) luon
+  // thang moi trang thai khac, vi day la thong tin nguoi dung PHAI thay
+  // truoc khi lam bat cu viec gi tiep theo.
   let overlay: BlockingOverlay | null = null;
-  if (state === "permission-denied") overlay = "camera-permission-denied";
+  if (flaggedResult) overlay = "flagged";
+  else if (rejection) overlay = "rejection";
+  else if (state === "permission-denied") overlay = "camera-permission-denied";
   else if (state === "no-camera") overlay = "camera-no-device";
   else if (state === "camera-in-use") overlay = "camera-in-use";
   else if (locationDenied) overlay = "location-permission-denied";
@@ -398,6 +508,83 @@ export function CameraSheet({
                 onClick={startLocation}
               >
                 {ATTENDANCE_EVIDENCE_LABEL.retry}
+              </Button>
+            </FullScreenMessage>
+          ) : null}
+
+          {/* --------------------------------------------- Ba ly do tu choi (D-20b) */}
+          {overlay === "rejection" && rejection ? (
+            <FullScreenMessage
+              icon={REJECTION_ICON[rejection]}
+              iconClassName="text-red-400"
+              title={ATTENDANCE_REJECTION_LABEL[rejection].title}
+              body={ATTENDANCE_REJECTION_LABEL[rejection].body}
+            >
+              {/* Ba ly do — ba hanh dong tiep theo khac nhau, KHONG dung
+                  chung mot nut "thu lai": missing_photo can chup lai (anh
+                  hien co co the da hong), outside_shift can duong bo sung
+                  cong co nguoi duyet (khong phai gui lai chinh lan bi tu
+                  choi), network_error can gui lai DUNG anh/toa do dang giu
+                  (D-23: khong bat chup lai). */}
+              {rejection === "missing_photo" ? (
+                <Button
+                  type="button"
+                  variant="onDark"
+                  size="mobile"
+                  className="mt-2 max-w-64"
+                  onClick={handleRetake}
+                >
+                  {ATTENDANCE_EVIDENCE_LABEL.retake}
+                </Button>
+              ) : null}
+              {rejection === "outside_shift" ? (
+                <Button asChild variant="onDark" size="mobile" className="mt-2 max-w-64">
+                  <Link href="/employee/requests?type=attendance_supplement">
+                    {REQUEST_TYPE_LABEL.attendance_supplement}
+                  </Link>
+                </Button>
+              ) : null}
+              {rejection === "network_error" ? (
+                <Button
+                  type="button"
+                  variant="onDark"
+                  size="mobile"
+                  className="mt-2 max-w-64"
+                  onClick={handleSubmit}
+                >
+                  {ATTENDANCE_EVIDENCE_LABEL.submitRetry}
+                </Button>
+              ) : null}
+            </FullScreenMessage>
+          ) : null}
+
+          {/* --------------------------------------------- Da ghi nhan nhung o xa (D-20) */}
+          {overlay === "flagged" && flaggedResult ? (
+            <FullScreenMessage
+              icon={AlertTriangle}
+              iconClassName="text-amber-400"
+              title={ATTENDANCE_EVIDENCE_LABEL.outsideRadiusTitle}
+              body={[
+                ATTENDANCE_EVIDENCE_LABEL.outsideRadiusBodyPrefix,
+                flaggedResult.workSiteName,
+                ATTENDANCE_EVIDENCE_LABEL.outsideRadiusDistanceLabel,
+                `${formatNumber(Math.round(flaggedResult.distanceMeters ?? 0))} m.`,
+                ATTENDANCE_EVIDENCE_LABEL.outsideRadiusBodySuffix,
+              ].join(" ")}
+            >
+              {/* Khong phai loi — mot lan cham xac nhan "Da hieu", KHONG
+                  phai toast thoang qua, vi day la thong tin nhan vien can
+                  nho (ban ghi cua ho se bi xem lai). Khong hien do chinh
+                  xac GPS o day — con so do chi co gia tri o man hinh quan
+                  tri. */}
+              <Button
+                type="button"
+                variant="onDark"
+                size="mobile"
+                className="mt-2 max-w-64"
+                onClick={handleAcknowledgeFlagged}
+              >
+                {ATTENDANCE_EVIDENCE_LABEL.acknowledge}
               </Button>
             </FullScreenMessage>
           ) : null}
