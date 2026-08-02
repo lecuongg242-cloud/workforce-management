@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: ch-m-c-ng-c-b-ng-ch-ng
 status: executing
-stopped_at: Completed 02-09-PLAN.md
-last_updated: "2026-08-02T08:20:14.747Z"
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-08-02T09:47:13.714Z"
 last_activity: 2026-08-02
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 24
-  completed_plans: 17
+  completed_plans: 18
 ---
 
 # Project State
@@ -28,11 +28,11 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 03 (ch-m-c-ng-c-b-ng-ch-ng) — EXECUTING
-Plan: 1 of 7
-Status: Executing Phase 03
+Plan: 2 of 7
+Status: Ready to execute
 Last activity: 2026-08-02 — Phase 03 execution started
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [████████░░] 76%
 | Phase 02 P07 | 80min | 3 tasks | 15 files |
 | Phase 02 P08 | 100min | 3 tasks | 20 files |
 | Phase 02 P09 | 55min | 2 tasks | 10 files |
+| Phase 03 P01 | 67min | 3 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,9 @@ Recent decisions affecting current work:
 - [Phase ?]: 02-09: GET /api/requests mac dinh gioi han employeeId ve chinh phien khi vai tro khong phai quan tri VA khong truyen tham so -- khac khuon GET /api/attendance (chi chan khi truyen sai), quyet dinh co chu dich vi yeu cau la loi khai ca nhan nhay cam hon cham cong
 - [Phase ?]: 02-09: createRequest doi chieu employeeId voi bang employees theo company_id truoc khi ghi -- FK khong kiem company_id nen can buoc nay de giu ranh gioi doanh nghiep, cung khuon voi checkIn/bulkMoveDepartment
 - [Phase ?]: 02-09: sau plan nay khong con file nao duoi src/app/ hoac src/components/ import @/lib/mock/service -- chi con employee-form.tsx dung REFERENCE_DATE, giao lai cho 02-11 (phase gate) xoa tang gia lap
+- [Phase ?]: 03-01: checkpoint bucket/duong dan Storage xac nhan boi chu du an - option-a, attendance-photos/{company_id}/{employee_id}/{photo_id}.jpg, uu tien xoa-theo-nhan-vien cho PRIV V3
+- [Phase ?]: 03-01: checkIn() evidence optional o MUC KIEU (bat buoc o hanh vi) de giu call site 4-tham-so cu compile duoc giua Task 2 va Task 3, tranh sua employee-home-view.tsx hai lan
+- [Phase ?]: 03-01: npm run test:db chay qua TF_ALLOW_CLOUD_TESTS=1 nham thang Supabase dev that vi Docker khong co san trong moi truong thuc thi - don sach 4 dong fixture pgTAP ngay sau khi chay, theo tien le 02-02-SUMMARY.md
 
 ### Pending Todos
 
@@ -134,6 +138,7 @@ None yet.
 - 01-04: Human must manually run the employees_select_member sabotage-and-revert teeth check (loosen to using(true), then drop policy) against the live dev DB — harness permission classifier blocks it from the executor. See WINDOWS.md entry 2 for exact steps.
 - 01-05: git push to origin denied (403) - local identity LeeCuongg is not a collaborator on lecuongg242-cloud/workforce-management; human must push with an authorized account and confirm db CI workflow is green (WINDOWS.md entry 3, same root cause as entry 1)
 - 02-03/02-04: khong co SUMMARY.md tren dia mac du code da duoc feat()/test() commit va migration da push (chi 02-01/02-02/02-05 co SUMMARY trong thu muc phase 02) -- can mot lan finalize rieng (SUMMARY + docs commit) cho hai plan nay de dong bo STATE/ROADMAP.
+- 03-01: Xac nhan cuoi (UAT) con thieu — mot lan cham cong that qua trinh duyet that voi camera/GPS that (dung human_verify_mode: end-of-phase cua config.json, khong chan cac plan tiep theo cua phase 3).
 
 ## Deferred Items
 
@@ -145,6 +150,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-01T10:17:09.656Z
-Stopped at: Completed 02-09-PLAN.md
+Last session: 2026-08-02T09:47:13.209Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: None

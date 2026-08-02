@@ -36,8 +36,8 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 
 ### Chấm công có bằng chứng (ATT)
 
-- [ ] **ATT-01**: Nhân viên chấm công vào/ra bắt buộc kèm ảnh chụp trực tiếp bằng camera tại thời điểm chấm; không chọn được ảnh có sẵn trong máy
-- [ ] **ATT-02**: Nhân viên chấm công bắt buộc kèm toạ độ GPS; **server** tính khoảng cách tới điểm làm việc và ghi lại kết quả cùng bản ghi, client không tự quyết định hợp lệ hay không. Ngoài bán kính **không chặn** — bản ghi vẫn được nhận nhưng mang cờ để quản trị xem lại (xem ghi chú thu hẹp bên dưới)
+- [x] **ATT-01**: Nhân viên chấm công vào/ra bắt buộc kèm ảnh chụp trực tiếp bằng camera tại thời điểm chấm; không chọn được ảnh có sẵn trong máy
+- [x] **ATT-02**: Nhân viên chấm công bắt buộc kèm toạ độ GPS; **server** tính khoảng cách tới điểm làm việc và ghi lại kết quả cùng bản ghi, client không tự quyết định hợp lệ hay không. Ngoài bán kính **không chặn** — bản ghi vẫn được nhận nhưng mang cờ để quản trị xem lại (xem ghi chú thu hẹp bên dưới)
 
   > **Sửa phạm vi ngày 2026-08-02.** Yêu cầu này ban đầu viết "server kiểm tra rằng toạ độ
   > **nằm trong** bán kính", tức ngoài bán kính là bị từ chối. Chủ dự án quyết định đổi sau
@@ -49,9 +49,9 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
   > gian lận chính chuyển sang ATT-07.
 
 - [ ] **ATT-03**: Quản trị khai báo được điểm làm việc: tên, toạ độ, bán kính cho phép
-- [ ] **ATT-04**: Quản trị xem lại được ảnh và vị trí của từng bản ghi chấm công
-- [ ] **ATT-05**: Ảnh chấm công lưu ở bucket riêng tư; chỉ người có quyền trong cùng doanh nghiệp mở được, qua liên kết ký hạn ngắn
-- [ ] **ATT-06**: Dấu thời gian của bản ghi chấm công do server cấp, không lấy từ đồng hồ thiết bị
+- [x] **ATT-04**: Quản trị xem lại được ảnh và vị trí của từng bản ghi chấm công
+- [x] **ATT-05**: Ảnh chấm công lưu ở bucket riêng tư; chỉ người có quyền trong cùng doanh nghiệp mở được, qua liên kết ký hạn ngắn
+- [x] **ATT-06**: Dấu thời gian của bản ghi chấm công do server cấp, không lấy từ đồng hồ thiết bị
 - [ ] **ATT-07**: Hệ thống đánh dấu bản ghi đáng ngờ khi lần chấm công **cách tâm điểm làm việc quá xa** (ngưỡng cấu hình được, mặc định 5 lần bán kính), để quản trị xem lại
 
   > **Sửa cách đo ngày 2026-08-02.** Bản đầu viết "hai lần chấm liên tiếp cách nhau một quãng
@@ -161,12 +161,12 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | AUTH-04 | Phase 2 | Complete |
 | AUTH-05 | Phase 2 | Complete |
 | AUTH-06 | Phase 1 | Complete (phạm vi thu hẹp — chỉ vế client bundle) |
-| ATT-01 | Phase 3 | Pending |
-| ATT-02 | Phase 3 | Pending |
+| ATT-01 | Phase 3 | Complete |
+| ATT-02 | Phase 3 | Complete |
 | ATT-03 | Phase 3 | Pending |
-| ATT-04 | Phase 3 | Pending |
-| ATT-05 | Phase 3 | Pending |
-| ATT-06 | Phase 3 | Pending |
+| ATT-04 | Phase 3 | Complete |
+| ATT-05 | Phase 3 | Complete |
+| ATT-06 | Phase 3 | Complete |
 | ATT-07 | Phase 3 | Pending |
 | ATT-08 | Phase 3 | Pending |
 | SET-01 | Phase 4 | Pending |
