@@ -3,8 +3,8 @@
 import { randomUUID } from "node:crypto";
 
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
+import { AttendanceRejectedError } from "@/lib/attendance/rejection";
 import { logMutation } from "@/lib/data/audit";
-import { AttendanceEvidenceError } from "@/lib/data/mutations/attendance-errors";
 import { ATTENDANCE_PHOTO_BUCKET, buildAttendancePhotoPath } from "@/lib/storage/attendance-photos";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { attendanceRecordSchema } from "@/lib/validation/api/attendance";
@@ -61,6 +61,28 @@ export interface CheckInResult extends AttendanceRecord {
  * la noi so huu chinh thuc cua hang so nay cho danh sach can xem lai. */
 const SUSPICIOUS_DISTANCE_MULTIPLIER = 5;
 
+/**
+ * D-20b/T-03-04-01: biên độ nới rộng hai đầu khung giờ ca khi kiểm "ngoài
+ * giờ ca làm" — CÓ CHỦ ĐÍCH rộng, không phải một hằng số tuỳ ý: một hệ thống
+ * từ chối người đến sớm mười phút là một hệ thống người ta sẽ tìm cách đi
+ * vòng. 120 phút (hai giờ) đủ rộng để không chặn nhầm người đến chuẩn bị
+ * sớm hay còn nán lại xử lý việc cuối ca, nhưng vẫn từ chối được người chấm
+ * công ở một khung giờ hoàn toàn khác ca được phân.
+ */
+const SHIFT_WINDOW_GRACE_MINUTES = 120;
+
+/**
+ * Cộng một số phút (có thể âm) vào một khoảnh khắc ISO để ra một khoảnh khắc
+ * mới — phép cộng EPOCH ĐƠN THUẦN (không phải một quy ước múi giờ thứ hai).
+ * Dùng CHUNG cho mọi nơi trong file này cần tính THỜI ĐIỂM KẾT THÚC CA THEO
+ * KẾ HOẠCH (checkOut, tính về sớm) hoặc NỚI BIÊN ĐỘ khung giờ ca (checkIn,
+ * kiểm ngoài ca) — CHỈ một dòng `new Date(` duy nhất trong toàn file, xem
+ * acceptance criteria của 03-04-PLAN.md Task 1.
+ */
+function addMinutesToInstant(instantIso: string, minutes: number): string {
+  return new Date(new Date(instantIso).getTime() + minutes * 60_000).toISOString();
+}
+
 interface RawAttendancePhotoRow {
   id: string;
   attendance_record_id: string;
@@ -96,8 +118,16 @@ interface RawAttendancePhotoRow {
  * la cach DUY NHAT de `npm run typecheck` xanh cho CA HAI task ma khong phai
  * sua truoc mot file ngoai pham vi Task 2. VE HANH VI, `evidence` la BAT
  * BUOC: thieu no (undefined hoac khong qua duoc `punchEvidenceSchema`) nem
- * `AttendanceEvidenceError("missing_photo", ...)` TRUOC KHI cham Storage hay
- * ghi bat ky dong nao — khong co nhanh nao coi "khong co anh" la hop le.
+ * `AttendanceRejectedError("missing_photo")` TRUOC KHI cham Storage hay ghi
+ * bat ky dong nao — khong co nhanh nao coi "khong co anh" la hop le.
+ *
+ * D-20b (plan 03-04): dung DUNG BA ly do tu choi ma server tu quyet duoc —
+ * `missing_photo` (thieu bang chung, o tren) va `outside_shift` (cham cong
+ * ngoai khung gio ca duoc phan, xem `SHIFT_WINDOW_GRACE_MINUTES`) — cong
+ * `network_error` la phan loai DUY NHAT client tu quyet khi loi vang KHONG
+ * mang truong `reason` hop le (loi mang, khong toi duoc server). KHONG CO LY
+ * DO THU TU: khoang cach vuot ban kinh KHONG BAO GIO la mot ly do tu choi
+ * (D-20/D-20a) o bat ky nhanh nao trong file nay.
  */
 export async function checkIn(
   companyId: string,
@@ -128,10 +158,7 @@ export async function checkIn(
   // cham Storage hay ghi bat ky dong nao (kiem tra re nhat, chay som nhat).
   const evidenceResult = punchEvidenceSchema.safeParse(evidence);
   if (!evidenceResult.success) {
-    throw new AttendanceEvidenceError(
-      "missing_photo",
-      "Thiếu ảnh chấm công. Vui lòng chụp lại và gửi.",
-    );
+    throw new AttendanceRejectedError("missing_photo");
   }
   const punchEvidence = evidenceResult.data;
 
@@ -187,6 +214,42 @@ export async function checkIn(
   );
   if (scheduledStartError || !scheduledStart) {
     throw new Error("Không thể tính thời gian bắt đầu ca.");
+  }
+
+  // T-03-04-01/D-20b: cham cong NGOAI khung gio ca duoc phan (cong bien do
+  // SHIFT_WINDOW_GRACE_MINUTES hai dau) bi tu choi. Dung LAI dung khuon
+  // checkOut hien co dang dung de tinh ve som: tf_shift_minutes() cho so
+  // phut TRON CA (da xu ly wrap qua nua dem cho ca qua dem, D-08 — khong tu
+  // tinh lai phep tru gio o day), cong vao scheduledStart bang
+  // addMinutesToInstant() de ra thoi diem KET THUC CA THEO KE HOACH.
+  const { data: rawShiftMinutesForWindow, error: shiftMinutesForWindowError } =
+    await supabase.rpc("tf_shift_minutes", {
+      p_start: shift.start_time,
+      p_end: shift.end_time,
+      p_break_minutes: 0,
+    });
+  if (shiftMinutesForWindowError || rawShiftMinutesForWindow === null) {
+    throw new Error("Không thể tính thời lượng ca.");
+  }
+  const scheduledEndForWindow = addMinutesToInstant(
+    scheduledStart as string,
+    rawShiftMinutesForWindow as number,
+  );
+  const windowStart = addMinutesToInstant(
+    scheduledStart as string,
+    -SHIFT_WINDOW_GRACE_MINUTES,
+  );
+  const windowEnd = addMinutesToInstant(
+    scheduledEndForWindow,
+    SHIFT_WINDOW_GRACE_MINUTES,
+  );
+  // So sanh chuoi ISO8601 (khong phai so sanh Date) — hop le vi ca ba gia
+  // tri deu la timestamptz cung mot dinh dang tu Postgres/PostgREST (cung do
+  // rong truong nam-thang-ngay-gio-phut-giay, phan phan-so-giay neu co chi
+  // lam chuoi DAI HON chu khong lam sai thu tu). Tranh them mot dong
+  // `new Date(` moi ngoai `addMinutesToInstant()` (xem acceptance criteria).
+  if ((nowIso as string) < windowStart || (nowIso as string) > windowEnd) {
+    throw new AttendanceRejectedError("outside_shift");
   }
 
   // Do muon = hieu (check_in_at - gio bat dau ca THEO KE HOACH), tinh tren
@@ -467,6 +530,16 @@ export async function checkOut(
     throw new ForbiddenError();
   }
 
+  // D-20b/T-03-04: tan ca cho mot ban ghi CHUA co gio vao khong phai mot
+  // trang thai du lieu hop le de tinh tiep — day khong phai mot ly do tu
+  // choi thu tu, ma la ap dung LAI `outside_shift` (D-20b chi cho dung ba ly
+  // do, khong duoc bia them): "chua bat dau ca" cung la mot dang "ngoai
+  // khung gio ca" theo nghia rong. Nem TRUOC moi RPC tinh gio/moi thao tac
+  // Storage.
+  if (!beforeRow.check_in_at) {
+    throw new AttendanceRejectedError("outside_shift");
+  }
+
   const { data: shiftRow, error: shiftError } = await supabase
     .from("shifts")
     .select("id, start_time, end_time, break_minutes, late_tolerance_minutes")
@@ -515,9 +588,10 @@ export async function checkOut(
   if (shiftMinutesError || rawShiftMinutes === null) {
     throw new Error("Không thể tính thời lượng ca.");
   }
-  const scheduledEnd = new Date(
-    new Date(scheduledStart as string).getTime() + (rawShiftMinutes as number) * 60_000,
-  ).toISOString();
+  const scheduledEnd = addMinutesToInstant(
+    scheduledStart as string,
+    rawShiftMinutes as number,
+  );
 
   const { data: earlyLeaveMinutes, error: earlyError } = await supabase.rpc(
     "tf_worked_minutes",
