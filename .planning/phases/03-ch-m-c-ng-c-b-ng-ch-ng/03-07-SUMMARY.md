@@ -88,11 +88,12 @@ coverage:
     description: "Camera truc tiep tren mot may Android that va mot may iOS that; do thoi gian lay GPS 3 lan tai mot van phong that; toan bo bay cong tu dong (npm test, test:db, check:assertions, check:secrets, typecheck, lint, build) xac nhan xanh dong thoi"
     verification: []
     human_judgment: true
-    rationale: "Doi hoi thiet bi vat ly that (Android + iOS) va mot nguoi that cam may -- khong the tu dong hoa trong moi truong thuc thi nay. Day la Task 2 (checkpoint:human-verify, gate=blocking) cua chinh plan nay -- CHUA duoc thuc hien. Ngoai ra, xem '## Blocker moi phat sinh' duoi day: hien tai moi truong dev dang o trang thai khong dang nhap duoc du lieu doanh nghiep (memberships rong) do mot su co ngoai y trong chinh phien thuc thi nay -- phai xu ly TRUOC khi lam Task 2."
+    rationale: "Doi hoi thiet bi vat ly that (Android + iOS) va mot nguoi that cam may -- khong the tu dong hoa trong moi truong thuc thi nay. Day la Task 2 (checkpoint:human-verify, gate=blocking) cua chinh plan nay. CHU DU AN DA QUYET DINH (2026-08-03) tu lam UAT thiet bi sau va yeu cau dong phase ngay -- Task 2 KHONG duoc thuc hien, day la no ky thuat co y thuc, khong phai da kiem xong. Blocker moi trong '## Blocker moi phat sinh' duoi day DA DUOC XU LY (xem '## Cap nhat 2026-08-03')."
 
-duration: ~85min (continuation session; Task 1 only -- Task 2 la checkpoint chua thuc hien)
+duration: ~85min (continuation session; Task 1 only -- Task 2 hoan lai cho chu du an theo quyet dinh 2026-08-03)
 completed: 2026-08-02
-status: partial
+status: complete
+task_2_status: deferred-to-owner
 ---
 
 # Phase 3 Plan 7: Cổng cuối phase — cô lập ảnh qua HTTP thật, cổng no-signed-url Summary
@@ -253,3 +254,54 @@ Không plan nào khác của phase phụ thuộc vào 03-07 (`affects: []`), nh�
 ## Self-Check: PASSED
 
 All 3 created files verified present on disk (scripts/e2e-photo.mjs, src/__tests__/no-signed-url.test.ts, supabase/migrations/0012_attendance_photo_storage_rls.sql); all 3 modified files confirmed changed (package.json, src/app/api/attendance-photos/[id]/route.ts, supabase/seed.sql); Task 1 commit `6a8a246` verified present in `git log`.
+
+---
+
+## Cập nhật 2026-08-03 — blocker đã xử lý, phase đóng với Task 2 hoãn lại
+
+### 1. Blocker `auth.users` đã được xử lý xong
+
+Orchestrator đã thực hiện, với sự cho phép tường minh của chủ dự án:
+
+1. Gỡ tham chiếu tới 4 uuid fixture khỏi `platform_admins`, `memberships`, `employees.user_id`, `audit_log.actor_user_id`.
+2. Xóa 4 dòng fixture khỏi `auth.users` **bằng `psql`** — `admin.deleteUser()` của Supabase JS **không dùng được** ở trạng thái này vì nó phải đọc dòng user trước khi xóa, mà chính thao tác đọc là thứ đang hỏng (trả lỗi rỗng `{}`). Kết quả: `DELETE 4`, 10 tài khoản thật còn nguyên.
+3. `listUsers` xác nhận khỏe trở lại (liệt kê được 10 tài khoản).
+4. `npm run seed:auth` → nối lại 10 tài khoản, 29 dòng `employees.user_id` null đúng kỳ vọng. `npm run reset:passwords` → 11 mật khẩu tạm.
+5. `npm run test:e2e-photo` chạy lại: **8 pass, 0 fail** — khớp đúng kết quả Task 1 đã ghi.
+
+**Một bài học vận hành mới, đáng giữ:** lần chạy lại đầu tiên ra **5 pass / 3 fail**, cả ba fail đều là các khẳng định cô lập (404/403/401 đều thành 500). Nguyên nhân **không phải code** mà là **dev server cũ với `.next` hỏng** đang chạy từ trước. Sau khi kill tiến trình, `rm -rf .next` và khởi động lại, cả 8 xanh. Bài học: khi cổng e2e đỏ bất thường ở các nhánh từ chối, nghi dev server trước khi nghi code.
+
+### 2. Code review phase 3 và hai blocker đã sửa
+
+`03-REVIEW.md` (commit `48a4651`) chấm 44 file, ra 2 critical + 3 warning + 1 info. Cô lập xuyên doanh nghiệp **sạch**. Hai critical đã sửa:
+
+- **CR-01** `099b50f` — `checkIn()` trước đây đặt cứng `check_out_at: null, worked_minutes: 0, early_leave_minutes: 0` rồi `.update()` lên bản ghi đã có, nên "vào ca" lại sau khi đã tan ca **xóa sạch bằng chứng tan ca**. Nay chặn bằng `AttendanceRejectedError("outside_shift")`, kèm test hồi quy khẳng định ba trường trên không đổi sau lần gọi bị từ chối.
+  - *Đánh đổi đã biết:* tái dùng lý do `outside_shift` vì D-20b khoá đúng ba lý do. Nhãn hiện ra là "Ngoài giờ ca làm" trong khi tình huống thật là "ca đã tan" — chặn đúng, chữ lệch. Sửa cho chuẩn phải mở lại D-20b.
+- **CR-02** `5061225` — `demo-state-switcher.tsx` (công cụ demo của V1) vẫn đang render **vô điều kiện, không có cổng `NODE_ENV` nào** trong màn hình nhân viên thật, và cho nhân viên một đường không cần quyền để kích hoạt CR-01 lên bản ghi thật của mình. Đã xóa hẳn file, import, render, state `demoState`, memo `displayRecord` giả và guard chết.
+
+**Ba warning chưa sửa** (chủ dự án khoanh phạm vi chỉ hai blocker): WR-01 `GET /api/work-sites` thiếu `requireRole`; WR-02 migration 0012 chỉ được kiểm bởi script thủ công, không có cổng tự động nào giữ; WR-03 `writePunchEvidence` để lại object Storage mồ côi mỗi lần chụp lại ảnh.
+
+### 3. Toàn bộ cổng tự động — xanh
+
+| Cổng | Kết quả |
+|---|---|
+| `npm run typecheck` | sạch |
+| `npm run lint` | sạch |
+| `npx vitest run` | **208/208** |
+| `npm run build` | exit 0 |
+| `npm run check:secrets` | OK, quét 218 file |
+| `npm run check:assertions` | 199 (đúng mốc, không tụt) |
+| `npm run test:e2e-photo` | 8 pass / 0 fail |
+
+**Một khiếm khuyết test đã phát hiện, chưa sửa:** `src/lib/data/__tests__/attendance-evidence.test.ts` dựng ca thử nghiệm bằng `±30 phút quanh giờ hiện tại`. Trong khoảng **23:30–00:30 mỗi ngày**, khoảng đó vắt qua nửa đêm nên thành ca-qua-đêm, và hệ thống neo ca qua đêm vào ngày bắt đầu → 11 test đỏ. Đã kiểm chứng bằng cách lùi hai file về baseline: baseline đỏ **10/15 y hệt**, tức đây là lỗi có sẵn, không do CR-01/CR-02 gây ra. Chạy ngoài khung giờ đó là 208/208. **Đây là quả bom hẹn giờ cho CI** — một job chạy lúc nửa đêm sẽ đỏ mà không ai hiểu vì sao.
+
+### 4. Task 2 — hoãn lại theo quyết định của chủ dự án
+
+Chủ dự án quyết định (2026-08-03) tự làm UAT thiết bị sau và yêu cầu đóng phase ngay. **Task 2 chưa được thực hiện.** Những việc còn nợ, đã được ghi lại thành kịch bản đánh số trong `docs/HUONG-DAN-TEST.md` §3.9.4 để không rơi vào quên lãng:
+
+- Camera chỉ mặt sau + chặn thư viện ảnh, trên Android thật và iOS thật (bước 51–52)
+- Đo thời gian bắt GPS 3 lần tại văn phòng thật, so với mốc chờ 15 giây chưa từng đo thực địa (bước 53)
+- Từ chối quyền rồi cấp lại trên thiết bị thật (bước 54)
+- Chế độ máy bay giữa lúc gửi, trên thiết bị thật (bước 55)
+
+Trình duyệt máy tính **không thay thế được** các bước này: nó luôn cho chọn webcam, nên không chứng minh được gì về ràng buộc "chỉ camera sau, không thư viện ảnh".
