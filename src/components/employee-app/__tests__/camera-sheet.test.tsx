@@ -318,7 +318,9 @@ describe("CameraSheet — ba ly do tu choi cua D-20b (Task 3)", () => {
 
   it("13. Bam 'Gửi lại' sau loi mang gui lai DUNG anh/toa do dang giu, khong mo lai camera", async () => {
     let callCount = 0;
-    const onSubmit = vi.fn(async () => {
+    const onSubmit = vi.fn<
+      (evidence: PunchEvidence) => Promise<PunchSubmitResult>
+    >(async () => {
       callCount += 1;
       if (callCount === 1) throw new Error("Failed to fetch");
       return NOT_FLAGGED;
