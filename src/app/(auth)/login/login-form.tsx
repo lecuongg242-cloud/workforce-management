@@ -30,8 +30,8 @@ export function LoginForm(): React.ReactElement {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "quan.nguyen@ngocphat.vn",
-      password: "timeflow2026",
+      email: "",
+      password: "",
       remember: true,
     },
   });
