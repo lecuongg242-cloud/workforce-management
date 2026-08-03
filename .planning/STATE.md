@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 Phase: 4 — Quy tắc công do doanh nghiệp tự khai
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-08-03 — Phase 03 complete, transitioned to Phase 4
+Last activity: 2026-08-03 — Quick task 260803-a01: bỏ giá trị điền sẵn trên form đăng nhập
 
 Progress: [██████████] 96%
 
@@ -165,6 +165,12 @@ None yet.
 - 02-03/02-04: khong co SUMMARY.md tren dia mac du code da duoc feat()/test() commit va migration da push (chi 02-01/02-02/02-05 co SUMMARY trong thu muc phase 02) -- can mot lan finalize rieng (SUMMARY + docs commit) cho hai plan nay de dong bo STATE/ROADMAP.
 - 03-01: Xac nhan cuoi (UAT) con thieu — mot lan cham cong that qua trinh duyet that voi camera/GPS that (dung human_verify_mode: end-of-phase cua config.json, khong chan cac plan tiep theo cua phase 3).
 - 03-07: Task 1 xong (commit 6a8a246), Task 2 (checkpoint device UAT, gate=blocking) CHUA thuc hien. Blocker moi: npm run test:db chay trong phien nay nap fixture pgTAP vao auth.users cloud that, lam Admin API listUsers tra 500 -> npm run seed:auth khong chay duoc -> memberships rong -> app khong dung duoc du login token van hop le. Can chu du an xoa 4 tai khoan (owner1/owner2/dualmember/nomember@timeflow.test) qua Supabase Dashboard, roi chay seed:auth+reset:passwords, truoc khi lam Task 2. Chi tiet: 03-07-SUMMARY.md muc 'Blocker moi phat sinh'.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260803-a01 | Bỏ giá trị email/mật khẩu điền sẵn trong form đăng nhập | 2026-08-03 | 8c2820b | [260803-a01-login-bo-prefill](./quick/260803-a01-login-bo-prefill/) |
 
 ## Deferred Items
 
