@@ -1,4 +1,3 @@
-<!-- GSD:project-start source:PROJECT.md -->
 
 ## Project
 
@@ -34,9 +33,7 @@ Supabase, chấm công có bằng chứng chống gian lận, và các module qu
 - **Ngôn ngữ**: giao diện tiếng Việt; nhãn nằm ở `constants.ts`, enum nghiệp vụ tiếng Anh
 - **Quy mô mục tiêu**: đủ tin cậy cho 1-2 doanh nghiệp thật, chưa cần tối ưu cho
   hàng nghìn tenant
-<!-- GSD:project-end -->
 
-<!-- GSD:stack-start source:codebase/STACK.md -->
 
 ## Technology Stack
 
@@ -101,9 +98,7 @@ Supabase, chấm công có bằng chứng chống gian lận, và các module qu
 
 ## Scripts
 
-<!-- GSD:stack-end -->
 
-<!-- GSD:conventions-start source:CONVENTIONS.md -->
 
 ## Conventions
 
@@ -241,9 +236,7 @@ Supabase, chấm công có bằng chứng chống gian lận, và các module qu
 - `"use client"` used in interactive components (forms, charts, interactive cards)
 - Server-side rendering for SEO and data fetching at layout level when possible
 
-<!-- GSD:conventions-end -->
 
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
 
 ## Architecture
 
@@ -382,34 +375,12 @@ Supabase, chấm công có bằng chứng chống gian lận, và các module qu
 
 ## Cross-Cutting Concerns
 
-<!-- GSD:architecture-end -->
 
-<!-- GSD:skills-start source:skills/ -->
+## Quy trình làm việc
 
-## Project Skills
+Chưa có skill/quy trình nào được cấu hình cho dự án này — tooling GSD đã được gỡ
+ngày 2026-08-05. Kế hoạch dự án vẫn nằm ở `.planning/` (ROADMAP.md, REQUIREMENTS.md,
+PROJECT.md, STATE.md, phases/) và là nguồn tham chiếu duy nhất cho việc còn lại.
 
-No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, `.github/skills/`, or `.codex/skills/` with a `SKILL.md` index file.
-<!-- GSD:skills-end -->
-
-<!-- GSD:workflow-start source:GSD defaults -->
-
-## GSD Workflow Enforcement
-
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
-
-Use these entry points:
-
-- `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
-- `/gsd-debug` for investigation and bug fixing
-- `/gsd-execute-phase` for planned phase work
-
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
-<!-- GSD:workflow-end -->
-
-<!-- GSD:profile-start -->
-
-## Developer Profile
-
-> Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
-> This section is managed by `generate-claude-profile` -- do not edit manually.
-<!-- GSD:profile-end -->
+Trạng thái khi gỡ: Phase 1-3 đã xong (24 plan), Phase 4-6 chưa làm. Các việc còn treo
+được ghi ở `.planning/STATE.md` mục Blockers/Concerns.

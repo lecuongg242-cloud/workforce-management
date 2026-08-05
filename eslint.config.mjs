@@ -14,9 +14,9 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    // File sinh tu dong / cong cu GSD framework, khong phai ma nguon app —
-    // khong kiem tra bang ESLint cua app (dung require() CommonJS thuan,
-    // khong tuan theo quy uoc next/typescript). `eslint-rules/__fixtures__`
+    // File sinh tu dong / cau hinh cong cu (`.claude/**`), khong phai ma nguon
+    // app — khong kiem tra bang ESLint cua app vi khong tuan theo quy uoc
+    // next/typescript. `eslint-rules/__fixtures__`
     // chua mot fixture CO CHU DICH VI PHAM D-19a (dung de chung minh rule
     // ben duoi co rang) — neu lot vao luot lint thuong thi se do vinh vien;
     // no van lint duoc rieng qua `npx eslint --no-ignore <path>`.
