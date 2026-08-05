@@ -49,12 +49,14 @@ describe("resolveGate (AUTH-02)", () => {
     });
   });
 
-  it("/login + co claims -> redirect /admin/dashboard", () => {
+  // Dich den la "/" chu KHONG phai "/admin/dashboard": middleware chi co JWT
+  // nen khong biet vai tro, `src/app/page.tsx` moi re duoc theo vai tro.
+  it("/login + co claims -> redirect / (de trang goc re theo vai tro)", () => {
     expect(
       resolveGate({ pathname: "/login", hasClaims: true, mustChangePassword: false }),
     ).toEqual({
       action: "redirect",
-      to: "/admin/dashboard",
+      to: "/",
     });
   });
 
@@ -134,14 +136,14 @@ describe("resolveGate — co buoc doi mat khau (D-16)", () => {
     ).toEqual({ action: "pass" });
   });
 
-  it("5. co tat, co claims, duong dan trang doi mat khau -> chuyen huong ve bang dieu khien", () => {
+  it("5. co tat, co claims, duong dan trang doi mat khau -> chuyen huong ve trang goc (re theo vai tro)", () => {
     expect(
       resolveGate({
         pathname: "/doi-mat-khau",
         hasClaims: true,
         mustChangePassword: false,
       }),
-    ).toEqual({ action: "redirect", to: "/admin/dashboard" });
+    ).toEqual({ action: "redirect", to: "/" });
   });
 
   it("6. co tat, khong claims, duong dan trang doi mat khau -> chuyen huong ve dang nhap", () => {

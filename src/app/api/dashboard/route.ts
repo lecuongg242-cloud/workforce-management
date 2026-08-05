@@ -40,17 +40,34 @@ interface RawAttendanceRow {
   location: string;
 }
 
+/**
+ * Tu migration 0013, mot nhan vien co the co NHIEU dong trong cung mot ngay
+ * (nhieu luot vao/ra). Moi con so o bang dieu khien la "bao nhieu NGUOI", nen
+ * phai dem nhan vien RIENG BIET — dem dong se cho ra "30 nguoi da cham cong"
+ * o mot doanh nghiep 28 nguoi.
+ */
+function countDistinctEmployees(records: RawAttendanceRow[]): number {
+  return new Set(records.map((record) => record.employee_id)).size;
+}
+
 function countByStatusOnDate(records: RawAttendanceRow[]): {
   present: number;
   late: number;
   leave: number;
 } {
   return {
-    present: records.filter((record) => record.check_in_at !== null).length,
-    late: records.filter((record) => record.status === "late").length,
-    leave: records.filter(
-      (record) => record.status === "leave_paid" || record.status === "leave_unpaid",
-    ).length,
+    present: countDistinctEmployees(
+      records.filter((record) => record.check_in_at !== null),
+    ),
+    late: countDistinctEmployees(
+      records.filter((record) => record.status === "late"),
+    ),
+    leave: countDistinctEmployees(
+      records.filter(
+        (record) =>
+          record.status === "leave_paid" || record.status === "leave_unpaid",
+      ),
+    ),
   };
 }
 
@@ -123,8 +140,12 @@ export async function GET(request: Request): Promise<NextResponse> {
     const chart: AttendanceChartPoint[] = Array.from({ length: 7 }, (_, index) => {
       const day = addDays(date, index - 6);
       const recordsOfDay = byWorkDate.get(day) ?? [];
-      const present = recordsOfDay.filter((record) => record.check_in_at !== null).length;
-      const late = recordsOfDay.filter((record) => record.status === "late").length;
+      const present = countDistinctEmployees(
+        recordsOfDay.filter((record) => record.check_in_at !== null),
+      );
+      const late = countDistinctEmployees(
+        recordsOfDay.filter((record) => record.status === "late"),
+      );
       const absent = Math.max(headcount - present, 0);
       return {
         date: day,
@@ -154,9 +175,19 @@ export async function GET(request: Request): Promise<NextResponse> {
     // sang hinh dang tra ve — so sanh chuoi ISO cho ra dung thu tu thoi gian
     // vi cac dau thoi gian nay la timestamptz that (khong con la chuoi
     // "HH:mm" co the trung nhau nhu tang gia lap).
+    // Mot nguoi co the co NHIEU luot trong ngay (migration 0013) — danh sach
+    // "hoat dong hom nay" la danh sach NGUOI, moi nguoi dung mot dong voi
+    // luot vao SOM NHAT. Loc sau khi da sap tang dan nen dong giu lai chinh
+    // la luot dau tien cua nguoi do.
+    const seenEmployeeIds = new Set<string>();
     const todayActivity = todayRecords
       .filter((record) => record.check_in_at !== null)
       .sort((a, b) => (a.check_in_at as string).localeCompare(b.check_in_at as string))
+      .filter((record) => {
+        if (seenEmployeeIds.has(record.employee_id)) return false;
+        seenEmployeeIds.add(record.employee_id);
+        return true;
+      })
       .map((record) => {
         const employee = employeeById.get(record.employee_id);
         return {

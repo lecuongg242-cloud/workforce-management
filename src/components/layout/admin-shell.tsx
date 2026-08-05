@@ -36,10 +36,11 @@ export function AdminShell({
 
   const { data: companies } = useDataQuery(() => listCompanies(), []);
 
+  // `signOut()` tu tai lai ca tai lieu ve /login sau khi xoa cookie phien —
+  // khong them router.replace() o day de tranh hai lan dieu huong dam nhau.
   const handleSignOut = React.useCallback(() => {
-    signOut();
-    router.replace("/login");
-  }, [signOut, router]);
+    void signOut();
+  }, [signOut]);
 
   if (status !== "authenticated" || !session) {
     return <AdminShellSkeleton />;

@@ -469,7 +469,11 @@ export function EmployeeDetailView({
                       <TableHead>Ngày</TableHead>
                       <TableHead>Giờ vào</TableHead>
                       <TableHead>Giờ ra</TableHead>
-                      <TableHead>Tổng giờ</TableHead>
+                      {/* Bang nay liet ke TUNG LUOT (kem anh cua luot do), nen
+                          o day la thoi luong tho cua rieng luot — gio nghi
+                          duoc tru mot lan cho ca ngay, khong thuoc luot nao.
+                          So gio duoc tinh cong xem o the tong hop thang. */}
+                      <TableHead>Thời lượng</TableHead>
                       <TableHead>Trạng thái</TableHead>
                       <TableHead>Địa điểm</TableHead>
                       <TableHead className="text-right">Ảnh</TableHead>

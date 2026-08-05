@@ -22,7 +22,12 @@ import {
   formatTime,
   getWeekday,
 } from "@/lib/format";
-import type { AttendanceRecord, AttendanceStatus } from "@/lib/types/domain";
+import {
+  groupAttendanceByDay,
+  shiftBreakInfoById,
+  type AttendanceDay,
+} from "@/lib/attendance/day";
+import type { AttendanceStatus } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
 /** Mau cham trang thai tren dai lich */
@@ -62,12 +67,23 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
     return map;
   }, [data]);
 
-  const visibleRecords = React.useMemo(() => {
-    if (!data) return [];
-    return selectedDate
-      ? data.records.filter((record) => record.date === selectedDate)
-      : data.records;
-  }, [data, selectedDate]);
+  /**
+   * Mot ngay co the co NHIEU luot vao/ra (migration 0013) — gop truoc khi
+   * hien thi, neu khong mot ngay se hien ra thanh hai ba the nhu the do la
+   * nhung ngay khac nhau.
+   */
+  const days = React.useMemo(
+    () =>
+      data
+        ? groupAttendanceByDay(data.records, shiftBreakInfoById(data.shifts))
+        : [],
+    [data],
+  );
+
+  const visibleDays = React.useMemo(
+    () => (selectedDate ? days.filter((day) => day.date === selectedDate) : days),
+    [days, selectedDate],
+  );
 
   // Doi thang thi bo chon ngay
   React.useEffect(() => {
@@ -95,24 +111,24 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
       ) : (
         <>
           {/* Dai lich cuon ngang */}
-          {data.records.length > 0 ? (
+          {days.length > 0 ? (
             <section
               aria-label="Chọn ngày để lọc"
               className="no-scrollbar -mx-4 overflow-x-auto px-4"
             >
               <div className="flex gap-1.5">
-                {[...data.records]
+                {[...days]
                   .sort((a, b) => (a.date < b.date ? -1 : 1))
-                  .map((record) => {
-                    const isSelected = selectedDate === record.date;
-                    const weekday = getWeekday(record.date);
+                  .map((day) => {
+                    const isSelected = selectedDate === day.date;
+                    const weekday = getWeekday(day.date);
                     return (
                       <button
-                        key={record.id}
+                        key={day.date}
                         type="button"
                         aria-pressed={isSelected}
                         onClick={() =>
-                          setSelectedDate(isSelected ? null : record.date)
+                          setSelectedDate(isSelected ? null : day.date)
                         }
                         className={cn(
                           "flex min-h-[64px] w-12 shrink-0 flex-col items-center justify-center gap-1 rounded-control border transition-colors",
@@ -125,13 +141,13 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
                           {WEEKDAY_LABEL[weekday]}
                         </span>
                         <span className="num text-[15px] leading-none font-medium text-ink">
-                          {record.date.slice(8)}
+                          {day.date.slice(8)}
                         </span>
                         <span
                           aria-hidden="true"
                           className={cn(
                             "size-1.5 rounded-full",
-                            dotClass[record.status],
+                            dotClass[day.status],
                           )}
                         />
                       </button>
@@ -159,7 +175,7 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
               ) : null}
             </div>
 
-            {visibleRecords.length === 0 ? (
+            {visibleDays.length === 0 ? (
               <div className="surface-card">
                 <EmptyState
                   icon={CalendarX2}
@@ -170,11 +186,11 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
               </div>
             ) : (
               <ul className="grid gap-2.5">
-                {visibleRecords.map((record) => (
+                {visibleDays.map((day) => (
                   <AttendanceItem
-                    key={record.id}
-                    record={record}
-                    shiftName={shiftNames[record.shiftId] ?? "—"}
+                    key={day.date}
+                    day={day}
+                    shiftName={shiftNames[day.shiftId] ?? "—"}
                   />
                 ))}
               </ul>
@@ -187,42 +203,74 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
 }
 
 function AttendanceItem({
-  record,
+  day,
   shiftName,
 }: {
-  record: AttendanceRecord;
+  day: AttendanceDay;
   shiftName: string;
 }): React.ReactElement {
-  const weekday = getWeekday(record.date);
+  const weekday = getWeekday(day.date);
 
   return (
     <li className="surface-card p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="num text-[15px] font-medium text-ink">
-            {formatDate(record.date)}
+            {formatDate(day.date)}
           </p>
           <p className="text-[13px] text-ink-muted">
             {WEEKDAY_LABEL[weekday]} · {shiftName}
+            {day.punches.length > 1 ? ` · ${day.punches.length} lượt` : ""}
           </p>
         </div>
-        <StatusBadge kind="attendance" value={record.status} size="sm" />
+        <StatusBadge kind="attendance" value={day.status} size="sm" />
       </div>
 
+      {/* Gio vao/ra la cua LUOT DAU va LUOT CUOI; tong gio cong don moi luot. */}
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <MiniCell label="Giờ vào" value={formatTime(record.checkIn)} />
-        <MiniCell label="Giờ ra" value={formatTime(record.checkOut)} />
+        <MiniCell label="Giờ vào" value={formatTime(day.firstCheckIn)} />
+        <MiniCell label="Giờ ra" value={formatTime(day.lastCheckOut)} />
         <MiniCell
           label="Tổng giờ"
           value={
-            record.workedMinutes > 0
-              ? formatDurationShort(record.workedMinutes)
-              : "—"
+            day.workedMinutes > 0 ? formatDurationShort(day.workedMinutes) : "—"
           }
         />
       </div>
 
-      {record.needsSupplement ? (
+      {day.punches.length > 1 ? (
+        <ul className="mt-2 grid gap-1">
+          {day.punches.map((punch, index) => (
+            /* Luoi ba cot CO DINH — xem ghi chu cung van de o
+               `attendance-status-card.tsx`: cot co gian lam gio vao/gio ra
+               lech nhau giua cac dong. */
+            <li
+              key={punch.id}
+              className="num grid grid-cols-[3rem_6.5rem_1fr] items-center gap-2 px-0.5 text-[12px] text-ink-muted"
+            >
+              <span>Lượt {index + 1}</span>
+              <span className="whitespace-nowrap">
+                {formatTime(punch.checkIn)} → {formatTime(punch.checkOut)}
+              </span>
+              <span className="text-right">
+                {punch.workedMinutes > 0
+                  ? formatDurationShort(punch.workedMinutes)
+                  : "—"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {/* Thoi luong tung luot la THO — khong noi ro thi "Tong gio" ben tren
+          trong nhu cong sai. */}
+      {day.breakMinutes > 0 ? (
+        <p className="num mt-2 px-0.5 text-[12px] text-ink-muted">
+          Đã trừ {formatDurationShort(day.breakMinutes)} giờ nghỉ của ca.
+        </p>
+      ) : null}
+
+      {day.needsSupplement ? (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-control border border-warning-border bg-warning-soft px-3 py-2">
           <p className="flex items-center gap-1.5 text-[12px] font-medium text-warning">
             <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" />

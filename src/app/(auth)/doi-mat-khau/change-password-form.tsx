@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, TriangleAlert } from "lucide-react";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 import { Field } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { redirectAfterSessionChange } from "@/lib/auth/post-auth-redirect";
 import { CHANGE_PASSWORD_LABELS } from "@/lib/constants";
 import { completeForcedPasswordChange } from "@/lib/data/mutations/accounts";
 import {
@@ -25,7 +25,6 @@ import {
  * NGUYEN VAN, khong doi thanh mot thong diep chung chung o day.
  */
 export function ChangePasswordForm(): React.ReactElement {
-  const router = useRouter();
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const {
@@ -45,7 +44,7 @@ export function ChangePasswordForm(): React.ReactElement {
       // ke tiep (trang dashboard) mang token da sach co.
       await completeForcedPasswordChange(values.newPassword);
       toast.success(CHANGE_PASSWORD_LABELS.successToast);
-      router.push("/admin/dashboard");
+      redirectAfterSessionChange("/");
     } catch (cause) {
       setSubmitError(
         cause instanceof Error

@@ -11,6 +11,7 @@ import { ErrorState } from "@/components/common/error-state";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDataQuery } from "@/hooks/use-data-query";
+import { redirectAfterSessionChange } from "@/lib/auth/post-auth-redirect";
 import { useSession } from "@/lib/auth/session-provider";
 import { COMPANY_ROLE_LABEL } from "@/lib/constants";
 import { listCompanies } from "@/lib/data/companies";
@@ -39,7 +40,7 @@ export function SelectCompanyView(): React.ReactElement {
 
   const handleEnter = async (company: Company): Promise<void> => {
     await selectCompany(company.id);
-    router.push("/admin/dashboard");
+    redirectAfterSessionChange("/");
   };
 
   return (

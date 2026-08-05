@@ -3,7 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 
-import { isAttendanceRejection } from "@/lib/attendance/rejection";
+import { getAttendanceDay, shiftBreakInfoById } from "@/lib/attendance/day";
 import { ErrorState } from "@/components/common/error-state";
 import { AttendanceStatusCard } from "@/components/employee-app/attendance-status-card";
 import { CameraSheet } from "@/components/employee-app/camera-sheet";
@@ -25,7 +25,7 @@ import { getEmployee } from "@/lib/data/employees";
 import { listShifts } from "@/lib/data/shifts";
 import { formatFullDate, getShortName } from "@/lib/format";
 import { useDataStore } from "@/lib/data/store";
-import type { AttendanceRecord, CheckInState, PunchEvidence } from "@/lib/types/domain";
+import type { CheckInState, PunchEvidence } from "@/lib/types/domain";
 
 export function EmployeeHomeView({
   today,
@@ -61,7 +61,7 @@ export function EmployeeHomeView({
         }),
         getMonthlySummary(session.companyId, employeeId, month),
       ]);
-      return { employee, shifts, todayRecord: todayRecords[0] ?? null, summary };
+      return { employee, shifts, todayRecords, summary };
     },
     [employeeId, session.companyId, today, month],
   );
@@ -71,15 +71,26 @@ export function EmployeeHomeView({
   const shift =
     data?.shifts.find((item) => item.id === data.employee?.shiftId) ?? null;
 
-  /** Trang thai thuc te suy ra tu ban ghi cham cong hom nay */
-  const realState: CheckInState = !data?.todayRecord?.checkIn
-    ? "not_started"
-    : data.todayRecord.checkOut
-      ? "finished"
-      : "working";
+  /**
+   * Mot ngay co the co NHIEU luot vao/ra (migration 0013) — gop lai truoc khi
+   * hien thi thay vi lay ban ghi dau tien nhu truoc.
+   */
+  const todayDay = data
+    ? getAttendanceDay(
+        data.todayRecords,
+        today,
+        shiftBreakInfoById(data.shifts),
+      )
+    : null;
+  const openPunch =
+    todayDay?.punches.find((punch) => punch.checkOut === null) ?? null;
 
-  /** Ban ghi hien thi */
-  const displayRecord: AttendanceRecord | null = data?.todayRecord ?? null;
+  /** Trang thai thuc te suy ra tu cac luot cham cong hom nay */
+  const realState: CheckInState = !todayDay || todayDay.punches.length === 0
+    ? "not_started"
+    : openPunch
+      ? "working"
+      : "finished";
 
   /**
    * "Vào ca" giờ CHỈ mở Camera Sheet ở chế độ vào ca (ATT-01) — không còn
@@ -98,8 +109,10 @@ export function EmployeeHomeView({
    * (khác `checkIn`) cần biết đang tan ca cho bản ghi nào.
    */
   const handleOpenCheckOut = (): void => {
-    if (!displayRecord) return;
-    setPendingCheckOutRecordId(displayRecord.id);
+    // Tan ca cho dung LUOT DANG MO, khong phai "ban ghi cua hom nay" — mot
+    // ngay co the co nhieu luot da khep lai truoc do.
+    if (!openPunch) return;
+    setPendingCheckOutRecordId(openPunch.id);
     setCameraOpen(true);
   };
 
@@ -118,11 +131,7 @@ export function EmployeeHomeView({
    * `CameraSheet.handleSubmit`, nơi giữ lại ảnh + toạ độ đã chụp trong bộ
    * nhớ và cho người dùng gửi lại mà không phải chụp lại (D-23), thay vì
    * hiện một toast trùng lặp ở đây rồi lại một khối banner khác ở Camera
-   * Sheet cho CÙNG một sự kiện. `isAttendanceRejection(cause)` chỉ dùng để
-   * LOG (không toast, không chặn lan lỗi) khi lỗi KHÔNG PHẢI một lần từ
-   * chối đã biết — một tín hiệu debug rẻ cho lỗi hạ tầng thật sự (DB lỗi,
-   * mất kết nối RPC) mà không đụng tới đường hiển thị đã chứng minh của
-   * Camera Sheet.
+   * Sheet cho CÙNG một sự kiện.
    *
    * Dùng CHUNG cho cả vào ca lẫn tan ca — `pendingCheckOutRecordId` (state)
    * quyết định gọi `checkInService` hay `checkOutService`, cùng một
@@ -160,9 +169,10 @@ export function EmployeeHomeView({
         isOutsideRadius: result.isOutsideRadius,
       };
     } catch (cause) {
-      if (!isAttendanceRejection(cause)) {
-        console.error("Punch submit error (non-rejection):", cause);
-      }
+      // KHONG console.error o day. Loi nem tu Server Action da duoc Camera
+      // Sheet xu ly thanh mot banner doc duoc; goi console.error them mot lan
+      // nua chi lam Next.js bat overlay loi cua che do dev de len ca man hinh
+      // — nguoi dung thay "web dung" cho mot tinh huong da duoc xu ly tu te.
       throw cause;
     } finally {
       setIsPending(false);
@@ -201,7 +211,7 @@ export function EmployeeHomeView({
 
           <AttendanceStatusCard
             state={realState}
-            record={displayRecord}
+            day={todayDay}
             shift={shift}
             isPending={isPending}
             onCheckIn={handleOpenCamera}

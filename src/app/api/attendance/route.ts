@@ -17,9 +17,9 @@ import {
 
 /**
  * Khuon 02-04 (D-12c): chi xuat `dynamic` va `GET`. Sap xep theo `work_date`
- * GIAM DAN roi `id` TANG DAN (V1 sap giam dan theo ngay; them `id` lam
- * tiebreaker de thu tu on dinh khi mot nhan vien co nhieu ban ghi cung ngay
- * o cac ca khac nhau).
+ * GIAM DAN, roi trong cung mot ngay sap theo `check_in_at` TANG DAN — tu
+ * migration 0013 mot ngay co the co NHIEU luot cham cong, va thu tu luot phai
+ * la thu tu thoi gian that (`id` la UUID nen khong dung lam thu tu duoc).
  *
  * Lop quyen (AUTH-03): vai tro `employee`/`manager` hoi `employeeId` khac
  * `employeeId` cua chinh phien bi tu choi (403). `owner`/`admin` doc duoc
@@ -66,8 +66,13 @@ export async function GET(request: Request): Promise<NextResponse> {
       query = query.eq("work_date", queryParams.date);
     }
 
+    // Trong cung mot ngay co the co NHIEU luot cham cong (migration 0013), va
+    // `id` la UUID nen khong phan anh thu tu thoi gian — sap theo check_in_at
+    // de "luot 1, luot 2" o giao dien dung la thu tu that. `id` giu lai lam
+    // tiebreaker cuoi cho hai dong khong co gio vao (nghi phep) cua cung ngay.
     query = query
       .order("work_date", { ascending: false })
+      .order("check_in_at", { ascending: true, nullsFirst: true })
       .order("id", { ascending: true });
 
     const { data, error } = await query;

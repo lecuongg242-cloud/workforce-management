@@ -9,7 +9,9 @@ import {
   NoActiveCompanyError,
   NoMembershipError,
   UnauthenticatedError,
+  canAccessAdminArea,
   getSessionContext,
+  homePathForRole,
 } from "@/lib/auth/session-context";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -193,6 +195,20 @@ describe("getSessionContext", () => {
     await expect(getSessionContext()).rejects.toBeInstanceOf(
       NoActiveCompanyError,
     );
+  });
+
+  it("trang chu re theo vai tro: employee/manager vao giao dien nhan vien, owner/admin vao giao dien quan tri", () => {
+    expect(homePathForRole("employee")).toBe("/employee");
+    expect(homePathForRole("manager")).toBe("/employee");
+    expect(homePathForRole("owner")).toBe("/admin/dashboard");
+    expect(homePathForRole("admin")).toBe("/admin/dashboard");
+  });
+
+  it("khu vuc quan tri chi mo cho owner/admin — cung ranh gioi voi isAdminRole cua AUTH-03", () => {
+    expect(canAccessAdminArea("owner")).toBe(true);
+    expect(canAccessAdminArea("admin")).toBe(true);
+    expect(canAccessAdminArea("manager")).toBe(false);
+    expect(canAccessAdminArea("employee")).toBe(false);
   });
 
   it("khang dinh tinh: session-context.ts khong doc tham so truy van hay URL cua request", () => {

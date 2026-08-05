@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AdminShell } from "@/components/layout/admin-shell";
-import { getSessionContextOrNull } from "@/lib/auth/session-context";
+import {
+  canAccessAdminArea,
+  getSessionContextOrNull,
+} from "@/lib/auth/session-context";
 
 export const metadata: Metadata = {
   title: "Quản trị",
@@ -15,6 +18,9 @@ export const metadata: Metadata = {
  * active ma chua chon) — `getSessionContextOrNull()` tra `null` cho ca hai,
  * va o day (chu KHONG phai o `src/app/layout.tsx` goc) la noi dung de
  * redirect, de `/login` va `/select-company` khong tu da chinh minh.
+ *
+ * Chan theo vai tro cung nam o day chu khong o middleware: vai tro den tu
+ * bang `memberships` (AUTH-03), middleware chi co JWT nen khong biet duoc.
  */
 export default async function AdminLayout({
   children,
@@ -24,6 +30,9 @@ export default async function AdminLayout({
   const context = await getSessionContextOrNull();
   if (!context) {
     redirect("/select-company");
+  }
+  if (!canAccessAdminArea(context.role)) {
+    redirect("/employee");
   }
   return <AdminShell>{children}</AdminShell>;
 }

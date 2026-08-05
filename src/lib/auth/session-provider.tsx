@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 
+import { redirectAfterSessionChange } from "@/lib/auth/post-auth-redirect";
 import { selectCompanyAction } from "@/lib/data/mutations/companies";
 import { signOutAction } from "@/lib/data/mutations/session";
 import { createBrowserSupabase } from "@/lib/supabase/browser";
@@ -40,7 +40,6 @@ export function SessionProvider({
   initialSession: UserSession | null;
   children: React.ReactNode;
 }): React.ReactElement {
-  const router = useRouter();
   const [session, setSession] = React.useState<UserSession | null>(
     initialSession,
   );
@@ -55,6 +54,9 @@ export function SessionProvider({
     setStatus(initialSession ? "authenticated" : "guest");
   }, [initialSession]);
 
+  // Ba ham duoi day chi lo phan doi cookie phien. Viec dieu huong sau do do
+  // noi goi dam nhiem bang `redirectAfterSessionChange()` — xem ly do vi sao
+  // KHONG duoc dung `router.push()/refresh()` o post-auth-redirect.ts.
   const signIn = React.useCallback(
     async (email: string, password: string): Promise<void> => {
       const supabase = createBrowserSupabase();
@@ -65,24 +67,21 @@ export function SessionProvider({
       if (error) {
         throw new Error("Email hoặc mật khẩu không đúng. Vui lòng thử lại.");
       }
-      router.refresh();
     },
-    [router],
+    [],
   );
 
   const selectCompany = React.useCallback(
     async (companyId: string): Promise<void> => {
       await selectCompanyAction(companyId);
-      router.refresh();
     },
-    [router],
+    [],
   );
 
   const signOut = React.useCallback(async (): Promise<void> => {
     await signOutAction();
-    router.replace("/login");
-    router.refresh();
-  }, [router]);
+    redirectAfterSessionChange("/login");
+  }, []);
 
   const value = React.useMemo<SessionContextValue>(
     () => ({ status, session, signIn, selectCompany, signOut }),

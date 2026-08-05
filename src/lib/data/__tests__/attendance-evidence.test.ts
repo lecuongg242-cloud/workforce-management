@@ -13,6 +13,8 @@ import { createClient } from "@supabase/supabase-js";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { AttendanceRejectedError, isAttendanceRejection } from "@/lib/attendance/rejection";
+import { isOutsideShiftWindow } from "@/lib/attendance/suspicious";
+import { toVnTime } from "@/lib/validation/api/attendance";
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
 import { checkIn, checkOut } from "@/lib/data/mutations/attendance";
 import { ATTENDANCE_PHOTO_BUCKET } from "@/lib/storage/attendance-photos";
@@ -72,6 +74,22 @@ const EMP_ROLE = "emp-03-04-role";
 const EMP_FARIN = "emp-03-04-farin";
 const TEST_EMPLOYEE_IDS = [EMP_EVI, EMP_OUTSIDE, EMP_NOCHECKIN, EMP_ROLE, EMP_FARIN];
 const NOCHECKIN_RECORD_ID = "att-03-04-nocheckin";
+
+/**
+ * Toa do "GAN" dung o moi lan cham cong hop le trong file nay, va mot diem
+ * lam viec DO CHINH FILE NAY TAO ra ngay tai toa do do.
+ *
+ * Truoc day cac test "khoang cach GAN" dua vao diem lam viec SEED cua
+ * `cty-01` — mot dong du lieu ai dung app cung sua duoc. Khi diem seed bi
+ * doi toa do, `isOutsideRadius` lat thanh true va bay test 4 cung toan bo
+ * chuoi test phu thuoc no. Diem lam viec rieng nay lam cac khang dinh do
+ * TAT DINH: khoang cach toi no luon bang 0 nen no luon la diem gan nhat,
+ * bat ke du lieu seed thay doi ra sao. Dung tien to `ws-03-04-*` giong moi
+ * fixture khac cua file va bi xoa trong afterAll.
+ */
+const NEAR_LAT = 10.7823;
+const NEAR_LNG = 106.6958;
+const TEST_WORK_SITE_ID = "ws-03-04-near";
 
 function pad2(value: number): string {
   return value.toString().padStart(2, "0");
@@ -266,6 +284,21 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
       throw new Error(`Không tạo được employees test: ${employeesError.message}`);
     }
 
+    // Diem lam viec RIENG cua file test, dat dung tai toa do "GAN" — xem ghi
+    // chu tai TEST_WORK_SITE_ID.
+    const { error: workSiteError } = await admin.from("work_sites").insert({
+      id: TEST_WORK_SITE_ID,
+      company_id: COMPANY_ID,
+      name: "Điểm làm việc test 03-04",
+      latitude: NEAR_LAT,
+      longitude: NEAR_LNG,
+      radius_meters: 150,
+      is_active: true,
+    });
+    if (workSiteError) {
+      throw new Error(`Không tạo được work_site test: ${workSiteError.message}`);
+    }
+
     // Ban ghi "chua vao ca" dung THANG (khong qua checkIn) — cho test
     // checkOut cho mot ban ghi khong co check_in_at.
     const { error: nocheckinError } = await admin.from("attendance_records").insert({
@@ -307,6 +340,7 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
     // employees cascade sang attendance_records roi attendance_photos.
     await admin.from("employees").delete().in("id", TEST_EMPLOYEE_IDS);
     await admin.from("shifts").delete().in("id", [FAR_SHIFT_ID, NEAR_SHIFT_ID]);
+    await admin.from("work_sites").delete().eq("id", TEST_WORK_SITE_ID);
     if (actorUserId) {
       await admin.auth.admin.deleteUser(actorUserId);
     }
@@ -345,23 +379,43 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
     });
   });
 
-  describe("checkIn — outside_shift (D-20b, T-03-04-01)", () => {
-    it("3. Chấm công ngoài khung giờ ca được phân (ca đối lập 12 giờ với hiện tại) -> AttendanceRejectedError(outside_shift), không ghi dòng nào", async () => {
+  /**
+   * Thay cho nhom "outside_shift chan cham cong" cu (T-03-04-01). Cham cong
+   * ngoai khung gio ca KHONG con bi tu choi — no duoc GHI NHAN roi danh dau
+   * de quan ly xem lai, cung nguyen tac ma D-20 da ap cho khoang cach.
+   */
+  describe("checkIn — ngoài khung giờ ca được ghi nhận rồi đánh dấu, KHÔNG chặn", () => {
+    it("3. Chấm công ở ca đối lập 12 giờ với hiện tại -> ghi nhận thành công, KHÔNG ném lỗi", async () => {
       vi.mocked(getSessionContext).mockResolvedValue(ownerSession());
-      let caught: unknown;
-      try {
-        await checkIn(EMP_OUTSIDE, makeEvidence(10.7823, 106.6958));
-      } catch (cause) {
-        caught = cause;
-      }
-      expect(caught).toBeInstanceOf(AttendanceRejectedError);
-      expect((caught as AttendanceRejectedError).reason).toBe("outside_shift");
+      const result = await checkIn(EMP_OUTSIDE, makeEvidence(10.7823, 106.6958));
+
+      expect(result.checkIn).not.toBeNull();
 
       const { count } = await admin
         .from("attendance_records")
         .select("id", { count: "exact", head: true })
         .eq("employee_id", EMP_OUTSIDE);
-      expect(count).toBe(0);
+      expect(count).toBe(1);
+    });
+
+    it("3b. Lượt đó bị nhận diện là ngoài khung giờ ca khi truy vấn (tính lại từ giờ chấm + giờ ca, không đọc cột nào)", async () => {
+      const { data } = await admin
+        .from("attendance_records")
+        .select("check_in_at, shifts(start_time, end_time)")
+        .eq("employee_id", EMP_OUTSIDE)
+        .single();
+      const row = data as unknown as {
+        check_in_at: string;
+        shifts: { start_time: string; end_time: string };
+      };
+
+      expect(
+        isOutsideShiftWindow({
+          punchTime: toVnTime(row.check_in_at) as string,
+          shiftStartTime: row.shifts.start_time.slice(0, 5),
+          shiftEndTime: row.shifts.end_time.slice(0, 5),
+        }),
+      ).toBe(true);
     });
   });
 
@@ -532,8 +586,16 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
     });
   });
 
-  describe("checkIn — CR-01 (03-REVIEW.md): không được ghi đè một ca đã tan ca", () => {
-    it("16. checkIn lại trên bản ghi ĐÃ có check_out_at (từ vòng đời test 4→10 của EMP_EVI) -> AttendanceRejectedError(outside_shift), check_out_at/worked_minutes/early_leave_minutes cũ được giữ nguyên", async () => {
+  /**
+   * Thay cho nhom CR-01 cu (03-REVIEW.md), da bi thay the boi migration 0013:
+   * mot ngay duoc phep co NHIEU luot vao/ra. Y DINH GOC cua CR-01 van duoc
+   * giu nguyen va la dieu ba test duoi day khoa lai — "vao lai" TUYET DOI
+   * khong duoc ghi de bang chung tan ca da co; no phai tao mot dong MOI.
+   */
+  describe("checkIn — vào lại sau khi đã tan ca tạo LƯỢT MỚI, không ghi đè lượt cũ (migration 0013)", () => {
+    let secondPunchId = "";
+
+    it("16. checkIn lại trên ngày ĐÃ có một lượt tan ca xong -> tạo dòng MỚI, dòng cũ giữ nguyên check_out_at/worked_minutes/early_leave_minutes", async () => {
       const { data: beforeRow, error: beforeError } = await admin
         .from("attendance_records")
         .select("check_out_at, worked_minutes, early_leave_minutes")
@@ -551,14 +613,12 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
       expect(before.check_out_at).not.toBeNull();
 
       vi.mocked(getSessionContext).mockResolvedValue(ownerSession());
-      let caught: unknown;
-      try {
-        await checkIn(EMP_EVI, makeEvidence(10.7823, 106.6958));
-      } catch (cause) {
-        caught = cause;
-      }
-      expect(caught).toBeInstanceOf(AttendanceRejectedError);
-      expect((caught as AttendanceRejectedError).reason).toBe("outside_shift");
+      const result = await checkIn(EMP_EVI, makeEvidence(10.7823, 106.6958));
+      secondPunchId = result.id;
+
+      expect(result.id).not.toBe(lifecycleRecordId);
+      expect(result.checkIn).not.toBeNull();
+      expect(result.checkOut).toBeNull();
 
       const { data: afterRow, error: afterError } = await admin
         .from("attendance_records")
@@ -574,6 +634,42 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
       expect(after.check_out_at).toBe(before.check_out_at);
       expect(after.worked_minutes).toBe(before.worked_minutes);
       expect(after.early_leave_minutes).toBe(before.early_leave_minutes);
+    });
+
+    it("17. lượt thứ hai KHÔNG tính đi muộn — chỉ lượt đầu tiên của ngày mới tính", async () => {
+      const { data, error } = await admin
+        .from("attendance_records")
+        .select("late_minutes, status")
+        .eq("id", secondPunchId)
+        .single();
+      expect(error).toBeNull();
+      const row = data as { late_minutes: number; status: string };
+
+      expect(row.late_minutes).toBe(0);
+      expect(row.status).toBe("on_time");
+    });
+
+    it("18. đang còn một lượt chưa tan ca -> checkIn lần nữa bị chặn, KHÔNG tạo dòng thứ ba", async () => {
+      const { count: countBefore } = await admin
+        .from("attendance_records")
+        .select("id", { count: "exact", head: true })
+        .eq("employee_id", EMP_EVI);
+
+      vi.mocked(getSessionContext).mockResolvedValue(ownerSession());
+      let caught: unknown;
+      try {
+        await checkIn(EMP_EVI, makeEvidence(10.7823, 106.6958));
+      } catch (cause) {
+        caught = cause;
+      }
+      expect(caught).toBeInstanceOf(Error);
+      expect((caught as Error).message).toContain("chưa tan ca");
+
+      const { count: countAfter } = await admin
+        .from("attendance_records")
+        .select("id", { count: "exact", head: true })
+        .eq("employee_id", EMP_EVI);
+      expect(countAfter).toBe(countBefore);
     });
   });
 });

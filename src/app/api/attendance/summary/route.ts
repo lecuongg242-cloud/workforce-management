@@ -7,9 +7,11 @@ import {
   UnauthenticatedError,
   getSessionContext,
 } from "@/lib/auth/session-context";
+import { groupAttendanceByDay, shiftBreakInfoById } from "@/lib/attendance/day";
 import { shiftMonth } from "@/lib/format";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
+  attendanceRecordSchema,
   attendanceSummaryQuerySchema,
   monthlySummarySchema,
 } from "@/lib/validation/api/attendance";
@@ -26,10 +28,8 @@ import {
  */
 export const dynamic = "force-dynamic";
 
-interface RawSummaryRow {
-  worked_minutes: number;
-  status: string;
-}
+const ATTENDANCE_COLUMNS =
+  "id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at, worked_minutes, late_minutes, early_leave_minutes, status, location, needs_supplement, note";
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
@@ -49,29 +49,71 @@ export async function GET(request: Request): Promise<NextResponse> {
     const start = `${queryParams.month}-01`;
     const end = `${shiftMonth(queryParams.month, 1)}-01`;
 
-    const { data, error } = await supabase
-      .from("attendance_records")
-      .select("worked_minutes, status")
-      .eq("company_id", companyId)
-      .eq("employee_id", queryParams.employeeId)
-      .gte("work_date", start)
-      .lt("work_date", end);
+    // Doc CA cung voi ban ghi: tu migration 0014, gio nghi duoc tru mot lan
+    // cho moi NGAY (khong phai moi dong), nen tong hop thang phai di qua
+    // dung phep gop ngay ma giao dien dung — neu tinh rieng o day thi hai
+    // noi se lech nhau va khong ai biet ben nao dung.
+    const [
+      { data, error },
+      { data: shiftRows, error: shiftsError },
+    ] = await Promise.all([
+      supabase
+        .from("attendance_records")
+        .select(ATTENDANCE_COLUMNS)
+        .eq("company_id", companyId)
+        .eq("employee_id", queryParams.employeeId)
+        .gte("work_date", start)
+        .lt("work_date", end),
+      supabase
+        .from("shifts")
+        .select("id, break_minutes, start_time, end_time")
+        .eq("company_id", companyId),
+    ]);
 
-    if (error) {
+    if (error || shiftsError) {
       return NextResponse.json(
         { error: "Không thể tải tổng hợp công tháng." },
         { status: 500 },
       );
     }
 
-    const records = (data ?? []) as RawSummaryRow[];
+    const records = ((data ?? []) as unknown[]).map((row) =>
+      attendanceRecordSchema.parse(row),
+    );
+    const breaks = shiftBreakInfoById(
+      (
+        (shiftRows ?? []) as Array<{
+          id: string;
+          break_minutes: number;
+          start_time: string;
+          end_time: string;
+        }>
+      ).map((row) => ({
+        id: row.id,
+        breakMinutes: row.break_minutes,
+        // `time` cua Postgres ve dang "HH:mm:ss" — cat con "HH:mm" cho khop
+        // voi `minutesBetween()`.
+        startTime: row.start_time.slice(0, 5),
+        endTime: row.end_time.slice(0, 5),
+      })),
+    );
+
+    // Tu migration 0013 mot ngay co the co NHIEU dong (nhieu luot vao/ra), va
+    // tu 0014 gio nghi duoc tru mot lan cho moi ngay. Gop ngay roi mo, khong
+    // cong thang cac dong: cong dong se ra tong LON HON so gio duoc tinh
+    // cong, va se dem mot ngay ra ngoai an trua thanh hai "ngay cong".
+    const days = groupAttendanceByDay(records, breaks);
+
     const summary = {
       month: queryParams.month,
-      workedDays: records.filter((record) => record.worked_minutes > 0).length,
-      totalMinutes: records.reduce((sum, record) => sum + record.worked_minutes, 0),
-      lateCount: records.filter((record) => record.status === "late").length,
-      leaveDays: records.filter(
-        (record) => record.status === "leave_paid" || record.status === "leave_unpaid",
+      workedDays: days.filter((day) => day.workedMinutes > 0).length,
+      totalMinutes: days.reduce((sum, day) => sum + day.workedMinutes, 0),
+      // Chi luot DAU TIEN cua ngay mang status "late" (xem `checkIn`), va
+      // `day.status` da lay tu luot do — dem ngay o day chinh la so ngay di
+      // muon.
+      lateCount: days.filter((day) => day.status === "late").length,
+      leaveDays: days.filter(
+        (day) => day.status === "leave_paid" || day.status === "leave_unpaid",
       ).length,
     };
 

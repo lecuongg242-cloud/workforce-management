@@ -180,6 +180,28 @@ export function requireRole(role: CompanyRole, allowed: CompanyRole[]): void {
 }
 
 /**
+ * Vai tro duoc vao khu vuc `/admin`. Ranh gioi nay TRUNG voi `isAdminRole`
+ * (`owner`/`admin`) da dung o moi Route Handler va Server Action theo AUTH-03:
+ * `manager` va `employee` chi doc duoc du lieu cua CHINH HO, nen man hinh
+ * quan tri voi ho se rong hoac 403 — dua ho vao giao dien nhan vien moi dung.
+ */
+export const ADMIN_AREA_ROLES: CompanyRole[] = ["owner", "admin"];
+
+export function canAccessAdminArea(role: CompanyRole): boolean {
+  return ADMIN_AREA_ROLES.includes(role);
+}
+
+/**
+ * Trang chu theo vai tro. `middleware.ts` KHONG goi duoc ham nay vi vai tro
+ * nam o bang `memberships` chu khong o JWT — vi vay moi loi vao sau khi doi
+ * phien deu di qua `/` (xem `src/app/page.tsx`) de server phan giai vai tro
+ * mot lan roi moi re nhanh.
+ */
+export function homePathForRole(role: CompanyRole): string {
+  return canAccessAdminArea(role) ? "/admin/dashboard" : "/employee";
+}
+
+/**
  * Dung boi `src/app/layout.tsx` de dung `UserSession` (kieu PHIA CLIENT,
  * khong doi trong domain.ts — xem <objective> cua 02-04-PLAN.md). Tra ve
  * `null` khi nguoi dung da xac thuc nhung chua phan giai duoc CA membership

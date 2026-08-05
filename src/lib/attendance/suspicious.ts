@@ -86,6 +86,77 @@ export function suspiciousMultiplier(
   return Math.round((distanceMeters / radiusMeters) * 10) / 10;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Ngoai khung gio ca — tin hieu thu hai cua danh sach "Can xem lai"          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Bien do noi rong hai dau khung gio ca. CO CHU DICH rong: mot he thong danh
+ * dau nguoi den som muoi phut la mot he thong ma quan ly se ngung doc danh
+ * sach. 120 phut du rong de khong hoi nguoi den chuan bi som hay con nan lai
+ * xu ly viec cuoi ca, nhung van nhan ra duoc lan cham cong o mot khung gio
+ * hoan toan khac ca duoc phan.
+ *
+ * Truoc day hang so nay nam o `mutations/attendance.ts` va dung de TU CHOI
+ * cham cong. Gio no chi de HOI (cung khuon voi `SUSPICIOUS_DISTANCE_MULTIPLIER`
+ * o tren) va vi vay thuoc ve module phat hien nay. Phase 4 doc no tu cau hinh
+ * doanh nghiep cung mot cho voi nguong khoang cach.
+ */
+export const SHIFT_WINDOW_GRACE_MINUTES = 120;
+
+const MINUTES_PER_DAY = 1440;
+
+function timeToMinutes(time: string): number {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+/** Khoang cach xuoi chieu tu `from` toi `to` theo phut, vong qua nua dem. */
+function forwardMinutes(from: string, to: string): number {
+  const diff = timeToMinutes(to) - timeToMinutes(from);
+  return diff >= 0 ? diff : diff + MINUTES_PER_DAY;
+}
+
+export interface IsOutsideShiftWindowInput {
+  /** Gio cham cong theo gio Viet Nam, "HH:mm" (chinh la `AttendanceRecord.checkIn`). */
+  punchTime: string;
+  /** "HH:mm" */
+  shiftStartTime: string;
+  /** "HH:mm" — co the nho hon `shiftStartTime` neu la ca qua dem. */
+  shiftEndTime: string;
+  graceMinutes?: number;
+}
+
+/**
+ * Lan cham cong nay co nam ngoai khung gio ca duoc phan khong?
+ *
+ * Lam viec tren "HH:mm" theo gio Viet Nam — chinh la dang ma
+ * `attendanceRecordSchema` da chuyen `check_in_at` sang. Nho vay khong noi
+ * nao phai tu lam phep doi mui gio (quy uoc cua du an: moi phep tinh gio di
+ * qua RPC cua database, khong tu viet lai o tang ung dung).
+ *
+ * Ca QUA DEM duoc xu ly bang phep do XUOI CHIEU tu gio bat dau ca: moi moc
+ * deu quy ve "bao nhieu phut sau khi ca bat dau", vong qua nua dem, nen
+ * khong can nhanh rieng cho ca qua dem.
+ */
+export function isOutsideShiftWindow({
+  punchTime,
+  shiftStartTime,
+  shiftEndTime,
+  graceMinutes = SHIFT_WINDOW_GRACE_MINUTES,
+}: IsOutsideShiftWindowInput): boolean {
+  const shiftMinutes = forwardMinutes(shiftStartTime, shiftEndTime);
+  const offset = forwardMinutes(shiftStartTime, punchTime);
+
+  // Trong ca (tinh tu luc bat dau) cong bien do sau khi ca ket thuc.
+  if (offset <= shiftMinutes + graceMinutes) return false;
+  // Truoc gio bat dau ca trong pham vi bien do — do dac xuoi chieu nen "som
+  // 30 phut" hien ra thanh 1410 phut, tuc gan het mot vong ngay.
+  if (offset >= MINUTES_PER_DAY - graceMinutes) return false;
+
+  return true;
+}
+
 /**
  * KHONG CO HAM NAO trong module nay nhan HAI lan cham lien tiep lam dau
  * vao. Cach do theo TOC DO DI CHUYEN giua hai lan cham da bi BAC BO tuong

@@ -77,16 +77,6 @@ export interface CheckOutResult extends AttendanceRecord, PunchEvidenceResult {}
  */
 
 /**
- * D-20b/T-03-04-01: biên độ nới rộng hai đầu khung giờ ca khi kiểm "ngoài
- * giờ ca làm" — CÓ CHỦ ĐÍCH rộng, không phải một hằng số tuỳ ý: một hệ thống
- * từ chối người đến sớm mười phút là một hệ thống người ta sẽ tìm cách đi
- * vòng. 120 phút (hai giờ) đủ rộng để không chặn nhầm người đến chuẩn bị
- * sớm hay còn nán lại xử lý việc cuối ca, nhưng vẫn từ chối được người chấm
- * công ở một khung giờ hoàn toàn khác ca được phân.
- */
-const SHIFT_WINDOW_GRACE_MINUTES = 120;
-
-/**
  * Cộng một số phút (có thể âm) vào một khoảnh khắc ISO để ra một khoảnh khắc
  * mới — phép cộng EPOCH ĐƠN THUẦN (không phải một quy ước múi giờ thứ hai).
  * Dùng CHUNG cho mọi nơi trong file này cần tính THỜI ĐIỂM KẾT THÚC CA THEO
@@ -397,84 +387,77 @@ export async function checkIn(
     throw new Error("Không thể tính thời gian bắt đầu ca.");
   }
 
-  // T-03-04-01/D-20b: cham cong NGOAI khung gio ca duoc phan (cong bien do
-  // SHIFT_WINDOW_GRACE_MINUTES hai dau) bi tu choi. Dung LAI dung khuon
-  // checkOut hien co dang dung de tinh ve som: tf_shift_minutes() cho so
-  // phut TRON CA (da xu ly wrap qua nua dem cho ca qua dem, D-08 — khong tu
-  // tinh lai phep tru gio o day), cong vao scheduledStart bang
-  // addMinutesToInstant() de ra thoi diem KET THUC CA THEO KE HOACH.
-  const { data: rawShiftMinutesForWindow, error: shiftMinutesForWindowError } =
-    await supabase.rpc("tf_shift_minutes", {
-      p_start: shift.start_time,
-      p_end: shift.end_time,
-      p_break_minutes: 0,
-    });
-  if (shiftMinutesForWindowError || rawShiftMinutesForWindow === null) {
-    throw new Error("Không thể tính thời lượng ca.");
-  }
-  const scheduledEndForWindow = addMinutesToInstant(
-    scheduledStart as string,
-    rawShiftMinutesForWindow as number,
-  );
-  const windowStart = addMinutesToInstant(
-    scheduledStart as string,
-    -SHIFT_WINDOW_GRACE_MINUTES,
-  );
-  const windowEnd = addMinutesToInstant(
-    scheduledEndForWindow,
-    SHIFT_WINDOW_GRACE_MINUTES,
-  );
-  // So sanh chuoi ISO8601 (khong phai so sanh Date) — hop le vi ca ba gia
-  // tri deu la timestamptz cung mot dinh dang tu Postgres/PostgREST (cung do
-  // rong truong nam-thang-ngay-gio-phut-giay, phan phan-so-giay neu co chi
-  // lam chuoi DAI HON chu khong lam sai thu tu). Tranh them mot dong
-  // `new Date(` moi ngoai `addMinutesToInstant()` (xem acceptance criteria).
-  if ((nowIso as string) < windowStart || (nowIso as string) > windowEnd) {
-    throw new AttendanceRejectedError("outside_shift");
-  }
+  // CHAM CONG NGOAI KHUNG GIO CA KHONG CON BI TU CHOI.
+  //
+  // Truoc day day la mot cua chan (T-03-04-01): ngoai khung gio ca cong bien
+  // do hai tieng thi nem `outside_shift`. Bo di vi hai ly do:
+  //
+  //   1. Tu migration 0013 mot ngay co nhieu luot, nen "lam ca sang xong,
+  //      chieu duoc goi quay lai hai tieng" la tinh huong THAT — va cua chan
+  //      nay khoa dung nguoi dang lam viec that.
+  //   2. No khong dong bo voi chinh nguyen tac cua he thong. D-20 da bien
+  //      "trong ban kinh" tu dieu kien CHAN thanh mot GHI CHU: cham cong o xa
+  //      van duoc ghi, chi bi danh dau de quan ly xem lai. Gio giac ngoai ca
+  //      la cung mot loai tin hieu — dang de hoi, khong du de ket luan.
+  //
+  // Su kien "ngoai khung gio ca" KHONG mat di: no duoc tinh LAI TAI THOI DIEM
+  // TRUY VAN tu `check_in_at` + gio ca (xem `isOutsideShiftWindow()` trong
+  // `src/lib/attendance/suspicious.ts`, dung o danh sach "Can xem lai"). Day
+  // la cung khuon voi co dang ngo theo khoang cach — khong luu mot cot
+  // boolean nao, nen khi bien do doi thi danh sach tu cap nhat, khong can ghi
+  // de hang loat len du lieu lich su (migration 0011 dong 56-60).
 
-  // Do muon = hieu (check_in_at - gio bat dau ca THEO KE HOACH), tinh tren
-  // TIMESTAMPTZ THAT qua tf_worked_minutes — den som tu dong ve 0 (khong can
-  // nguong chan 720 phut nhu tang gia lap, vi day la hieu tuyet doi giua hai
-  // khoanh khac, khong phai phep tru gio-trong-ngay co the wrap quanh nua
-  // dem).
-  const { data: lateRaw, error: lateError } = await supabase.rpc(
-    "tf_worked_minutes",
-    { p_check_in: scheduledStart, p_check_out: nowIso, p_break_minutes: 0 },
-  );
-  if (lateError || lateRaw === null) {
-    throw new Error("Không thể tính số phút đi muộn.");
-  }
-  const lateMinutes = Math.max((lateRaw as number) - shift.late_tolerance_minutes, 0);
-  const status: AttendanceRecord["status"] = lateMinutes > 0 ? "late" : "on_time";
-
-  // Cham vao lan thu hai trong cung (employee_id, work_date, shift_id) cap
-  // nhat ban ghi dang co thay vi tao dong thu hai — rang buoc `unique` cua
-  // database la lop hai.
-  const { data: existing, error: existingError } = await supabase
+  // Cac luot DA cham cua chinh ngay/ca nay, som nhat truoc. Loc bo dong
+  // khong co gio vao (nghi phep/nghi khong luong) — nhung dong do khong phai
+  // mot luot cham cong va khong duoc tinh vao thu tu luot.
+  const { data: punchesTodayData, error: punchesTodayError } = await supabase
     .from("attendance_records")
     .select(ATTENDANCE_COLUMNS)
     .eq("employee_id", employeeId)
     .eq("work_date", workDate)
     .eq("shift_id", shift.id)
     .eq("company_id", activeCompanyId)
-    .maybeSingle();
-  if (existingError) {
+    .not("check_in_at", "is", null)
+    .order("check_in_at", { ascending: true });
+  if (punchesTodayError) {
     throw new Error("Không thể kiểm tra bản ghi chấm công.");
   }
+  const punchesToday = (punchesTodayData ?? []) as RawAttendanceRow[];
 
-  // CR-01 (03-REVIEW.md): mot ca DA hoan tat (check_out_at khac null) khong
-  // duoc phep "vao lai" — writeRow ben duoi luon dat check_out_at/worked_minutes/
-  // early_leave_minutes ve gia tri rong, nen ap dung no len mot ban ghi da
-  // tan ca se XOA bang chung tan ca da ghi (anh, so phut lam viec, ve som).
-  // Day khong phai mot ly do tu choi thu tu (D-20b khoa dung BA ly do) ma la
-  // AP DUNG LAI `outside_shift`, cung khuon voi checkOut tai su dung
-  // `outside_shift` cho ban ghi chua co gio vao (xem nhanh `!beforeRow.check_in_at`
-  // trong checkOut ben duoi): mot ca da ket thuc cung la mot dang "ngoai
-  // khung gio ca" theo nghia rong.
-  if (existing && (existing as RawAttendanceRow).check_out_at) {
-    throw new AttendanceRejectedError("outside_shift");
+  // Bat bien "khong ai o trong hai luot cung luc" — cung dieu kien voi partial
+  // unique index `attendance_records_open_punch_uidx` (migration 0013), day
+  // chi la lop kiem tra som de tra ve mot thong diep doc duoc thay vi loi
+  // rang buoc cua database. KHONG dung AttendanceRejectedError: D-20b khoa
+  // dung ba ly do va day khong phai mot trong ba (cung khong phai mot lan
+  // cham cong bi TU CHOI — no la mot thao tac sai trinh tu).
+  if (punchesToday.some((row) => !row.check_out_at)) {
+    throw new Error(
+      "Bạn đang trong một lượt chấm công chưa tan ca. Hãy tan ca trước khi vào lại.",
+    );
   }
+
+  // Do muon CHI tinh cho LUOT DAU TIEN cua ngay: cac luot sau la quay lai
+  // sau khi ra ngoai giua ca, so voi gio bat dau ca thi luon "muon" — tinh
+  // do muon cho chung se bien moi lan di an trua ve thanh mot lan di muon.
+  const isFirstPunchOfDay = punchesToday.length === 0;
+
+  let lateMinutes = 0;
+  if (isFirstPunchOfDay) {
+    // Do muon = hieu (check_in_at - gio bat dau ca THEO KE HOACH), tinh tren
+    // TIMESTAMPTZ THAT qua tf_worked_minutes — den som tu dong ve 0 (khong can
+    // nguong chan 720 phut nhu tang gia lap, vi day la hieu tuyet doi giua hai
+    // khoanh khac, khong phai phep tru gio-trong-ngay co the wrap quanh nua
+    // dem).
+    const { data: lateRaw, error: lateError } = await supabase.rpc(
+      "tf_worked_minutes",
+      { p_check_in: scheduledStart, p_check_out: nowIso, p_break_minutes: 0 },
+    );
+    if (lateError || lateRaw === null) {
+      throw new Error("Không thể tính số phút đi muộn.");
+    }
+    lateMinutes = Math.max((lateRaw as number) - shift.late_tolerance_minutes, 0);
+  }
+  const status: AttendanceRecord["status"] = lateMinutes > 0 ? "late" : "on_time";
 
   const writeRow = {
     check_in_at: nowIso,
@@ -488,52 +471,33 @@ export async function checkIn(
     note: null,
   };
 
-  let resultRow: RawAttendanceRow;
-  let auditAction: "insert" | "update";
-  let before: unknown = null;
-
-  if (existing) {
-    auditAction = "update";
-    before = existing;
-    const { data: updated, error: updateError } = await supabase
-      .from("attendance_records")
-      .update(writeRow)
-      .eq("id", (existing as RawAttendanceRow).id)
-      .eq("company_id", activeCompanyId)
-      .select(ATTENDANCE_COLUMNS)
-      .single();
-    if (updateError || !updated) {
-      throw new Error("Không thể ghi nhận giờ vào ca.");
-    }
-    resultRow = updated as RawAttendanceRow;
-  } else {
-    auditAction = "insert";
-    const id = randomUUID();
-    const { data: inserted, error: insertError } = await supabase
-      .from("attendance_records")
-      .insert({
-        id,
-        company_id: activeCompanyId,
-        employee_id: employeeId,
-        work_date: workDate,
-        shift_id: shift.id,
-        ...writeRow,
-      })
-      .select(ATTENDANCE_COLUMNS)
-      .single();
-    if (insertError || !inserted) {
-      throw new Error("Không thể ghi nhận giờ vào ca.");
-    }
-    resultRow = inserted as RawAttendanceRow;
+  // Moi luot vao ca la mot DONG MOI (khong con nhanh cap nhat dong cu): mot
+  // ngay co the co nhieu luot, va moi luot phai giu duoc bang chung rieng
+  // (anh vao/ra, toa do, khoang cach) cua chinh no.
+  const { data: inserted, error: insertError } = await supabase
+    .from("attendance_records")
+    .insert({
+      id: randomUUID(),
+      company_id: activeCompanyId,
+      employee_id: employeeId,
+      work_date: workDate,
+      shift_id: shift.id,
+      ...writeRow,
+    })
+    .select(ATTENDANCE_COLUMNS)
+    .single();
+  if (insertError || !inserted) {
+    throw new Error("Không thể ghi nhận giờ vào ca.");
   }
+  const resultRow = inserted as RawAttendanceRow;
 
   await logMutation({
     companyId: activeCompanyId,
     actorUserId: userId,
-    action: auditAction,
+    action: "insert",
     entityTable: "attendance_records",
     entityId: resultRow.id,
-    before,
+    before: null,
     after: resultRow,
     reason: null,
   });
@@ -625,12 +589,17 @@ export async function checkOut(
     throw new Error("Không thể xác định thời gian máy chủ.");
   }
 
+  // `p_break_minutes: 0` CO CHU DICH (migration 0014): cot `worked_minutes`
+  // luu THOI LUONG THO cua rieng luot nay. Gio nghi thuoc ve CA NGAY, khong
+  // thuoc ve mot luot — tru no o day se tru lap lai o moi luot cua ngay, va
+  // se lam mot luot ngan hon gio nghi ra 0 phut. Phep tru dung mot lan cho
+  // ca ngay nam o `src/lib/attendance/day.ts`.
   const { data: workedMinutes, error: workedError } = await supabase.rpc(
     "tf_worked_minutes",
     {
       p_check_in: beforeRow.check_in_at,
       p_check_out: nowIso,
-      p_break_minutes: shift.break_minutes,
+      p_break_minutes: 0,
     },
   );
   if (workedError || workedMinutes === null) {

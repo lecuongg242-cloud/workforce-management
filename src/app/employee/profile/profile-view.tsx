@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import {
   Bell,
   ChevronRight,
@@ -33,7 +32,6 @@ import { listShifts } from "@/lib/data/shifts";
 export function ProfileView(): React.ReactElement {
   const session = useAuthenticatedSession();
   const { signOut } = useSession();
-  const router = useRouter();
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
 
   const { data, isLoading, error, reload } = useDataQuery(
@@ -211,8 +209,7 @@ export function ProfileView(): React.ReactElement {
         tone="destructive"
         onConfirm={() => {
           setConfirmSignOut(false);
-          signOut();
-          router.replace("/login");
+          void signOut();
         }}
       />
     </div>

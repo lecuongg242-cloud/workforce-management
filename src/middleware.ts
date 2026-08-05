@@ -18,6 +18,14 @@ export interface GateResult {
 const PROTECTED_PREFIXES = ["/admin", "/employee"];
 const CHANGE_PASSWORD_PATH = "/doi-mat-khau";
 
+/**
+ * Middleware chi doc duoc JWT, ma vai tro nam o bang `memberships` (AUTH-03).
+ * Nen moi khi da co claims ma can dua nguoi dung "vao trong", no chi tra ve
+ * `/` — `src/app/page.tsx` phan giai vai tro roi re tiep toi `/admin/dashboard`
+ * hoac `/employee`.
+ */
+const HOME_PATH = "/";
+
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -37,7 +45,7 @@ function isProtectedPath(pathname: string): boolean {
  *   chuyen huong toi `/doi-mat-khau`. Bao gom ca `/select-company` — nguoi
  *   chua doi mat khau khong duoc lam gi khac.
  * - Co bat va duong dan LA `/doi-mat-khau` -> cho qua.
- * Khi co TAT: `/doi-mat-khau` tu chuyen huong ra ngoai (ve dashboard neu co
+ * Khi co TAT: `/doi-mat-khau` tu chuyen huong ra ngoai (ve `HOME_PATH` neu co
  * claims, ve login neu khong) de nguoi da doi xong khong quay lai duoc trang
  * do va boi roi.
  */
@@ -60,12 +68,12 @@ export function resolveGate({
       return { action: "redirect", to: CHANGE_PASSWORD_PATH };
     }
     // pathname === "/login" voi co bat: khong co quy tac rieng o day, roi
-    // xuong cac quy tac hien co ben duoi (vd co claims -> /admin/dashboard,
+    // xuong cac quy tac hien co ben duoi (vd co claims -> HOME_PATH,
     // roi lan ke tiep se lai bi day ve /doi-mat-khau — canh tinh co chu y,
     // khong xay ra vong lap vo han vi moi buoc deu tien ve mot trang khac).
   } else if (isChangePasswordPath) {
     return hasClaims
-      ? { action: "redirect", to: "/admin/dashboard" }
+      ? { action: "redirect", to: HOME_PATH }
       : { action: "redirect", to: "/login" };
   }
 
@@ -73,7 +81,7 @@ export function resolveGate({
     return { action: "redirect", to: "/login" };
   }
   if (pathname === "/login" && hasClaims) {
-    return { action: "redirect", to: "/admin/dashboard" };
+    return { action: "redirect", to: HOME_PATH };
   }
   return { action: "pass" };
 }

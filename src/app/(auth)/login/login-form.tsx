@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, Loader2, TriangleAlert } from "lucide-react";
@@ -12,11 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { redirectAfterSessionChange } from "@/lib/auth/post-auth-redirect";
 import { useSession } from "@/lib/auth/session-provider";
 import { loginSchema, type LoginFormValues } from "@/lib/validation/schemas";
 
 export function LoginForm(): React.ReactElement {
-  const router = useRouter();
   const { signIn } = useSession();
   const [showPassword, setShowPassword] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
@@ -42,9 +41,10 @@ export function LoginForm(): React.ReactElement {
     setSubmitError(null);
     try {
       await signIn(values.email, values.password);
-      // middleware.ts + getSessionContext() quyet dinh phan con lai: nguoi
-      // co nhieu membership se bi dua toi /select-company (NoActiveCompanyError).
-      router.push("/admin/dashboard");
+      // Luon ve "/" — `src/app/page.tsx` moi biet vai tro de re vao giao dien
+      // quan tri hay giao dien nhan vien, va dua nguoi co nhieu membership toi
+      // /select-company. Phia trinh duyet khong duoc tu doan dich den.
+      redirectAfterSessionChange("/");
     } catch (cause) {
       setSubmitError(
         cause instanceof Error

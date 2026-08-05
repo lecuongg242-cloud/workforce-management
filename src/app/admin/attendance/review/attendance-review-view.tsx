@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Clock, MapPinOff, ShieldAlert, XCircle } from "lucide-react";
+import {
+  CalendarClock,
+  CheckCircle2,
+  Clock,
+  MapPinOff,
+  ShieldAlert,
+  XCircle,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { AttendancePhotoDialog } from "@/components/attendance/attendance-photo-dialog";
@@ -125,26 +132,48 @@ export function AttendanceReviewView(): React.ReactElement {
                     <TableCell className="font-medium text-ink">
                       {item.employeeName}
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={item.workSiteName}>
-                      {item.workSiteName}
+                    <TableCell
+                      className="max-w-[200px] truncate"
+                      title={item.workSiteName ?? item.shiftWindow ?? undefined}
+                    >
+                      {item.workSiteName ?? item.shiftWindow ?? "—"}
                     </TableCell>
                     <TableCell>
-                      {/* Khoang cach LUON di kem boi so VA do chinh xac — khong
-                          bao gio de mot con so khoang cach dung mot minh trong
-                          bang nay, vi nguoi doc can phan biet duoc "GPS do
-                          sai" voi "dung xa that" (D-20). */}
-                      <p className="num flex items-center gap-1.5 font-semibold text-warning">
-                        <MapPinOff aria-hidden="true" className="size-3.5 shrink-0" />
-                        {formatNumber(Math.round(item.distanceMeters))} m ·{" "}
-                        {ATTENDANCE_REVIEW_LABEL.multiplierPrefix} {item.multiplier}{" "}
-                        {ATTENDANCE_REVIEW_LABEL.multiplierSuffix}
-                      </p>
-                      {item.accuracyMeters !== null ? (
-                        <p className="num mt-0.5 text-xs text-ink-muted">
-                          {ATTENDANCE_REVIEW_LABEL.accuracyPrefix}:{" "}
-                          {formatNumber(Math.round(item.accuracyMeters))} m
-                        </p>
-                      ) : null}
+                      {/* Hai ly do, hai cach doc khac han nhau — khong gop
+                          chung mot dinh dang. */}
+                      {item.reason === "far_from_site" &&
+                      item.distanceMeters !== null ? (
+                        <>
+                          {/* Khoang cach LUON di kem boi so VA do chinh xac —
+                              khong bao gio de mot con so khoang cach dung mot
+                              minh trong bang nay, vi nguoi doc can phan biet
+                              duoc "GPS do sai" voi "dung xa that" (D-20). */}
+                          <p className="num flex items-center gap-1.5 font-semibold text-warning">
+                            <MapPinOff aria-hidden="true" className="size-3.5 shrink-0" />
+                            {formatNumber(Math.round(item.distanceMeters))} m ·{" "}
+                            {ATTENDANCE_REVIEW_LABEL.multiplierPrefix} {item.multiplier}{" "}
+                            {ATTENDANCE_REVIEW_LABEL.multiplierSuffix}
+                          </p>
+                          {item.accuracyMeters !== null ? (
+                            <p className="num mt-0.5 text-xs text-ink-muted">
+                              {ATTENDANCE_REVIEW_LABEL.accuracyPrefix}:{" "}
+                              {formatNumber(Math.round(item.accuracyMeters))} m
+                            </p>
+                          ) : null}
+                        </>
+                      ) : (
+                        <>
+                          <p className="flex items-center gap-1.5 font-semibold text-warning">
+                            <CalendarClock aria-hidden="true" className="size-3.5 shrink-0" />
+                            {ATTENDANCE_REVIEW_LABEL.outsideShiftLabel}
+                          </p>
+                          {item.punchTime ? (
+                            <p className="num mt-0.5 text-xs text-ink-muted">
+                              {ATTENDANCE_REVIEW_LABEL.punchTimePrefix}: {item.punchTime}
+                            </p>
+                          ) : null}
+                        </>
+                      )}
                     </TableCell>
                     <TableCell className="num">
                       {formatCapturedAt(item.capturedAt)}

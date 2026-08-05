@@ -1,5 +1,65 @@
 import { describe, expect, it } from "vitest";
 
+import { isOutsideShiftWindow } from "@/lib/attendance/suspicious";
+
+/**
+ * Ngoai khung gio ca — tin hieu thu hai cua danh sach "Can xem lai". Truoc
+ * day day la mot cua CHAN o `checkIn`; nay chi de HOI.
+ *
+ * Ca dung o nhom nay: 06:00-14:00, bien do mac dinh 120 phut -> khung
+ * 04:00-16:00.
+ */
+describe("isOutsideShiftWindow — ca sang 06:00-14:00, bien do 120 phut", () => {
+  const shift = { shiftStartTime: "06:00", shiftEndTime: "14:00" };
+
+  it("dung truong hop da bay ra loi: cham luc 16:23 -> ngoai khung (qua han 23 phut)", () => {
+    expect(isOutsideShiftWindow({ ...shift, punchTime: "16:23" })).toBe(true);
+  });
+
+  it("trong ca -> khong ngoai khung", () => {
+    expect(isOutsideShiftWindow({ ...shift, punchTime: "09:30" })).toBe(false);
+  });
+
+  it("bien tren: dung 16:00 con trong khung, 16:01 da ra ngoai", () => {
+    expect(isOutsideShiftWindow({ ...shift, punchTime: "16:00" })).toBe(false);
+    expect(isOutsideShiftWindow({ ...shift, punchTime: "16:01" })).toBe(true);
+  });
+
+  it("bien duoi: dung 04:00 con trong khung, 03:59 da ra ngoai", () => {
+    expect(isOutsideShiftWindow({ ...shift, punchTime: "04:00" })).toBe(false);
+    expect(isOutsideShiftWindow({ ...shift, punchTime: "03:59" })).toBe(true);
+  });
+
+  it("ca QUA DEM 22:00-06:00: cham luc 02:00 (qua nua dem) van trong ca", () => {
+    expect(
+      isOutsideShiftWindow({
+        punchTime: "02:00",
+        shiftStartTime: "22:00",
+        shiftEndTime: "06:00",
+      }),
+    ).toBe(false);
+  });
+
+  it("ca QUA DEM 22:00-06:00: cham luc 12:00 (giua trua) la ngoai khung", () => {
+    expect(
+      isOutsideShiftWindow({
+        punchTime: "12:00",
+        shiftStartTime: "22:00",
+        shiftEndTime: "06:00",
+      }),
+    ).toBe(true);
+  });
+
+  it("bien do 0 -> chi trong dung khung gio ca moi khong bi danh dau", () => {
+    expect(
+      isOutsideShiftWindow({ ...shift, punchTime: "14:30", graceMinutes: 0 }),
+    ).toBe(true);
+    expect(
+      isOutsideShiftWindow({ ...shift, punchTime: "13:59", graceMinutes: 0 }),
+    ).toBe(false);
+  });
+});
+
 import {
   SUSPICIOUS_DISTANCE_MULTIPLIER,
   isSuspiciousPunch,

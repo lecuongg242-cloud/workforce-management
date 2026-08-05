@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { redirectAfterSessionChange } from "@/lib/auth/post-auth-redirect";
 import { useSession } from "@/lib/auth/session-provider";
 import { COMPANY_ROLE_LABEL } from "@/lib/constants";
 import type { Company } from "@/lib/types/domain";
@@ -66,7 +67,7 @@ export function CompanySwitcher({
               if (company.id === currentCompanyId) return;
               void (async () => {
                 await selectCompany(company.id);
-                router.push("/admin/dashboard");
+                redirectAfterSessionChange("/");
               })();
             }}
           >

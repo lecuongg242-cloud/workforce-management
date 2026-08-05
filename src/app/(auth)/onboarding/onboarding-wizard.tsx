@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -31,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { redirectAfterSessionChange } from "@/lib/auth/post-auth-redirect";
 import { useSession } from "@/lib/auth/session-provider";
 import {
   COMPANY_SIZE_LABEL,
@@ -57,7 +57,6 @@ const STEPS = [
 ] as const;
 
 export function OnboardingWizard(): React.ReactElement {
-  const router = useRouter();
   const { selectCompany } = useSession();
   const { invalidate } = useDataStore();
   const [step, setStep] = React.useState(0);
@@ -118,7 +117,7 @@ export function OnboardingWizard(): React.ReactElement {
       toast.success("Đã tạo doanh nghiệp thành công", {
         description: `${company.name} đã sẵn sàng để thêm nhân viên.`,
       });
-      router.push("/admin/dashboard");
+      redirectAfterSessionChange("/");
     } catch (cause) {
       toast.error(
         cause instanceof Error ? cause.message : "Không tạo được doanh nghiệp.",

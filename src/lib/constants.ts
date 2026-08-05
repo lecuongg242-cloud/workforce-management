@@ -387,15 +387,15 @@ export const ATTENDANCE_REVIEW_LABEL = {
   pageTitle: "Cần xem lại",
   pageDescriptionPrefix: "Đang có",
   pageDescriptionSuffix:
-    "bản ghi chấm công cách xa điểm làm việc bất thường. Khoảng cách lớn có thể do GPS đo sai, nhân viên đi công tác, hoặc điểm làm việc khai sai toạ độ — hãy xem chi tiết để kiểm tra, không tự kết luận.",
+    "bản ghi chấm công bất thường: cách xa điểm làm việc, hoặc nằm ngoài khung giờ ca được phân. Cả hai đều có thể do GPS đo sai, nhân viên đi công tác, làm thêm ngoài ca, hoặc dữ liệu ca/điểm làm việc khai sai — hãy xem chi tiết để kiểm tra, không tự kết luận.",
   emptyTitle: "Không có bản ghi nào cần xem lại",
   emptyBody:
-    "Mọi lần chấm công gần đây đều nằm trong hoặc gần bán kính điểm làm việc.",
+    "Mọi lần chấm công gần đây đều nằm trong hoặc gần bán kính điểm làm việc và đúng khung giờ ca.",
   reviewAction: "Đánh dấu đã xem xét",
   detailAction: "Xem chi tiết",
   employeeColumn: "Nhân viên",
-  workSiteColumn: "Điểm làm việc",
-  distanceColumn: "Khoảng cách",
+  workSiteColumn: "Điểm làm việc / Ca",
+  distanceColumn: "Dấu hiệu",
   capturedAtColumn: "Thời điểm",
   reviewStatusColumn: "Trạng thái xem xét",
   actionColumn: "Hành động",
@@ -403,6 +403,8 @@ export const ATTENDANCE_REVIEW_LABEL = {
   multiplierPrefix: "gấp",
   multiplierSuffix: "lần bán kính",
   accuracyPrefix: "Độ chính xác GPS",
+  outsideShiftLabel: "Ngoài khung giờ ca",
+  punchTimePrefix: "Chấm lúc",
 } as const;
 
 export const PHOTO_REVIEW_STATUS_LABEL: Record<PhotoReviewStatus, string> = {
