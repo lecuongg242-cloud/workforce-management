@@ -1,10 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Crosshair, Loader2 } from "lucide-react";
+import { Crosshair, Loader2, MapPin, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useDebounce } from "@/hooks/use-debounce";
+import { searchPlaces, type GeocodePlace } from "@/lib/data/geocode";
 
 import "leaflet/dist/leaflet.css";
 
@@ -89,6 +92,14 @@ export function WorkSiteMapPicker({
 
   const [isMapReady, setIsMapReady] = React.useState(false);
   const [isLocating, setIsLocating] = React.useState(false);
+
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState<GeocodePlace[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  // Tri hoan de khong goi dich vu tim kiem sau moi phim go — Nominatim la
+  // han ngach dung chung, khong phai mot dich vu tra tien co the goi thoai
+  // mai.
+  const debouncedQuery = useDebounce(query, 500);
 
   // Giu tham chieu on dinh: effect tao ban do chi chay MOT lan nen khong duoc
   // dong kin (closure) lay `onPick` cua lan render dau.
@@ -193,6 +204,47 @@ export function WorkSiteMapPicker({
     }
   }, [isMapReady, hasPosition, latitude, longitude, radiusMeters]);
 
+  React.useEffect(() => {
+    const trimmed = debouncedQuery.trim();
+    if (trimmed.length < 3) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    // Truy van cu tra ve SAU truy van moi se ghi de ket qua dung bang ket qua
+    // cu — co `cancelled` de lan chay da bi thay the khong con ghi state nua.
+    let cancelled = false;
+    setIsSearching(true);
+    searchPlaces(trimmed)
+      .then((places) => {
+        if (!cancelled) setResults(places);
+      })
+      .catch(() => {
+        if (!cancelled) setResults([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsSearching(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery]);
+
+  const handleSelectPlace = (place: GeocodePlace): void => {
+    onPickRef.current({
+      latitude: round6(place.latitude),
+      longitude: round6(place.longitude),
+    });
+    // Doi khung nhin ve dia diem vua chon: `setView` o effect dong bo chi
+    // chay cho lan dat ghim DAU TIEN, cac lan sau no co y khong keo ban do
+    // theo (tranh giat khi keo ghim) — nen o day phai tu doi.
+    mapRef.current?.setView([place.latitude, place.longitude], PICKED_ZOOM);
+    setQuery("");
+    setResults([]);
+  };
+
   const handleUseCurrentPosition = (): void => {
     if (!navigator.geolocation) {
       toast.error("Trình duyệt không hỗ trợ lấy vị trí hiện tại.");
@@ -219,6 +271,56 @@ export function WorkSiteMapPicker({
 
   return (
     <div className="grid gap-2">
+      {/* `relative` de danh sach ket qua noi TREN ban do — Leaflet dat cac
+          lop cua no o z-index 400-700 nen danh sach phai cao hon the. */}
+      <div className="relative">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-muted"
+        />
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Tìm địa chỉ hoặc tên địa điểm…"
+          aria-label="Tìm địa điểm"
+          autoComplete="off"
+          className="pl-9"
+        />
+        {isSearching ? (
+          <Loader2
+            aria-hidden="true"
+            className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-ink-muted"
+          />
+        ) : null}
+
+        {results.length > 0 ? (
+          <ul className="absolute top-[calc(100%+4px)] right-0 left-0 z-[1000] max-h-56 overflow-y-auto rounded-control border border-hairline bg-white py-1 shadow-e2">
+            {results.map((place) => (
+              <li key={place.id}>
+                <button
+                  type="button"
+                  onClick={() => handleSelectPlace(place)}
+                  className="flex w-full items-start gap-2 px-3 py-2 text-left text-[13px] text-ink hover:bg-canvas-soft"
+                >
+                  <MapPin
+                    aria-hidden="true"
+                    className="mt-0.5 size-3.5 shrink-0 text-ink-muted"
+                  />
+                  <span>{place.displayName}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {!isSearching && debouncedQuery.trim().length >= 3 && results.length === 0 ? (
+          <p className="mt-1.5 text-[13px] text-ink-muted">
+            Không tìm thấy địa điểm nào. Bạn có thể nhấn thẳng lên bản đồ để
+            chọn vị trí.
+          </p>
+        ) : null}
+      </div>
+
       <div
         ref={containerRef}
         role="application"
