@@ -4,11 +4,11 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 4
 current_phase_name: Quy tắc công do doanh nghiệp tự khai
-status: planning
-stopped_at: 03-07 Task 1 xong (6a8a246); Task 2 checkpoint cho device UAT, blocked them boi su co auth.users
-last_updated: "2026-08-02T17:41:48.226Z"
-last_activity: 2026-08-03
-last_activity_desc: Phase 03 complete, transitioned to Phase 4
+status: planned
+stopped_at: Phase 4 da lap ke hoach (6 plan, 5 wave); chua bat dau 04-01
+last_updated: "2026-08-05T00:00:00.000Z"
+last_activity: 2026-08-05
+last_activity_desc: Lap ke hoach Phase 4 — 04-CONTEXT.md + 04-01..04-06-PLAN.md
 progress:
   total_phases: 3
   completed_phases: 3
@@ -28,9 +28,9 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 ## Current Position
 
 Phase: 4 — Quy tắc công do doanh nghiệp tự khai
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-08-03 — Quick task 260803-a01: bỏ giá trị điền sẵn trên form đăng nhập
+Plan: 04-01 (chưa bắt đầu) — 6 plan đã lập, xếp thành 5 wave
+Status: Planned, ready to execute
+Last activity: 2026-08-05 — Lập kế hoạch Phase 4 (04-CONTEXT.md + 04-01…04-06-PLAN.md)
 
 Progress: [██████████] 96%
 
@@ -147,6 +147,15 @@ Recent decisions affecting current work:
 - [Phase ?]: 03-06: co dang ngo tinh TAI THOI DIEM TRUY VAN qua isSuspiciousPunch(), khong doc tu cot boolean da luu - Phase 4 doi nguong sang cau hinh doanh nghiep chi can sua mot ham
 - [Phase ?]: 03-07: RLS storage.objects thieu hoan toan cho bucket attendance-photos (broker route + checkIn/checkOut deu bi chan) -- them migration 0012, dung lai tf_is_member() qua split_part(name,'/',1)
 - [Phase ?]: 03-07: seed.sql attendance_photos fixture thieu GPS gay 500 tren metadata route -- them toa do that khop work_sites
+
+Quyết định của Phase 4 (lập kế hoạch 2026-08-05, chi tiết ở `04-CONTEXT.md`):
+
+- D-24: hệ số tăng ca phải dẫn tới giờ quy đổi nhìn thấy được trên bản ghi và tổng hợp kỳ
+- D-25: hệ số tăng ca append-only theo `effective_from`; D-25a cưỡng chế bằng trigger ở database; D-25b ngày lễ vẫn sửa được nhưng cảnh báo kèm số bản ghi bị ảnh hưởng
+- D-26: doanh nghiệp mới có 0 ngày lễ và 0 hệ số; thiếu hệ số trả `null` + nhãn "chưa khai", tuyệt đối không ngầm lấy 1.0
+- D-27: khung giờ đêm (mặc định 22:00–06:00) là định nghĩa pháp lý, nằm trong `company_settings` và sửa được
+- D-28: mỗi phút thuộc đúng một loại, ưu tiên lễ > cuối tuần > đêm > thường, **không cộng dồn** — thấp hơn cách tính của luật lao động, cần chủ dự án chốt ở 04-04 Task 4 trước khi 04-05 chạy
+- D-29: `SUSPICIOUS_DISTANCE_MULTIPLIER` và `SHIFT_WINDOW_GRACE_MINUTES` chuyển thành cấu hình doanh nghiệp — đóng lời hứa D-21a của Phase 3
 
 ### Pending Todos
 

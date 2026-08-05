@@ -166,7 +166,30 @@ Plans:
   3. Chủ doanh nghiệp tự khai hệ số tăng ca cho ngày thường, ngày nghỉ, ngày lễ và ca đêm; không có hệ số nào nhúng cứng trong mã nguồn.
   4. Bản ghi chấm công được phân loại theo quy tắc đang hiệu lực tại thời điểm phát sinh — sửa quy tắc hôm nay không làm đổi cách phân loại của bản ghi hôm qua.
 
-**Plans**: TBD
+**Plans:** 0/6 plans executed
+
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Tracer: bảng `company_settings` + RLS, `GET /api/settings`, Server Action ghi kèm audit, trang `/admin/settings` khung bốn tab, và hai ngưỡng Phase 3 rời khỏi mã nguồn (D-29 đóng D-21a)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-02-PLAN.md — SET-01: tab giờ làm chuẩn và ân hạn đi muộn theo từng ca; bằng chứng hai chiều cho tiêu chí 1 và 4
+- [ ] 04-03-PLAN.md — SET-02: ngày nghỉ lễ (đọc/ghi/xoá, cảnh báo khi chạm ngày quá khứ đã có bản ghi — D-25b)
+
+**Wave 3** *(blocked on Wave 1 completion)*
+
+- [ ] 04-04-PLAN.md — SET-03: hệ số tăng ca append-only theo `effective_from`, trigger cưỡng chế ở database (D-25a), tab Tăng ca; checkpoint chốt quy ước ưu tiên loại ngày (D-28)
+
+**Wave 4** *(blocked on Wave 2 + Wave 3 completion)*
+
+- [ ] 04-05-PLAN.md — SET-04: mô-đun phân loại (loại ngày, phút đêm, giờ quy đổi) tra hệ số theo `work_date`, hiển thị trên màn hình chấm công và tổng hợp tháng
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 04-06-PLAN.md — Cổng cuối phase: chặn con số nghiệp vụ nhúng cứng (có kiểm răng), e2e doanh nghiệp trắng, nghiệm thu bốn tiêu chí
+
 **UI hint**: yes
 
 ### Phase 5: Duyệt yêu cầu và chốt kỳ công
@@ -210,7 +233,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Nền dữ liệu và cô lập doanh nghiệp | 6/6 | In Progress|  |
 | 2. Phiên thật và cắt tầng dữ liệu giả | 11/11 | Complete    | 2026-08-02 |
 | 3. Chấm công có bằng chứng | 7/7 | Complete    | 2026-08-03 |
-| 4. Quy tắc công do doanh nghiệp tự khai | 0/TBD | Not started | - |
+| 4. Quy tắc công do doanh nghiệp tự khai | 0/6 | Planned | - |
 | 5. Duyệt yêu cầu và chốt kỳ công | 0/TBD | Not started | - |
 | 6. Super admin và hỗ trợ nhiều doanh nghiệp | 0/TBD | Not started | - |
 
