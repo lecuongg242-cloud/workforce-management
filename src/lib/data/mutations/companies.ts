@@ -171,6 +171,18 @@ export async function createCompanyAction(
     throw new Error("Không thể khởi tạo ca làm việc mặc định.");
   }
 
+  // Cau hinh van hanh cua doanh nghiep moi (plan 04-01): chen dong voi TOAN BO
+  // gia tri mac dinh cua migration 0015 — khong lap lai con so nao o day. Doanh
+  // nghiep moi vi vay co dung mot dong cau hinh ngay tu phut dau, trong khi
+  // `holidays` va `overtime_rules` van RONG (D-26): cau hinh la nguong van
+  // hanh, con ngay le va he so la thu doanh nghiep phai tu khai.
+  const { error: settingsError } = await admin
+    .from("company_settings")
+    .insert({ company_id: companyId });
+  if (settingsError) {
+    throw new Error("Không thể khởi tạo cấu hình doanh nghiệp.");
+  }
+
   const nowIso = new Date().toISOString();
   const { error: membershipError } = await admin.from("memberships").insert({
     user_id: userId,

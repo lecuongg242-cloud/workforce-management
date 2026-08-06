@@ -18,7 +18,11 @@
  * + 18 (01_isolation_companies.sql) + 53 (02_time_overnight.sql) + 41
  * (03_isolation_core.sql) + 15 (04_isolation_v2.sql) + 35 (05_seed_fixture.sql)
  * + 8 (06_platform_admins.sql) + 6 (07_search_normalize.sql) + 7
- * (08_role_write_scope.sql) + 8 (09_attendance_evidence.sql) = 199. Moc nay
+ * (08_role_write_scope.sql) + 8 (09_attendance_evidence.sql) = 199.
+ *
+ * Nang len 205 ngay 2026-08-06 (plan 04-01 Task 1): + 6
+ * (10_company_settings.sql). Nang len 212 cung ngay (plan 04-04 Task 1): + 7
+ * (11_overtime_rules_append_only.sql). Moc nay
  * CHI DUOC NANG LEN, khong bao gio ha xuong — ha moc la cach am tham bien
  * mot bo test dang co lai thanh mot cong van bao xanh (xem <prohibitions>
  * cua 02-02-PLAN.md).
@@ -28,7 +32,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const MIN_ASSERTIONS = 199;
+const MIN_ASSERTIONS = 212;
 
 const TESTS_DIR = path.join("supabase", "tests");
 const RUN_ALL_PATH = path.join(TESTS_DIR, "run-all.sql");

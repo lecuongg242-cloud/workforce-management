@@ -193,6 +193,71 @@ export interface WorkSite {
 }
 
 /**
+ * Ngay nghi le do CHINH doanh nghiep khai (SET-02, bang `holidays`). Bang co y
+ * de RONG khi doanh nghiep khoi tao — he thong khong cai san ngay nao (D-26).
+ *
+ * `date` la NGAY LICH dang "YYYY-MM-DD", khong phai mot khoanh khac: khong co
+ * mui gio nao tham gia vao kieu nay.
+ */
+export interface Holiday {
+  id: string;
+  companyId: string;
+  date: string;
+  name: string;
+}
+
+/** Bon loai ngay ma doanh nghiep khai he so tang ca (SET-03). */
+export type OvertimeRuleKey = "weekday" | "weekend" | "holiday" | "night";
+
+/**
+ * MOT PHIEN BAN he so tang ca (SET-03, bang `overtime_rules`). Bang la
+ * APPEND-ONLY (D-25): sua he so nghia la them mot dong moi voi `effectiveFrom`
+ * khac, dong cu giu nguyen de so lieu cua ky da qua tai lap duoc.
+ */
+export interface OvertimeRule {
+  id: string;
+  companyId: string;
+  ruleKey: OvertimeRuleKey;
+  multiplier: number;
+  /** "YYYY-MM-DD" — ngay bat dau co hieu luc */
+  effectiveFrom: string;
+}
+
+/**
+ * Mot loai ngay kem he so DANG HIEU LUC hom nay va toan bo lich su phien ban.
+ * `currentMultiplier` bang `null` nghia la doanh nghiep CHUA KHAI — khong bao
+ * gio duoc ngam hieu la 1.0 (D-26).
+ */
+export interface OvertimeRuleGroup {
+  ruleKey: OvertimeRuleKey;
+  currentMultiplier: number | null;
+  currentEffectiveFrom: string | null;
+  versions: OvertimeRule[];
+}
+
+/**
+ * Cau hinh van hanh cua mot doanh nghiep (Phase 4, bang `company_settings`).
+ *
+ * CHI chua nguong van hanh va dinh nghia phap ly — KHONG chua gia tri nghiep
+ * vu ma doanh nghiep tu quyet (he so tang ca o `overtime_rules`, ngay le o
+ * `holidays`, hai bang do co y de rong khi khoi tao, D-26).
+ */
+export interface CompanySettings {
+  companyId: string;
+  /** Boi so ban kinh de mot lan cham cong bi coi la dang ngo (D-29, dong D-21a) */
+  suspiciousDistanceMultiplier: number;
+  /** Bien do noi rong hai dau khung gio ca, phut (D-29) */
+  shiftWindowGraceMinutes: number;
+  /** "HH:mm" — mac dinh 22:00 theo Bo luat Lao dong, sua duoc (D-27) */
+  nightStartTime: string;
+  /** "HH:mm" — mac dinh 06:00 */
+  nightEndTime: string;
+  /** ISO date-time */
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+/**
  * Bang chung mot lan cham cong (ATT-01/ATT-02/ATT-04/ATT-06). KHONG khai
  * truong nao chua URL anh — anh chi den qua duong `/api/attendance-photos/{id}`
  * (broker Route Handler, tiêu chí 4 cua ROADMAP).
@@ -370,6 +435,18 @@ export type DepartmentInput = Omit<Department, "id" | "companyId">;
 export type ShiftInput = Omit<Shift, "id" | "companyId">;
 
 export type WorkSiteInput = Omit<WorkSite, "id" | "companyId" | "createdAt">;
+
+export type HolidayInput = Omit<Holiday, "id" | "companyId">;
+
+export type OvertimeRuleInput = Omit<OvertimeRule, "id" | "companyId">;
+
+/**
+ * Dau vao GHI cau hinh — PATCH TUNG PHAN: truong khong gui giu nguyen gia
+ * tri cu, khong bi ghi de bang mac dinh. Khong khai `companyId` (D-12b).
+ */
+export type CompanySettingsInput = Partial<
+  Omit<CompanySettings, "companyId" | "updatedAt" | "updatedBy">
+>;
 
 export type WorkRequestInput = Pick<
   WorkRequest,

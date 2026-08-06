@@ -459,3 +459,205 @@ export const ATTENDANCE_PHOTO_DIALOG_LABEL = {
   scopeNote:
     "Ảnh là ảnh hiện trường tại thời điểm chấm công, không dùng để đối chiếu khuôn mặt hay xác nhận danh tính người chấm công.",
 } as const;
+
+/**
+ * Trang cài đặt doanh nghiệp (`/admin/settings`, Phase 4). Bốn tab, mỗi tab do
+ * một plan lắp nội dung vào — thứ tự tab là cố định và không plan nào được đổi:
+ * Chung (04-01) / Ca làm việc (04-02) / Ngày lễ (04-03) / Tăng ca (04-04).
+ *
+ * Chữ trợ giúp của mỗi trường nói HỆ QUẢ chứ không mô tả lại tên trường: người
+ * đọc cần biết đổi con số này thì cái gì trên hệ thống đổi theo.
+ */
+export const SETTINGS_LABEL = {
+  pageTitle: "Cài đặt",
+  pageDescription:
+    "Những quy tắc công của riêng doanh nghiệp bạn. Hệ thống không áp sẵn con số nào — trừ vài ngưỡng vận hành có thể sửa ở tab Chung.",
+  tabGeneral: "Chung",
+  tabShifts: "Ca làm việc",
+  tabHolidays: "Ngày lễ",
+  tabOvertime: "Tăng ca",
+  comingSoon: "Đang xây dựng",
+  comingSoonBody: "Phần này sẽ có trong bước tiếp theo của Phase 4.",
+  saveButton: "Lưu thay đổi",
+  saveSuccess: "Đã lưu cấu hình.",
+  saveError: "Không lưu được cấu hình.",
+  loadError: "Không tải được cấu hình doanh nghiệp.",
+} as const;
+
+/**
+ * Tab "Chung" — bốn ngưỡng vận hành. Hai ngưỡng đầu là phần đóng lại của
+ * D-21a (Phase 3 hứa sẽ đưa chúng ra khỏi mã nguồn); khung giờ đêm là định
+ * nghĩa pháp lý dùng cho hệ số ca đêm ở tab Tăng ca (D-27).
+ */
+export const SETTINGS_GENERAL_LABEL = {
+  sectionTitle: "Ngưỡng vận hành",
+  sectionDescription:
+    "Bốn giá trị này chỉ ảnh hưởng tới cách hệ thống đặt câu hỏi, không tự kết luận thay bạn.",
+  suspiciousMultiplierLabel: "Ngưỡng đáng ngờ (số lần bán kính)",
+  suspiciousMultiplierHelp:
+    "Lần chấm công cách tâm điểm làm việc xa hơn ngần này lần bán kính sẽ xuất hiện trong danh sách Cần xem lại. Đặt cao hơn nếu doanh nghiệp có chi nhánh xa nhau.",
+  shiftWindowGraceLabel: "Biên độ khung giờ ca (phút)",
+  shiftWindowGraceHelp:
+    "Chấm công sớm hoặc muộn hơn khung giờ ca quá ngần này phút sẽ được đưa vào danh sách Cần xem lại. Không chặn ai chấm công.",
+  nightStartLabel: "Ca đêm bắt đầu",
+  nightEndLabel: "Ca đêm kết thúc",
+  nightHelp:
+    "Khoảng giờ được tính là làm đêm, dùng cho hệ số ca đêm ở tab Tăng ca. Mặc định 22:00–06:00 theo Bộ luật Lao động.",
+} as const;
+
+/**
+ * Tab "Ca làm việc" của trang cài đặt (SET-01, plan 04-02). Chữ trợ giúp nói rõ
+ * ranh giới thời gian của thay đổi: áp cho những lần chấm công SAU ĐÓ, còn bản
+ * ghi đã có giữ nguyên cách phân loại của ngày hôm đó (tiêu chí 1 và 4 của phase).
+ */
+export const SETTINGS_SHIFT_LABEL = {
+  sectionTitle: "Giờ làm chuẩn và ân hạn đi muộn",
+  sectionDescription:
+    "Mỗi ca có giờ làm và mức ân hạn riêng. Thay đổi ở đây áp cho những lần chấm công sau đó; các bản ghi đã có giữ nguyên cách phân loại của ngày hôm đó.",
+  columnShift: "Ca",
+  columnHours: "Giờ làm",
+  columnTolerance: "Ân hạn đi muộn",
+  columnEmployees: "Nhân viên",
+  columnAction: "",
+  overnightTag: "qua đêm",
+  noTolerance: "Không ân hạn",
+  editAction: "Sửa",
+  saveError: "Không lưu được ca làm việc.",
+  emptyTitle: "Chưa có ca làm việc nào",
+  emptyBody:
+    "Doanh nghiệp cần ít nhất một ca để hệ thống biết giờ làm chuẩn mà đối chiếu khi nhân viên chấm công.",
+  emptyAction: "Tới trang Ca làm việc",
+} as const;
+
+/**
+ * Tab "Ngày lễ" của trang cài đặt (SET-02, plan 04-03).
+ *
+ * Trạng thái rỗng nói đúng sự thật của D-26: hệ thống KHÔNG cài sẵn ngày lễ
+ * nào, vì mỗi doanh nghiệp nghỉ khác nhau — đây là trạng thái hợp lệ của một
+ * doanh nghiệp mới, không phải một lỗi hay một ngõ cụt.
+ *
+ * Chữ cảnh báo khi chạm vào quá khứ (D-25b) nói đúng ba điều: bao nhiêu bản
+ * ghi sẽ đổi cách phân loại, rằng đây là thay đổi hồi tố, và rằng thao tác
+ * được ghi vào nhật ký.
+ */
+export const SETTINGS_HOLIDAY_LABEL = {
+  sectionTitle: "Ngày nghỉ lễ của doanh nghiệp",
+  sectionDescription:
+    "Danh sách này do doanh nghiệp tự khai. Hệ thống không cài sẵn ngày nào vì mỗi nơi nghỉ khác nhau.",
+  yearLabel: "Năm",
+  addButton: "Thêm ngày lễ",
+  columnDate: "Ngày",
+  columnName: "Tên ngày lễ",
+  columnAction: "",
+  pastTag: "đã qua",
+  editAction: "Sửa",
+  deleteAction: "Xoá",
+  emptyTitle: "Chưa khai ngày nghỉ lễ nào cho năm này",
+  emptyBody:
+    "Doanh nghiệp mới bắt đầu với một lịch nghỉ trắng — hệ thống không cài sẵn ngày lễ nào. Thêm ngày đầu tiên để hệ thống phân loại công theo đúng lịch nghỉ của bạn.",
+  dialogCreateTitle: "Thêm ngày nghỉ lễ",
+  dialogEditTitle: "Sửa ngày nghỉ lễ",
+  dialogDescription:
+    "Ngày nghỉ lễ ảnh hưởng tới cách phân loại công và hệ số tăng ca của chính ngày đó.",
+  fieldDate: "Ngày",
+  fieldName: "Tên ngày lễ",
+  // Vi du CO Y khong phai mot ngay le quoc gia: goi y mot ngay le quoc gia o
+  // day la mot cach ngam de xuat "he thong biet truoc ban nen nghi ngay nao",
+  // trai voi chinh D-26.
+  fieldNamePlaceholder: "Ví dụ: Nghỉ hè toàn công ty",
+  save: "Lưu",
+  cancel: "Huỷ",
+  createSuccess: "Đã thêm ngày nghỉ lễ.",
+  updateSuccess: "Đã cập nhật ngày nghỉ lễ.",
+  deleteSuccess: "Đã xoá ngày nghỉ lễ.",
+  saveError: "Không lưu được ngày nghỉ lễ.",
+  deleteError: "Không xoá được ngày nghỉ lễ.",
+  countError: "Không đếm được số bản ghi chấm công của ngày này.",
+  pastConfirmTitle: "Thay đổi này có hiệu lực hồi tố",
+  pastConfirmBodyPrefix: "Ngày này đã có",
+  pastConfirmBodySuffix:
+    "bản ghi chấm công. Cách phân loại của những bản ghi đó sẽ đổi theo, và thao tác này được ghi vào nhật ký.",
+  pastConfirmAction: "Tôi hiểu, tiếp tục",
+  deleteConfirmTitle: "Xoá",
+  deleteConfirmBody:
+    "Ngày này sẽ không còn được tính là ngày nghỉ lễ khi phân loại công.",
+} as const;
+
+/** Nhãn tiếng Việt của bốn loại ngày có hệ số tăng ca (SET-03, enum giữ tiếng Anh). */
+export const OVERTIME_RULE_KEY_LABEL: Record<
+  "weekday" | "weekend" | "holiday" | "night",
+  string
+> = {
+  weekday: "Ngày thường",
+  weekend: "Ngày nghỉ",
+  holiday: "Ngày lễ",
+  // D-28a: "night" KHONG phai mot loai ngay ngang hang ba loai tren — no la
+  // mot PHU CAP CONG THEM tren nen he so cua loai ngay. Nhan phai noi dung
+  // dieu do, neu khong nguoi khai se dien vao mot he so nhan (vi du 1.3) va
+  // con so quy doi se sai gap boi.
+  night: "Phụ cấp ca đêm",
+};
+
+/** Mô tả từng loại ngày — nói loại giờ nào rơi vào nhóm này, không mô tả lại nhãn. */
+export const OVERTIME_RULE_KEY_HINT: Record<
+  "weekday" | "weekend" | "holiday" | "night",
+  string
+> = {
+  weekday: "Giờ làm vượt quá độ dài ca vào một ngày làm việc bình thường.",
+  weekend: "Toàn bộ giờ làm vào ngày không thuộc lịch làm việc của ca.",
+  holiday: "Toàn bộ giờ làm vào ngày doanh nghiệp đã khai là ngày nghỉ lễ.",
+  night:
+    "CỘNG THÊM cho phần giờ rơi vào khung giờ đêm (khai ở tab Chung), trên nền hệ số của chính ngày hôm đó. Ví dụ: 0.3 nghĩa là cộng thêm 30%.",
+};
+
+/**
+ * Tab "Tăng ca" của trang cài đặt (SET-03, plan 04-04).
+ *
+ * KHÔNG có hệ số nào được gợi ý sẵn ở đây — kể cả các mức theo luật lao động.
+ * Chỗ chưa khai nói thẳng là chưa khai (D-26), vì một con số hiện ra khi doanh
+ * nghiệp chưa khai gì là sai lặng lẽ, khó phát hiện nhất.
+ *
+ * `disclaimer` là câu giới hạn của D-28, dùng CHUNG cho mọi màn hình hiển thị
+ * giờ quy đổi để hai nơi không nói hai câu khác nhau.
+ */
+export const SETTINGS_OVERTIME_LABEL = {
+  sectionTitle: "Hệ số tăng ca",
+  sectionDescription:
+    "Hệ số áp từ ngày hiệu lực trở đi. Phiên bản cũ giữ nguyên, nên số liệu của các kỳ trước không đổi khi bạn khai một mức mới.",
+  // D-28a: cong thuc noi thanh mot cau ngan ngay tren tab, de nguoi khai hieu
+  // vi sao "Phu cap ca dem" hien dang "+30%" con ba loai kia hien dang "x3.0".
+  formulaNote:
+    "Mỗi giờ tăng ca lấy hệ số của loại ngày, cộng thêm phụ cấp ca đêm nếu giờ đó rơi vào khung giờ đêm. Ví dụ: ngày lễ ×3.0 và phụ cấp đêm 0.3 thì một giờ làm đêm ngày lễ quy đổi ×3.3.",
+  notDeclared: "Chưa khai hệ số",
+  notDeclaredHint: "Giờ tăng ca của loại ngày này chưa quy đổi được.",
+  notDeclaredHintNight:
+    "Giờ làm đêm chưa được cộng thêm phụ cấp nào.",
+  effectiveFromPrefix: "Hiệu lực từ",
+  declareAction: "Khai hệ số mới",
+  historyTitle: "Lịch sử phiên bản",
+  historyEmpty: "Chưa có phiên bản nào.",
+  historyToggleShow: "Xem lịch sử",
+  historyToggleHide: "Ẩn lịch sử",
+  dialogTitle: "Khai hệ số mới",
+  dialogDescription:
+    "Thao tác này THÊM một phiên bản mới, không sửa đè phiên bản đang có.",
+  fieldMultiplier: "Hệ số",
+  fieldMultiplierNight: "Phụ cấp (cộng thêm)",
+  fieldMultiplierNightHint:
+    "Nhập phần cộng thêm, không phải hệ số nhân. Ví dụ: 0.3 nghĩa là cộng thêm 30% trên hệ số của chính ngày hôm đó.",
+  fieldEffectiveFrom: "Hiệu lực từ ngày",
+  retroWarning:
+    "Ngày hiệu lực nằm trong quá khứ: giờ tăng ca của những ngày đã qua kể từ mốc này sẽ được quy đổi lại theo hệ số mới.",
+  save: "Thêm phiên bản",
+  cancel: "Huỷ",
+  saveSuccess: "Đã thêm phiên bản hệ số mới.",
+  saveError: "Không khai được hệ số tăng ca.",
+} as const;
+
+/**
+ * Câu giới hạn D-28, dùng chung ở mọi nơi hiển thị giờ quy đổi (tab Tăng ca,
+ * màn hình chấm công của quản trị, tổng hợp tháng của nhân viên). Một hằng số
+ * duy nhất để ba nơi không bao giờ nói ba câu khác nhau.
+ */
+export const OVERTIME_DISCLAIMER =
+  "Giờ quy đổi là số liệu công theo quy tắc doanh nghiệp đã khai, chưa phải căn cứ tính lương theo luật lao động.";

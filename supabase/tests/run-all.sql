@@ -17,3 +17,5 @@
 \ir 07_search_normalize.sql
 \ir 08_role_write_scope.sql
 \ir 09_attendance_evidence.sql
+\ir 10_company_settings.sql
+\ir 11_overtime_rules_append_only.sql

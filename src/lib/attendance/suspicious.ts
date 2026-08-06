@@ -12,14 +12,15 @@
 /**
  * Nguong danh dau dang ngo, boi so cua BAN KINH work_site gan nhat.
  *
- * (1) Day la gia tri MAC DINH — Phase 4 se doc no tu cau hinh doanh nghiep
- *     khi trang cai dat ra doi (D-21a). No duoc dat DUY NHAT o day (mot diem
- *     import, khong nhung vao truy van SQL nao) chinh la de Phase 4 chi can
- *     sua MOT noi khi doi tu hang so sang doc-tu-cau-hinh, khong phai di tim
- *     rai rac trong nhieu file.
+ * (1) TU PLAN 04-01 (D-29), day KHONG con la nguong van hanh — no la GIA TRI
+ *     MAC DINH dung khi doanh nghiep chua khai gi. Nguong that nam o cot
+ *     `company_settings.suspicious_distance_multiplier` va duoc truyen vao
+ *     `isSuspiciousPunch()` qua tham so `multiplier`. Day la lan dong lai cua
+ *     loi hua D-21a ("nguong khong duoc nhung cung") ma Phase 3 de lai.
  * (2) Doanh nghiep co chi nhanh xa nhau (kho, nha may) can noi rong nguong
  *     nay — 5 lan ban kinh la mot gia tri KHOI DIEM hop ly, khong phai mot
- *     con so tuyet doi dung cho moi doanh nghiep.
+ *     con so tuyet doi dung cho moi doanh nghiep. Gio ho tu noi duoc o
+ *     `/admin/settings`.
  * (3) Day la nguong de HOI, khong phai nguong de KET LUAN. Vuot nguong chi
  *     co nghia "dang vao danh sach can nguoi xem lai" — KHONG co nghia "day
  *     la gian lan". GPS trong nha xuong sai 20-50m, nhan vien co the dang di
@@ -35,6 +36,14 @@ export interface IsSuspiciousPunchInput {
   radiusMeters: number | null;
   /** Employee.canCheckInRemotely — nhan vien duoc phep cham cong ngoai dia diem */
   canCheckInRemotely: boolean;
+  /**
+   * Boi so nguong cua CHINH doanh nghiep do
+   * (`company_settings.suspicious_distance_multiplier`). Khong truyen thi
+   * dung `SUSPICIOUS_DISTANCE_MULTIPLIER` — chi de call site cu (va test)
+   * khong phai khai lai gia tri mac dinh, KHONG phai de tang du lieu duoc
+   * phep bo qua cau hinh.
+   */
+  multiplier?: number;
 }
 
 /**
@@ -59,13 +68,22 @@ export interface IsSuspiciousPunchInput {
  *   la LON HON nguong, khong phai BANG nguong.
  */
 export function isSuspiciousPunch(input: IsSuspiciousPunchInput): boolean {
-  const { distanceMeters, radiusMeters, canCheckInRemotely } = input;
+  const {
+    distanceMeters,
+    radiusMeters,
+    canCheckInRemotely,
+    multiplier = SUSPICIOUS_DISTANCE_MULTIPLIER,
+  } = input;
 
   if (canCheckInRemotely) return false;
   if (distanceMeters === null) return false;
   if (radiusMeters === null || radiusMeters === 0) return false;
+  // Nguong <= 0 la du lieu cau hinh hong (rang buoc CHECK cua migration 0015
+  // khong cho, nhung ham nay khong duoc phep tin dieu do): coi nhu khong co
+  // nguong thay vi bien MOI lan cham thanh dang ngo.
+  if (multiplier <= 0) return false;
 
-  return distanceMeters > radiusMeters * SUSPICIOUS_DISTANCE_MULTIPLIER;
+  return distanceMeters > radiusMeters * multiplier;
 }
 
 /**
@@ -99,8 +117,11 @@ export function suspiciousMultiplier(
  *
  * Truoc day hang so nay nam o `mutations/attendance.ts` va dung de TU CHOI
  * cham cong. Gio no chi de HOI (cung khuon voi `SUSPICIOUS_DISTANCE_MULTIPLIER`
- * o tren) va vi vay thuoc ve module phat hien nay. Phase 4 doc no tu cau hinh
- * doanh nghiep cung mot cho voi nguong khoang cach.
+ * o tren).
+ *
+ * TU PLAN 04-01 (D-29): day la GIA TRI MAC DINH khi doanh nghiep chua khai.
+ * Bien do that nam o `company_settings.shift_window_grace_minutes` va di vao
+ * day qua tham so `graceMinutes` co san cua `isOutsideShiftWindow()`.
  */
 export const SHIFT_WINDOW_GRACE_MINUTES = 120;
 

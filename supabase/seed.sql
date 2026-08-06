@@ -38,7 +38,7 @@
 truncate
   periods, audit_log, overtime_rules, holidays, attendance_photos, work_sites,
   work_requests, attendance_records, employees, shifts, departments,
-  memberships, companies
+  memberships, company_settings, companies
   restart identity cascade;
 
 -- Tu day tro di chay trong MOT transaction: departments.manager_id tham
@@ -73,6 +73,16 @@ insert into companies (id, name, code, industry, size, phone, address, accent) v
     'Lô C7, KCN Sóng Thần, Dĩ An, Bình Dương',
     'navy'
   );
+
+/* -------------------------------------------------------------------------- */
+/* company_settings — mot dong cho moi doanh nghiep, de nguyen gia tri mac    */
+/* dinh cua migration 0015 (5 lan ban kinh / 120 phut / 22:00-06:00).         */
+/* -------------------------------------------------------------------------- */
+-- Khong khai gia tri nao o day: seed phai tai lap dung trang thai cua mot
+-- doanh nghiep VUA duoc tao (D-26 tinh than) — cau hinh o muc mac dinh, con
+-- ngay le va he so tang ca thi doanh nghiep tu khai.
+
+insert into company_settings (company_id) values ('cty-01'), ('cty-02');
 
 /* -------------------------------------------------------------------------- */
 /* memberships — CO Y de rong o day (con lai trong danh sach truncate o tren) */

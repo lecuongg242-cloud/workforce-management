@@ -40,11 +40,30 @@ function makeChain(result: QueryResult): Record<string, unknown> {
   chain.gte = vi.fn(() => chain);
   chain.lte = vi.fn(() => chain);
   chain.in = vi.fn(() => chain);
+  chain.maybeSingle = vi.fn(() => Promise.resolve(result));
   chain.then = (
     resolve: (value: QueryResult) => unknown,
     reject?: (reason: unknown) => unknown,
   ) => Promise.resolve(result).then(resolve, reject);
   return chain;
+}
+
+/**
+ * Dong `company_settings` mac dinh (migration 0015). Tu plan 04-01 (D-29),
+ * Route Handler doc CA HAI nguong tu day thay vi tu hang so trong ma, nen moi
+ * client gia lap phai phuc vu duoc bang nay.
+ */
+function settingsRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    company_id: "cty-01",
+    suspicious_distance_multiplier: 5,
+    shift_window_grace_minutes: 120,
+    night_start_time: "22:00:00",
+    night_end_time: "06:00:00",
+    updated_at: "2026-08-06T00:00:00.000Z",
+    updated_by: null,
+    ...overrides,
+  };
 }
 
 function throwingClient(): FakeServerClient {
@@ -55,14 +74,25 @@ function throwingClient(): FakeServerClient {
   } as unknown as FakeServerClient;
 }
 
-/** Client hai bang: `attendance_photos` (buoc 1) va `attendance_records` (buoc 2), phan biet theo TEN BANG, khong theo thu tu goi. */
+/**
+ * Client ba bang: `company_settings` (nguong, plan 04-01), `attendance_photos`
+ * (buoc 1) va `attendance_records` (buoc 2) — phan biet theo TEN BANG, khong
+ * theo thu tu goi.
+ */
 function twoTableClient(
   photoResult: QueryResult,
   recordResult: QueryResult,
-): { client: FakeServerClient; photoChain: Record<string, unknown>; recordChain: Record<string, unknown> } {
+  settings: Record<string, unknown> = settingsRow(),
+): {
+  client: FakeServerClient;
+  photoChain: Record<string, unknown>;
+  recordChain: Record<string, unknown>;
+} {
   const photoChain = makeChain(photoResult);
   const recordChain = makeChain(recordResult);
+  const settingsChain = makeChain({ data: settings, error: null });
   const from = vi.fn((table: string) => {
+    if (table === "company_settings") return settingsChain;
     if (table === "attendance_photos") return photoChain;
     if (table === "attendance_records") return recordChain;
     throw new Error(`Bang khong mong doi trong test: ${table}`);
@@ -297,6 +327,46 @@ describe("GET /api/attendance/review (plan 03-06)", () => {
 
     expect(response.status).toBe(500);
     expect(recordChain.select).not.toHaveBeenCalled();
+  });
+
+  /**
+   * D-29 (plan 04-01) o TANG ROUTE HANDLER: cung mot tap du lieu, hai cau
+   * hinh khac nhau cho hai danh sach khac nhau. Day la bang chung tu dong cho
+   * cau "cau hinh dieu khien hanh vi that" — phan quan sat bang tay ghi o
+   * SUMMARY chi la lop xac nhan thu hai.
+   */
+  it("12. ha nguong dang ngo trong cau hinh -> lan cham truoc day 'sach' xuat hien trong danh sach", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(SESSION_CTY01_OWNER);
+    const photo = rawPhotoRow({
+      distance_meters: 150, // 1.5 lan ban kinh: duoi nguong mac dinh 5
+      work_sites: { name: "Văn phòng chính", radius_meters: 100 },
+    });
+    const { client } = twoTableClient(
+      { data: [photo], error: null },
+      { data: [rawRecordRow()], error: null },
+      settingsRow({ suspicious_distance_multiplier: 1.2 }),
+    );
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    const response = await GET(fakeGetRequest());
+    const body = (await response.json()) as unknown[];
+
+    expect(body).toHaveLength(1);
+  });
+
+  it("13. nang nguong dang ngo trong cau hinh -> lan cham dang ngo bien khoi danh sach", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(SESSION_CTY01_OWNER);
+    const { client } = twoTableClient(
+      { data: [rawPhotoRow()], error: null }, // 620.4m / 100m = 6.2 lan
+      { data: [rawRecordRow()], error: null },
+      settingsRow({ suspicious_distance_multiplier: 10 }),
+    );
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    const response = await GET(fakeGetRequest());
+    const body = (await response.json()) as unknown[];
+
+    expect(body).toHaveLength(0);
   });
 
   it("11. thieu vai tro xac thuc (chua dang nhap) -> 401", async () => {

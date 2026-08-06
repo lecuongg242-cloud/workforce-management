@@ -91,18 +91,35 @@ khuôn cặp schema Zod hai đầu (D-12d), khuôn Dialog + card của `/admin/w
   nghiệp tự quyết** (hệ số, ngày lễ); khung giờ đêm là mốc pháp lý và vẫn để doanh nghiệp
   đổi được.
 
-- **D-28: Mỗi phút thuộc đúng một loại, không cộng dồn hệ số.** Thứ tự ưu tiên: **lễ > cuối
-  tuần > đêm > thường**. Một giờ làm đêm ngày lễ tính theo hệ số **lễ**, không nhân chồng
-  lễ × đêm.
-  *Lý do:* mô hình cộng dồn đúng luật cần cả phụ cấp đêm cộng thêm trên nền ngày lễ, và nó
-  chỉ có ý nghĩa khi đi kèm bảng lương thật — thứ đã nằm ngoài phạm vi V2.
-  — **Giới hạn ghi rõ, không được giấu:** con số quy đổi của V2 là **số liệu công**, chưa
-  phải căn cứ trả lương đúng luật. Màn hình phải nói đúng điều đó bằng chữ, không để người
-  dùng tự suy ra. V3 làm bảng lương sẽ phải dựng lại phép cộng dồn.
-  — **Reversibility:** reversible — phép cộng dồn thêm vào cùng một mô-đun; nhưng mọi con số
-  đã hiển thị trong giai đoạn này mang nghĩa khác với sau đó.
-  — **Checkpoint:** quy ước này được xác nhận với chủ dự án ở 04-04 Task 3 **trước khi**
-  04-05 hiện thực phép quy đổi.
+- **D-28 (bản gốc, ĐÃ BỊ THAY THẾ — giữ lại để đọc được lịch sử quyết định): mỗi phút thuộc
+  đúng một loại, không cộng dồn hệ số.** Thứ tự ưu tiên lễ > cuối tuần > đêm > thường; một
+  giờ làm đêm ngày lễ tính hệ số lễ. Lý do khi đề xuất: mô hình cộng dồn đúng luật chỉ có ý
+  nghĩa khi đi kèm bảng lương thật — thứ đã nằm ngoài phạm vi V2.
+
+- **D-28a (CHỐT 2026-08-06 tại checkpoint 04-04 Task 4 — chủ dự án chọn cộng dồn):**
+  hệ số **cộng dồn hai lớp**, và `rule_key = 'night'` **đổi nghĩa** từ *hệ số nhân* thành
+  **phụ cấp cộng thêm**:
+
+  > `hệ số áp cho một phút = hệ số của loại ngày (thường | cuối tuần | lễ)`
+  > `                        + phụ cấp đêm, nếu phút đó rơi vào khung giờ đêm`
+
+  Ví dụ đã chốt: lễ = 3.0, đêm = 0.3 → một giờ tăng ca ban đêm ngày lễ quy đổi **×3.3**
+  (không phải ×3.0 của bản gốc, cũng không phải ×3.9 của phép nhân chồng).
+
+  *Lý do:* gần Điều 98 Bộ luật Lao động (phụ cấp làm đêm cộng thêm ít nhất 30%), trong khi
+  **không cần migration mới** — cột `multiplier` giữ nguyên, chỉ ngữ nghĩa của khoá `night`,
+  nhãn trên màn hình và phép tính đổi.
+
+  — **Giới hạn còn lại, ghi rõ chứ không giấu:** Điều 98.3 còn một lớp thứ ba (làm thêm giờ
+  vào ban đêm được cộng thêm 20% tiền lương của công việc làm ban ngày của chính ngày đó).
+  V2 **không** làm lớp này — nó cần một khoá thứ năm và một migration, và chỉ có nghĩa khi
+  có bảng lương thật. Con số quy đổi của V2 vẫn là **số liệu công**, chưa phải căn cứ trả
+  lương đúng luật; màn hình phải nói đúng điều đó bằng chữ.
+
+  — **Reversibility:** reversible về mã (phép tính nằm gọn trong một mô-đun), **costly về dữ
+  liệu**: các hệ số `night` đã khai theo nghĩa cũ (hệ số nhân) mang nghĩa khác hẳn theo
+  nghĩa mới (phụ cấp) — và `overtime_rules` là append-only nên không sửa lại được, chỉ khai
+  đè bằng một phiên bản mới.
 
 ### Đóng nốt lời hứa của Phase 3
 

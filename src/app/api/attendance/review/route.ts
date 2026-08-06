@@ -13,6 +13,7 @@ import {
   isSuspiciousPunch,
   suspiciousMultiplier,
 } from "@/lib/attendance/suspicious";
+import { loadCompanySettings } from "@/lib/settings/company-settings";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { toVnTime } from "@/lib/validation/api/attendance";
 import {
@@ -27,13 +28,14 @@ import {
  * kien chan thanh mot ghi chu. Khuon 02-04 (D-12c): chi xuat `dynamic` va
  * `GET`.
  *
- * Co dang ngo duoc TINH TAI THOI DIEM TRUY VAN qua `isSuspiciousPunch()`
- * (doc `SUSPICIOUS_DISTANCE_MULTIPLIER` tu MOT nguon duy nhat,
- * `src/lib/attendance/suspicious.ts`) — KHONG doc tu mot cot boolean da luu
- * san (`supabase/migrations/0011_attendance_evidence.sql` dong 56-60 giai
- * thich vi sao). Khi Phase 4 doi nguong tu hang so sang cau hinh doanh
- * nghiep (D-21a), danh sach nay TU CAP NHAT ma khong can mot lan ghi de hang
- * loat len du lieu lich su.
+ * Co dang ngo duoc TINH TAI THOI DIEM TRUY VAN qua `isSuspiciousPunch()` —
+ * KHONG doc tu mot cot boolean da luu san
+ * (`supabase/migrations/0011_attendance_evidence.sql` dong 56-60 giai thich
+ * vi sao). Tu plan 04-01 (D-29, dong D-21a) nguong den tu
+ * `company_settings.suspicious_distance_multiplier` cua chinh doanh nghiep,
+ * khong con tu hang so trong ma — va vi phep tinh dien ra luc truy van, doi
+ * nguong lam danh sach nay TU CAP NHAT ma khong can mot lan ghi de hang loat
+ * len du lieu lich su.
  *
  * Truy van chia lam HAI buoc thay vi mot embed long ba tang
  * (`attendance_photos -> attendance_records -> employees`): buoc 1 doc
@@ -118,11 +120,14 @@ async function collectOutsideShiftItems({
   companyId,
   from,
   to,
+  graceMinutes,
 }: {
   supabase: Awaited<ReturnType<typeof createServerSupabase>>;
   companyId: string;
   from?: string;
   to?: string;
+  /** `company_settings.shift_window_grace_minutes` cua chinh doanh nghiep nay (D-29) */
+  graceMinutes: number;
 }) {
   let query = supabase
     .from("attendance_records")
@@ -152,6 +157,7 @@ async function collectOutsideShiftItems({
       punchTime,
       shiftStartTime: toHourMinute(shift.start_time),
       shiftEndTime: toHourMinute(shift.end_time),
+      graceMinutes,
     });
   });
   if (outsideRows.length === 0) return [];
@@ -227,6 +233,14 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     const supabase = await createServerSupabase();
 
+    // D-29 (dong D-21a): CA HAI nguong cua danh sach nay den tu cau hinh cua
+    // chinh doanh nghiep, khong tu hang so trong ma. Vi ca dang ngo lan ngoai
+    // khung gio deu duoc TINH TAI THOI DIEM TRUY VAN (khong luu cot boolean
+    // nao — migration 0011 dong 56-60), doi nguong o `/admin/settings` lam
+    // danh sach nay tu cap nhat ngay lan tai ke tiep, khong can mot lan ghi
+    // de hang loat len du lieu lich su.
+    const settings = await loadCompanySettings(companyId);
+
     // Buoc 1: doc anh cham cong cua DUNG doanh nghiep phien, bo qua ngay
     // nhung dong chua co khoang cach (distance_meters null nghia la CHUA do
     // duoc — thieu phep do khong phai bang chung cua bat thuong).
@@ -301,6 +315,7 @@ export async function GET(request: Request): Promise<NextResponse> {
             distanceMeters: row.distance_meters,
             radiusMeters: workSite.radius_meters,
             canCheckInRemotely: employee.canCheckInRemotely,
+            multiplier: settings.suspiciousDistanceMultiplier,
           })
         ) {
           return null;
@@ -330,6 +345,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       companyId,
       from,
       to,
+      graceMinutes: settings.shiftWindowGraceMinutes,
     });
 
     // Mot luot vua o xa VUA sai khung gio chi hien MOT dong (uu tien khoang

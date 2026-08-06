@@ -40,7 +40,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     icon: ShieldAlert,
   },
   { label: "Bảng lương", href: "/admin/payroll", icon: Wallet, comingSoon: true },
-  { label: "Cài đặt", href: "/admin/settings", icon: Settings, comingSoon: true },
+  { label: "Cài đặt", href: "/admin/settings", icon: Settings },
 ];
 
 export interface EmployeeNavItem {

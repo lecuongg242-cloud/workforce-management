@@ -4,8 +4,8 @@ import { randomUUID } from "node:crypto";
 
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
 import { AttendanceRejectedError } from "@/lib/attendance/rejection";
-import { SUSPICIOUS_DISTANCE_MULTIPLIER } from "@/lib/attendance/suspicious";
 import { logMutation } from "@/lib/data/audit";
+import { loadCompanySettings } from "@/lib/settings/company-settings";
 import { ATTENDANCE_PHOTO_BUCKET, buildAttendancePhotoPath } from "@/lib/storage/attendance-photos";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { attendanceRecordSchema } from "@/lib/validation/api/attendance";
@@ -66,14 +66,14 @@ export interface CheckInResult extends AttendanceRecord, PunchEvidenceResult {}
 export interface CheckOutResult extends AttendanceRecord, PunchEvidenceResult {}
 
 /**
- * D-21/03-06: nguong danh dau dang ngo (mac dinh 5 lan ban kinh work_site)
- * gio DUNG chung mot nguon voi danh sach "can xem lai" cua quan tri —
- * `src/lib/attendance/suspicious.ts` la noi so huu CHINH THUC DUY NHAT cua
- * hang so nay trong toan repo. File nay CHI import lai de tinh banner tuc
- * thi (`isOutsideRadius`) ngay sau khi cham cong; KHONG con tu khai mot ban
- * sao cuc bo nua (ban sao cu cua 03-01/03-03 da bi go — nguon dung chung
- * moi dam bao Phase 4 chi doi nguong o MOT noi khi chuyen sang cau hinh
- * doanh nghiep, xem comment tai dinh nghia hang so).
+ * D-21/03-06 va D-29/04-01: nguong danh dau dang ngo gio den tu CAU HINH cua
+ * chinh doanh nghiep (`company_settings.suspicious_distance_multiplier`, doc
+ * qua `loadCompanySettings()`), khong con tu mot hang so trong ma. File nay
+ * dung no de tinh banner tuc thi (`isOutsideRadius`) ngay sau khi cham cong,
+ * va danh sach "Can xem lai" cua quan tri doc CUNG mot nguon — neu mot ben
+ * doc hang so con ben kia doc cau hinh thi hai man hinh se bat dong ve cung
+ * mot lan cham cong. `SUSPICIOUS_DISTANCE_MULTIPLIER` o
+ * `src/lib/attendance/suspicious.ts` chi con la GIA TRI MAC DINH.
  */
 
 /**
@@ -169,15 +169,22 @@ async function writePunchEvidence({
     }
   }
 
-  // D-21: danh dau dang ngo khi khoang cach vuot NGUONG (5 lan ban kinh mac
-  // dinh), khong phai vuot ban kinh tran (D-20a: "trong ban kinh" tu dieu
-  // kien bat buoc thanh ghi chu). CHI dung de quyet dinh banner tuc thi o
-  // day — KHONG chan cham cong o bat ky nhanh nao (D-20).
+  // D-21: danh dau dang ngo khi khoang cach vuot NGUONG, khong phai vuot ban
+  // kinh tran (D-20a: "trong ban kinh" tu dieu kien bat buoc thanh ghi chu).
+  // CHI dung de quyet dinh banner tuc thi o day — KHONG chan cham cong o bat
+  // ky nhanh nao (D-20).
+  //
+  // Nguong doc tu cau hinh cua CHINH doanh nghiep (D-29, plan 04-01): banner
+  // ma nhan vien nhin thay va danh sach "Can xem lai" ma quan tri nhin thay
+  // phai noi CUNG mot nguong — neu mot ben doc hang so con ben kia doc cau
+  // hinh thi hai man hinh se bat dong ve cung mot lan cham cong.
+  const settings = await loadCompanySettings(companyId);
   const isOutsideRadius =
     nearestWorkSiteId !== null &&
     nearestDistanceMeters !== null &&
     nearestWorkSiteRadiusMeters !== null &&
-    nearestDistanceMeters > nearestWorkSiteRadiusMeters * SUSPICIOUS_DISTANCE_MULTIPLIER;
+    nearestDistanceMeters >
+      nearestWorkSiteRadiusMeters * settings.suspiciousDistanceMultiplier;
 
   // T-03-06/ATT-01: anh chi den tu khung hinh truc tiep (Blob dung canh
   // duoc kiem boi punchEvidenceSchema) — khong co duong nao khac de doc

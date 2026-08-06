@@ -143,6 +143,56 @@ describe("isSuspiciousPunch", () => {
   });
 });
 
+/**
+ * D-29 (plan 04-01): nguong den tu `company_settings` chu khong tu hang so.
+ * Bon test duoi kiem chinh cai ban le do — hang so chi con la MAC DINH.
+ */
+describe("isSuspiciousPunch — nguong tu cau hinh doanh nghiep (D-29)", () => {
+  it("12. nguong nho hon mac dinh -> mot lan cham truoc day 'sach' tro thanh dang ngo", () => {
+    const input = {
+      distanceMeters: 200, // 2 lan ban kinh
+      radiusMeters: 100,
+      canCheckInRemotely: false,
+    };
+
+    expect(isSuspiciousPunch(input)).toBe(false); // mac dinh 5 lan
+    expect(isSuspiciousPunch({ ...input, multiplier: 1.5 })).toBe(true);
+  });
+
+  it("13. nguong lon hon mac dinh -> mot lan cham dang ngo tro lai binh thuong", () => {
+    const input = {
+      distanceMeters: 600, // 6 lan ban kinh
+      radiusMeters: 100,
+      canCheckInRemotely: false,
+    };
+
+    expect(isSuspiciousPunch(input)).toBe(true); // mac dinh 5 lan
+    expect(isSuspiciousPunch({ ...input, multiplier: 10 })).toBe(false);
+  });
+
+  it("14. canCheckInRemotely van thang moi nguong — nguong nho toi dau cung khong keo ho vao danh sach", () => {
+    expect(
+      isSuspiciousPunch({
+        distanceMeters: 50_000,
+        radiusMeters: 100,
+        canCheckInRemotely: true,
+        multiplier: 0.1,
+      }),
+    ).toBe(false);
+  });
+
+  it("15. nguong <= 0 (du lieu cau hinh hong) -> false, khong bien MOI lan cham thanh dang ngo", () => {
+    const input = {
+      distanceMeters: 5_000,
+      radiusMeters: 100,
+      canCheckInRemotely: false,
+    };
+
+    expect(isSuspiciousPunch({ ...input, multiplier: 0 })).toBe(false);
+    expect(isSuspiciousPunch({ ...input, multiplier: -3 })).toBe(false);
+  });
+});
+
 describe("suspiciousMultiplier", () => {
   it("9. lam tron toi mot chu so thap phan", () => {
     expect(suspiciousMultiplier(620, 100)).toBe(6.2);
