@@ -551,6 +551,74 @@ export const SETTINGS_GENERAL_LABEL = {
  * không bị: SET-05 nói cảnh báo, không chặn cứng.
  */
 /**
+ * Bảng công của quản trị (`/admin/attendance`).
+ *
+ * Ký hiệu trong lưới tháng là **chữ**, không phải màu: một ô chỉ tô màu sẽ vô
+ * nghĩa với người mù màu và biến mất khi in ra giấy — mà bảng công thì hay
+ * được in ra để ký.
+ */
+export const ADMIN_ATTENDANCE_LABEL = {
+  pageTitle: "Chấm công",
+  pageDescription: "Soát lại công của cả doanh nghiệp trước khi chốt kỳ.",
+  gridTab: "Lưới tháng",
+  listTab: "Danh sách bản ghi",
+  legendTitle: "Ký hiệu",
+  totalColumn: "Ngày công",
+  employeeColumn: "Nhân viên",
+  allDepartments: "Tất cả phòng ban",
+  searchPlaceholder: "Tìm theo tên hoặc mã nhân viên…",
+  emptyTitle: "Chưa có dữ liệu chấm công",
+  emptyBody: "Tháng này chưa có bản ghi chấm công nào của doanh nghiệp.",
+  emptyFilteredTitle: "Không có nhân viên nào khớp bộ lọc",
+  emptyFilteredBody: "Thử bỏ bớt điều kiện lọc hoặc chọn tháng khác.",
+  noRecordCell: "Không có bản ghi",
+  openDetail: "Xem bằng chứng chấm công",
+} as const;
+
+/** Ký hiệu một ngày trong lưới tháng — CHỮ trước, màu chỉ là lớp thứ hai. */
+export const ATTENDANCE_GRID_SYMBOL: Record<AttendanceStatus, string> = {
+  on_time: "✓",
+  late: "M",
+  early_leave: "S",
+  missing_checkout: "!",
+  leave_paid: "P",
+  leave_unpaid: "K",
+  day_off: "·",
+};
+
+/**
+ * Bảng chuẩn bị lương (`/admin/payroll`).
+ *
+ * KHÔNG nhãn nào ở đây nói tới tiền, và đó là điều cố ý: V2 chuẩn bị **dữ
+ * liệu công** cho việc tính lương, không tính lương (xem `PayrollPrepRow`
+ * trong `domain.ts` và PROJECT.md §Out of Scope).
+ */
+export const PAYROLL_LABEL = {
+  pageTitle: "Bảng lương",
+  pageDescription:
+    "Tổng hợp công theo tháng để bàn giao cho kế toán. Bảng này không tính tiền — thuế, bảo hiểm và phiếu lương thuộc phiên bản sau.",
+  periodClosed: "Kỳ đã chốt — số liệu đã khoá",
+  periodOpen: "Kỳ đang mở — số liệu còn thay đổi được",
+  periodMissing: "Kỳ chưa được tạo — số liệu còn thay đổi được",
+  exportAction: "Xuất CSV",
+  exportedToast: "Đã tải tệp CSV.",
+  employeeColumn: "Nhân viên",
+  departmentColumn: "Phòng ban",
+  workedDaysColumn: "Ngày công",
+  totalHoursColumn: "Giờ làm",
+  overtimeColumn: "Giờ tăng ca",
+  convertedColumn: "Giờ quy đổi",
+  leaveColumn: "Ngày nghỉ phép",
+  lateColumn: "Lần đi muộn",
+  // D-26: thiếu hệ số trả `null`, không bao giờ ngầm lấy 1.0.
+  missingMultiplier: "chưa khai hệ số",
+  missingMultiplierHint:
+    "Doanh nghiệp chưa khai hệ số tăng ca cho loại ngày tương ứng, nên giờ quy đổi chưa tính được. Khai ở tab Tăng ca của trang Cài đặt.",
+  emptyTitle: "Chưa có nhân viên nào để tổng hợp",
+  emptyBody: "Tháng này chưa có nhân viên nào đang làm việc hoặc có bản ghi công.",
+} as const;
+
+/**
  * Kỳ công và thao tác chốt kỳ (PERD-01/PERD-02, plan 05-05).
  *
  * Không nhãn nào ở đây hứa một nút mở lại kỳ đã chốt — vì nó không tồn tại

@@ -590,6 +590,49 @@ export interface MonthlySummary {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Bang chuan bi luong                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Mot dong cua bang chuan bi luong: tong hop cong cua MOT nhan vien trong MOT
+ * thang, kem ngu canh du de ke toan doi chieu.
+ *
+ * KHONG CO TRUONG TIEN NAO O DAY, va do la co y. TimeFlow V2 chuan bi DU LIEU
+ * CONG cho viec tinh luong, khong tinh luong: gross-net, thue TNCN, BHXH/BHYT/
+ * BHTN va phieu luong (nhom PAY) hoan sang V3 vi rui ro nghiep vu cao va can
+ * dung luat (xem PROJECT.md §Out of Scope). Them mot cot tien vao day ma chua
+ * co mo hinh luong la hua mot thu san pham chua lam duoc.
+ */
+export interface PayrollPrepRow {
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  departmentName: string | null;
+  workedDays: number;
+  totalMinutes: number;
+  lateCount: number;
+  leaveDays: number;
+  overtimeMinutes: number;
+  overtimeNightMinutes: number;
+  /** `null` nghia la THIEU HE SO (D-26), khong phai "khong co gio tang ca". */
+  convertedOvertimeHours: number | null;
+  missingMultiplierKeys: OvertimeRuleKey[];
+}
+
+/** Bang chuan bi luong cua mot thang. */
+export interface PayrollPrep {
+  /** "YYYY-MM" */
+  month: string;
+  /**
+   * Trang thai ky cong cua thang do; `null` khi ky chua ton tai trong bang.
+   * `closed` nghia la so lieu da khoa (PERD-02) — day la dieu ke toan can biet
+   * TRUOC KHI dua con so nay di dau: mot ky dang mo van con doi duoc.
+   */
+  periodStatus: PeriodStatus | null;
+  rows: PayrollPrepRow[];
+}
+
+/* -------------------------------------------------------------------------- */
 /* Input cho cac thao tac ghi                                                  */
 /* -------------------------------------------------------------------------- */
 

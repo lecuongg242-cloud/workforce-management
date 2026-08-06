@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 6
 current_phase_name: Super admin và hỗ trợ nhiều doanh nghiệp
 status: planning
-stopped_at: Phase 5 hoan tat (6/6 plan); bien ban nghiem thu o 05-UAT.md — con cho chu du an bam tay ba man hinh moi
+stopped_at: Phase 5 hoan tat (6/6 plan) + Phase 5.1 chen them (bang cong quan tri + bang chuan bi luong)
 last_updated: "2026-08-06T09:00:00.000Z"
 last_activity: 2026-08-06
-last_activity_desc: Thuc thi Phase 5 tron ven — 05-01..05-06 (migration 0017-0021, 4 file pgTAP moi, e2e vong doi)
+last_activity_desc: Phase 5.1 (INSERTED) — /admin/attendance hai tab, /admin/payroll bang chuan bi luong + CSV
 progress:
   total_phases: 5
   completed_phases: 5
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 
 Phase: 6 — Super admin và hỗ trợ nhiều doanh nghiệp (chưa lập kế hoạch)
 Plan: —
-Status: Phase 5 đã xong 6/6 plan; sẵn sàng lập kế hoạch Phase 6
-Last activity: 2026-08-06 — Thực thi Phase 5 (05-01…05-06)
+Status: Phase 5 xong 6/6 plan; Phase 5.1 (chèn) xong; sẵn sàng lập kế hoạch Phase 6
+Last activity: 2026-08-06 — Phase 5.1: bảng công của quản trị và bảng chuẩn bị lương
 
 Progress: [██████████] 100% của 5/6 phase đã có kế hoạch
 
@@ -188,6 +188,17 @@ Quyết định phát sinh **khi thực thi** Phase 5 (2026-08-06; chi tiết �
   sai. Nó là một `Error` thường mang thông điệp của chính trigger (SQLSTATE riêng `TF001`)
 - 05-05: `closed_by = coalesce(auth.uid(), p_closed_by)` — `auth.uid()` **luôn thắng** nên tham
   số không thể dùng để ghi tên người khác vào vết
+Quyết định của Phase 5.1 (chèn 2026-08-06 theo yêu cầu chủ dự án; chi tiết ở `05-1-SUMMARY.md`):
+
+- **Bảng lương KHÔNG tính tiền** — chủ dự án chọn mức "chuẩn bị lương" sau khi được trình bày
+  ba mức (chuẩn bị / thêm lương cơ bản / gross-net đầy đủ). Nhóm PAY vẫn ở V3.
+- Phép tổng hợp tháng tách thành `src/lib/attendance/month-context.ts` **trước khi** viết
+  đường đọc mới — bảng lương và tổng hợp từng nhân viên dùng CHUNG `summarizeMonth()`, có test
+  khẳng định hai đường trả khớp từng trường.
+- Quy tắc "ai có mặt trong bảng công / bảng lương" = **không phải người đã nghỉ việc, HOẶC có
+  bản ghi trong tháng** — nghỉ việc giữa tháng không xoá đi những ngày đã làm.
+- Ký hiệu trong lưới tháng là **chữ**, màu chỉ là lớp thứ hai: bảng công hay được in ra để ký.
+
 - 05-06: hai migration của phase (0018, 0021) được làm **chạy lại được** (`drop … if exists` ở
   đầu) để sửa được tại chỗ khi chưa phát hành, thay vì để lại một file chỉ để vá một dòng
 
@@ -214,6 +225,9 @@ None yet.
 - 05-06: `npm run test:db` **van chua chay duoc** (khong co `psql`; da kiem lai trong phien 2026-08-06). Bon file pgTAP moi cua Phase 5 — `12_request_reviews.sql` (8), `13_apply_approved_request.sql` (13), `14_notifications.sql` (6), `15_period_close.sql` (11), tong **38 assertion** — da viet va da vao cong `check:assertions` (san 212 -> **250**) nhung CHUA CHAY THAT lan nao; can Postgres tam cua CI. Toan bo hanh vi chung khang dinh da duoc phu doc lap bang test tich hop Vitest tren database that.
 - 05-06: **chu du an chua bam tay** qua ba man hinh moi (`/admin/requests`, `/admin/periods`, `/employee/notifications`). Toan bo nghiem thu hien tai la quan sat cua may tren he thong chay that (test tich hop + `npm run test:e2e-approval` qua HTTP that). Dang chu y nhat la hop xac nhan **chot ky** — thao tac duy nhat cua san pham khong hoan tac duoc.
 - 05-06: fixture cua test tich hop Phase 5 de lai vai doanh nghiep `cty-05xx-<ngau nhien>` tren database dev khong xoa duoc (cascade xuong `request_reviews`/`overtime_rules` bi trigger append-only chan). Cung cach don voi 04-06: mot lan `npm run db:seed`.
+- 5.1: hai man hinh moi (`/admin/attendance`, `/admin/payroll`) **chua ai bam tay tren trinh duyet** — smoke qua HTTP chi chung minh HTML dau tien khong loi, con luoi thang va bang deu render o client sau khi du lieu ve. Cung tinh chat voi ba man hinh cua Phase 5.
+- 5.1: **tep CSV chua duoc mo thu bang Excel that.** Ba quyet dinh dinh dang (dau cham phay, BOM UTF-8, so thap phan dau phay) duoc kiem bang test tren chuoi, khong bang mot lan mo tep that tren may co Excel tieng Viet — dang thu mot lan truoc khi ban giao cho ke toan that.
+- 5.1: luoi thang **chua co phan trang** — render moi nhan vien cua doanh nghiep trong mot bang. Dung cho quy mo pilot (~40 nguoi), se can xu ly khi mot doanh nghiep vai tram nguoi.
 
 ### Quick Tasks Completed
 

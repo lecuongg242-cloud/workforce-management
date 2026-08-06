@@ -29,12 +29,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "Phòng ban", href: "/admin/departments", icon: Network },
   { label: "Ca làm việc", href: "/admin/shifts", icon: CalendarClock },
   { label: "Điểm làm việc", href: "/admin/work-sites", icon: MapPin },
-  {
-    label: "Chấm công",
-    href: "/admin/attendance",
-    icon: Clock3,
-    comingSoon: true,
-  },
+  { label: "Chấm công", href: "/admin/attendance", icon: Clock3 },
   {
     label: "Cần xem lại",
     href: "/admin/attendance/review",
@@ -42,7 +37,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   },
   { label: "Yêu cầu", href: "/admin/requests", icon: ClipboardList },
   { label: "Kỳ công", href: "/admin/periods", icon: CalendarCheck },
-  { label: "Bảng lương", href: "/admin/payroll", icon: Wallet, comingSoon: true },
+  { label: "Bảng lương", href: "/admin/payroll", icon: Wallet },
   { label: "Cài đặt", href: "/admin/settings", icon: Settings },
 ];
 

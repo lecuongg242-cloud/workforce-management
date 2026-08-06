@@ -29,6 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Chấm công có bằng chứng** - Ảnh hiện trường chụp trực tiếp, GPS kiểm ở server theo bán kính điểm làm việc, màn hình quản trị xem lại (completed 2026-08-03)
 - [x] **Phase 4: Quy tắc công do doanh nghiệp tự khai** - Trang cài đặt: giờ làm, ân hạn, ngày lễ, hệ số tăng ca; phân loại công theo quy tắc đang hiệu lực (completed 2026-08-06)
 - [x] **Phase 5: Duyệt yêu cầu và chốt kỳ công** - Duyệt/từ chối có lý do, tác động đúng vào dữ liệu kỳ, lịch sử xử lý, thông báo, chốt kỳ có ghi vết (completed 2026-08-06)
+- [x] **Phase 5.1: Bảng công của quản trị và bàn giao cho kế toán** (INSERTED 2026-08-06) - Lưới tháng + danh sách lượt chấm công, bảng chuẩn bị lương xuất CSV (completed 2026-08-06)
 - [ ] **Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp** - Danh sách toàn hệ thống, tra cứu sâu một doanh nghiệp, đường ghi riêng có kiểm soát
 
 ## Phase Details
@@ -231,6 +232,30 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 5.1: Bảng công của quản trị và bàn giao cho kế toán (INSERTED)
+
+**Goal**: Quản trị soát được công của cả doanh nghiệp trong một màn hình, và bàn giao được số
+liệu tháng cho kế toán — hai mục nav `comingSoon` còn sót từ V1 được đóng lại.
+**Depends on**: Phase 5 (số liệu kỳ và trạng thái chốt kỳ)
+**Requirements**: VIEW-01, VIEW-02, VIEW-03
+**Vì sao là phase chèn**: hai màn hình này chưa từng được map vào requirement nào — bảng phủ
+của REQUIREMENTS.md vẫn báo "unmapped: 0" trong khi khu quản trị thiếu chỗ xem công. Chủ dự án
+yêu cầu lấp ngày 2026-08-06.
+**Success Criteria** (what must be TRUE):
+
+  1. `/admin/attendance` hiển thị công cả tháng của mọi nhân viên dưới dạng lưới (nhân viên ×
+     ngày), lọc được theo phòng ban và tìm theo tên/mã; bấm một ngày mở được ảnh và vị trí.
+  2. Tab thứ hai liệt kê từng lượt chấm công của tháng, để trả lời "lúc đó ai chấm, ở đâu".
+  3. `/admin/payroll` tổng hợp công theo tháng cho từng nhân viên và xuất được CSV mở đúng
+     trên Excel tiếng Việt; bảng nói rõ nó **không tính tiền**.
+  4. Mọi con số của bảng lương trùng khít với `GET /api/attendance/summary` của cùng nhân
+     viên — một nguồn, hai màn hình.
+
+**Plans:** không lập plan riêng (thực thi trực tiếp theo yêu cầu của chủ dự án; xem
+`.planning/phases/05-.../05-1-SUMMARY.md`)
+
+**UI hint**: yes
+
 ### Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp
 
 **Goal**: Đội vận hành TimeFlow nhìn được toàn hệ thống và hỗ trợ được một doanh nghiệp cụ thể mà không phá vỡ ranh giới cô lập đã dựng ở Phase 1.
@@ -249,7 +274,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -258,6 +283,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Chấm công có bằng chứng | 7/7 | Complete    | 2026-08-03 |
 | 4. Quy tắc công do doanh nghiệp tự khai | 6/6 | Complete    | 2026-08-06 |
 | 5. Duyệt yêu cầu và chốt kỳ công | 6/6 | Complete    | 2026-08-06 |
+| 5.1 Bảng công của quản trị (INSERTED) | — | Complete    | 2026-08-06 |
 | 6. Super admin và hỗ trợ nhiều doanh nghiệp | 0/TBD | Not started | - |
 
 ## Requirement Coverage
@@ -273,9 +299,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | SET-05 | Phase 5 |
 | APRV-01 … APRV-05 | Phase 5 |
 | PERD-01, PERD-02 | Phase 5 |
+| VIEW-01, VIEW-02, VIEW-03 | Phase 5.1 |
 | SADM-01 … SADM-04 | Phase 6 |
 
-**Coverage:** 38/38 v1 requirements mapped, mỗi requirement thuộc đúng một phase.
+**Coverage:** 41/41 v1 requirements mapped, mỗi requirement thuộc đúng một phase.
 
 ---
 *Roadmap created: 2026-07-31*

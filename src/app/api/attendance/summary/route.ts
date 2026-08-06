@@ -7,14 +7,7 @@ import {
   UnauthenticatedError,
   getSessionContext,
 } from "@/lib/auth/session-context";
-import {
-  classifyDay,
-  loadCompanyRules,
-  sumConvertedOvertimeHours,
-  type ShiftRuleInfo,
-} from "@/lib/attendance/classification-context";
-import { groupAttendanceByDay, shiftBreakInfoById } from "@/lib/attendance/day";
-import { shiftMonth } from "@/lib/format";
+import { loadMonthContext, summarizeMonth } from "@/lib/attendance/month-context";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
   attendanceRecordSchema,
@@ -52,31 +45,25 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
 
     const supabase = await createServerSupabase();
-    const start = `${queryParams.month}-01`;
-    const end = `${shiftMonth(queryParams.month, 1)}-01`;
 
-    // Doc CA cung voi ban ghi: tu migration 0014, gio nghi duoc tru mot lan
-    // cho moi NGAY (khong phai moi dong), nen tong hop thang phai di qua
-    // dung phep gop ngay ma giao dien dung — neu tinh rieng o day thi hai
-    // noi se lech nhau va khong ai biet ben nao dung.
-    const [
-      { data, error },
-      { data: shiftRows, error: shiftsError },
-    ] = await Promise.all([
-      supabase
-        .from("attendance_records")
-        .select(ATTENDANCE_COLUMNS)
-        .eq("company_id", companyId)
-        .eq("employee_id", queryParams.employeeId)
-        .gte("work_date", start)
-        .lt("work_date", end),
-      supabase
-        .from("shifts")
-        .select("id, break_minutes, start_time, end_time, working_days")
-        .eq("company_id", companyId),
-    ]);
+    // Ngu canh thang (ca lam viec + quy tac cong dang hieu luc) va phep tong
+    // hop deu den tu `month-context.ts` — CUNG nguon ma bang chuan bi luong
+    // (`GET /api/payroll/summary`) dung, nen hai man hinh khong the noi hai
+    // con so khac nhau ve cung mot thang.
+    const context = await loadMonthContext({
+      companyId,
+      month: queryParams.month,
+    });
 
-    if (error || shiftsError) {
+    const { data, error } = await supabase
+      .from("attendance_records")
+      .select(ATTENDANCE_COLUMNS)
+      .eq("company_id", companyId)
+      .eq("employee_id", queryParams.employeeId)
+      .gte("work_date", context.start)
+      .lt("work_date", context.end);
+
+    if (error) {
       return NextResponse.json(
         { error: "Không thể tải tổng hợp công tháng." },
         { status: 500 },
@@ -86,85 +73,12 @@ export async function GET(request: Request): Promise<NextResponse> {
     const records = ((data ?? []) as unknown[]).map((row) =>
       attendanceRecordSchema.parse(row),
     );
-    const rawShifts = (shiftRows ?? []) as Array<{
-      id: string;
-      break_minutes: number;
-      start_time: string;
-      end_time: string;
-      working_days: number[];
-    }>;
 
-    const breaks = shiftBreakInfoById(
-      rawShifts.map((row) => ({
-        id: row.id,
-        breakMinutes: row.break_minutes,
-        // `time` cua Postgres ve dang "HH:mm:ss" — cat con "HH:mm" cho khop
-        // voi `minutesBetween()`.
-        startTime: row.start_time.slice(0, 5),
-        endTime: row.end_time.slice(0, 5),
-      })),
-    );
-
-    // Quy tac cua ca, dung cho phep phan loai: lich lam viec (quyet dinh ngay
-    // nao la "ngay nghi") va do dai ca DA TRU gio nghi (moc de tinh phan vuot).
-    const shiftRules = new Map<string, ShiftRuleInfo>(
-      rawShifts.map((row) => {
-        const info = breaks[row.id];
-        return [
-          row.id,
-          {
-            workingDays: row.working_days as ShiftRuleInfo["workingDays"],
-            scheduledMinutes: Math.max(
-              (info?.shiftMinutes ?? 0) - (info?.breakMinutes ?? 0),
-              0,
-            ),
-          },
-        ];
-      }),
-    );
-
-    // Tu migration 0013 mot ngay co the co NHIEU dong (nhieu luot vao/ra), va
-    // tu 0014 gio nghi duoc tru mot lan cho moi ngay. Gop ngay roi mo, khong
-    // cong thang cac dong: cong dong se ra tong LON HON so gio duoc tinh
-    // cong, va se dem mot ngay ra ngoai an trua thanh hai "ngay cong".
-    const days = groupAttendanceByDay(records, breaks);
-
-    // SET-04: phan loai tung ngay theo quy tac DANG HIEU LUC TAI NGAY DO
-    // (khong phai quy tac hom nay) — xem `classification-context.ts`.
-    const rules = await loadCompanyRules({
-      companyId,
-      fromDate: start,
-      toDate: end,
-    });
-    const classifications = days.map((day) =>
-      classifyDay({ day, shift: shiftRules.get(day.shiftId), rules }),
-    );
-    const converted = sumConvertedOvertimeHours(classifications);
-
-    const summary = {
-      month: queryParams.month,
-      workedDays: days.filter((day) => day.workedMinutes > 0).length,
-      totalMinutes: days.reduce((sum, day) => sum + day.workedMinutes, 0),
-      // Chi luot DAU TIEN cua ngay mang status "late" (xem `checkIn`), va
-      // `day.status` da lay tu luot do — dem ngay o day chinh la so ngay di
-      // muon.
-      lateCount: days.filter((day) => day.status === "late").length,
-      leaveDays: days.filter(
-        (day) => day.status === "leave_paid" || day.status === "leave_unpaid",
-      ).length,
-      overtimeMinutes: classifications.reduce(
-        (sum, item) => sum + item.overtimeMinutes,
-        0,
+    return NextResponse.json(
+      monthlySummarySchema.parse(
+        summarizeMonth({ records, context, month: queryParams.month }),
       ),
-      overtimeNightMinutes: classifications.reduce(
-        (sum, item) => sum + item.overtimeNightMinutes,
-        0,
-      ),
-      convertedOvertimeHours: converted.hours,
-      missingMultiplierKeys: converted.missingKeys,
-    };
-
-    return NextResponse.json(monthlySummarySchema.parse(summary));
+    );
   } catch (cause) {
     if (cause instanceof UnauthenticatedError) {
       return NextResponse.json({ error: cause.message }, { status: 401 });

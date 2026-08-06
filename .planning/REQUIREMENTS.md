@@ -98,6 +98,22 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 - [x] **PERD-01**: Quản trị chốt được kỳ công; kỳ đã chốt hiển thị rõ trạng thái
 - [x] **PERD-02**: Sau khi chốt, mọi thay đổi vào dữ liệu của kỳ đều phải qua một yêu cầu được duyệt và để lại vết trong audit log
 
+### Bảng công và bàn giao cho kế toán (VIEW)
+
+> **Thêm ngày 2026-08-06** theo yêu cầu của chủ dự án. Hai màn hình này là mục nav
+> `comingSoon` còn lại từ V1 và **chưa từng được map vào requirement nào** — bảng phủ vẫn
+> báo "unmapped: 0" trong khi khu quản trị thiếu chỗ xem công. Đây là việc lấp khoảng trống
+> đó, không phải một tính năng mới phát sinh.
+
+- [x] **VIEW-01**: Quản trị xem được công của cả doanh nghiệp theo tháng dưới dạng lưới (nhân viên × ngày), lọc theo phòng ban và tìm theo tên/mã, bấm một ngày mở được bằng chứng chấm công
+- [x] **VIEW-02**: Quản trị tra cứu được từng lượt chấm công trong tháng qua danh sách có bộ lọc, để trả lời câu hỏi "lúc đó ai chấm, ở đâu"
+- [x] **VIEW-03**: Quản trị xem được bảng tổng hợp công theo tháng cho từng nhân viên (ngày công, giờ làm, giờ tăng ca, giờ quy đổi, ngày nghỉ phép, lần đi muộn) và xuất được ra CSV để bàn giao cho kế toán
+  - *Giới hạn cố ý:* bảng này **không tính tiền**. Gross-net, thuế TNCN, BHXH/BHYT/BHTN và
+    phiếu lương vẫn thuộc nhóm PAY của V3 (xem PROJECT.md §Out of Scope). Chủ dự án chọn
+    phạm vi này ngày 2026-08-06 khi được trình bày ba mức.
+  - *Bất biến:* mọi con số đến từ `summarizeMonth()` — cùng hàm mà `GET /api/attendance/summary`
+    dùng — nên bảng lương và tổng hợp của từng nhân viên không thể nói hai con số khác nhau.
+
 ### Super admin (SADM)
 
 - [ ] **SADM-01**: Super admin xem được danh sách toàn bộ doanh nghiệp trên hệ thống và tình trạng cơ bản của từng nơi
@@ -187,6 +203,9 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | APRV-05 | Phase 5 | Complete |
 | PERD-01 | Phase 5 | Complete |
 | PERD-02 | Phase 5 | Complete |
+| VIEW-01 | Phase 5.1 | Complete |
+| VIEW-02 | Phase 5.1 | Complete |
+| VIEW-03 | Phase 5.1 | Complete |
 | SADM-01 | Phase 6 | Pending |
 | SADM-02 | Phase 6 | Pending |
 | SADM-03 | Phase 6 | Pending |
@@ -194,8 +213,8 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 
 **Coverage:**
 
-- v1 requirements: 38 total (đếm lại từ danh sách bên trên; con số 36 ghi lúc khởi tạo là sai)
-- Mapped to phases: 38
+- v1 requirements: 41 total (38 khi khởi tạo + 3 của nhóm VIEW, thêm 2026-08-06)
+- Mapped to phases: 41
 - Unmapped: 0 ✓
 
 Phân bổ theo phase: Phase 1 — 6 · Phase 2 — 8 · Phase 3 — 8 · Phase 4 — 4 · Phase 5 — 8 · Phase 6 — 4
