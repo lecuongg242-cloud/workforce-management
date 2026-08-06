@@ -1,9 +1,15 @@
 import { fetchJson } from "@/lib/data/fetch-json";
 import {
+  attendanceClassificationListResponseSchema,
   attendanceListResponseSchema,
   monthlySummarySchema,
 } from "@/lib/validation/api/attendance";
-import type { AttendanceQuery, AttendanceRecord, MonthlySummary } from "@/lib/types/domain";
+import type {
+  AttendanceDayClassification,
+  AttendanceQuery,
+  AttendanceRecord,
+  MonthlySummary,
+} from "@/lib/types/domain";
 
 /**
  * checkIn(employeeId, evidence) / checkOut(recordId, evidence) — chu ky cuoi
@@ -42,4 +48,22 @@ export async function getMonthlySummary(
   void companyId;
   const params = new URLSearchParams({ employeeId, month });
   return fetchJson(`/api/attendance/summary?${params.toString()}`, monthlySummarySchema);
+}
+
+/**
+ * Phan loai tung ngay cong cua mot nhan vien trong mot thang (SET-04, plan
+ * 04-05): loai ngay, phut dem, phut tang ca, gio quy doi. `companyId` giu lai
+ * cho nhat quan voi cac ham chi em nhung KHONG gui len server (D-12b).
+ */
+export async function listAttendanceClassification(
+  companyId: string,
+  employeeId: string,
+  month: string,
+): Promise<AttendanceDayClassification[]> {
+  void companyId;
+  const params = new URLSearchParams({ employeeId, month });
+  return fetchJson(
+    `/api/attendance/classification?${params.toString()}`,
+    attendanceClassificationListResponseSchema,
+  );
 }

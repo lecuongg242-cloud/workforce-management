@@ -13,12 +13,21 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
-import { WEEKDAY_LABEL } from "@/lib/constants";
-import { getMonthlySummary, listAttendance } from "@/lib/data/attendance";
+import {
+  OVERTIME_DISPLAY_LABEL,
+  WEEKDAY_LABEL,
+  WORK_DAY_TYPE_LABEL,
+} from "@/lib/constants";
+import {
+  getMonthlySummary,
+  listAttendance,
+  listAttendanceClassification,
+} from "@/lib/data/attendance";
 import { listShifts } from "@/lib/data/shifts";
 import {
   formatDate,
   formatDurationShort,
+  formatNumber,
   formatTime,
   getWeekday,
 } from "@/lib/format";
@@ -27,7 +36,10 @@ import {
   shiftBreakInfoById,
   type AttendanceDay,
 } from "@/lib/attendance/day";
-import type { AttendanceStatus } from "@/lib/types/domain";
+import type {
+  AttendanceDayClassification,
+  AttendanceStatus,
+} from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
 /** Mau cham trang thai tren dai lich */
@@ -49,12 +61,13 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
 
   const { data, isLoading, error, reload } = useDataQuery(
     async () => {
-      const [records, summary, shifts] = await Promise.all([
+      const [records, summary, shifts, classifications] = await Promise.all([
         listAttendance({ companyId: session.companyId, employeeId, month }),
         getMonthlySummary(session.companyId, employeeId, month),
         listShifts(session.companyId),
+        listAttendanceClassification(session.companyId, employeeId, month),
       ]);
-      return { records, summary, shifts };
+      return { records, summary, shifts, classifications };
     },
     [session.companyId, employeeId, month],
   );
@@ -79,6 +92,17 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
         : [],
     [data],
   );
+
+  /**
+   * Phan loai cong theo NGAY (SET-04) — loai ngay va gio quy doi den tu
+   * server, khong tinh lai o client: mot phep tinh thu hai o day se lech voi
+   * tong hop thang ma khong ai biet ben nao dung.
+   */
+  const classificationByDate = React.useMemo(() => {
+    const map = new Map<string, AttendanceDayClassification>();
+    data?.classifications.forEach((item) => map.set(item.date, item));
+    return map;
+  }, [data]);
 
   const visibleDays = React.useMemo(
     () => (selectedDate ? days.filter((day) => day.date === selectedDate) : days),
@@ -191,6 +215,7 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
                     key={day.date}
                     day={day}
                     shiftName={shiftNames[day.shiftId] ?? "—"}
+                    classification={classificationByDate.get(day.date)}
                   />
                 ))}
               </ul>
@@ -205,9 +230,11 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
 function AttendanceItem({
   day,
   shiftName,
+  classification,
 }: {
   day: AttendanceDay;
   shiftName: string;
+  classification: AttendanceDayClassification | undefined;
 }): React.ReactElement {
   const weekday = getWeekday(day.date);
 
@@ -223,7 +250,16 @@ function AttendanceItem({
             {day.punches.length > 1 ? ` · ${day.punches.length} lượt` : ""}
           </p>
         </div>
-        <StatusBadge kind="attendance" value={day.status} size="sm" />
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <StatusBadge kind="attendance" value={day.status} size="sm" />
+          {/* Loai ngay hien bang NHAN CHU, khong phai mau — va chi hien khi
+              KHAC ngay thuong, de dong ngay binh thuong khong bi them nhieu. */}
+          {classification && classification.dayType !== "weekday" ? (
+            <span className="text-[11px] text-ink-muted">
+              {WORK_DAY_TYPE_LABEL[classification.dayType]}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {/* Gio vao/ra la cua LUOT DAU va LUOT CUOI; tong gio cong don moi luot. */}
@@ -237,6 +273,36 @@ function AttendanceItem({
           }
         />
       </div>
+
+      {/* Gio tang ca: hien CA gio tho LAN gio quy doi (D-24). Thieu he so thi
+          noi thang la chua khai — khong bao gio hien so 0 thay cho no (D-26). */}
+      {classification && classification.overtimeMinutes > 0 ? (
+        <p className="mt-2 text-[12px] text-ink-muted">
+          {OVERTIME_DISPLAY_LABEL.overtimeRawLabel}:{" "}
+          <span className="num text-ink">
+            {formatDurationShort(classification.overtimeMinutes)}
+          </span>
+          {classification.overtimeNightMinutes > 0 ? (
+            <>
+              {" "}
+              ({OVERTIME_DISPLAY_LABEL.nightPortionPrefix}{" "}
+              <span className="num">
+                {formatDurationShort(classification.overtimeNightMinutes)}
+              </span>{" "}
+              {OVERTIME_DISPLAY_LABEL.nightPortionSuffix})
+            </>
+          ) : null}
+          {" · "}
+          {OVERTIME_DISPLAY_LABEL.overtimeConvertedLabel}:{" "}
+          {classification.convertedOvertimeHours === null ? (
+            <span>{OVERTIME_DISPLAY_LABEL.notDeclared}</span>
+          ) : (
+            <span className="num text-ink">
+              {formatNumber(classification.convertedOvertimeHours)} giờ
+            </span>
+          )}
+        </p>
+      ) : null}
 
       {day.punches.length > 1 ? (
         <ul className="mt-2 grid gap-1">

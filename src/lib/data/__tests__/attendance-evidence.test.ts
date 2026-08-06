@@ -504,10 +504,17 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
         .eq("entity_table", "attendance_records")
         .eq("entity_id", lifecycleRecordId)
         .gt("created_at", checkpoint);
+      // Loc them theo TAC NHAN cua chinh file test nay: dieu kien cu (chi
+      // entity_table + created_at) la mot khang dinh TOAN CUC tren bang
+      // audit_log — bat ky file test nao chay song song va co ghi anh cham
+      // cong deu lam no do (da xay ra that khi plan 04-02 them
+      // `shift-rules-effect.test.ts` cung cham cty-01). Moi file test tao mot
+      // auth user rieng nen `actor_user_id` la ranh gioi dung.
       const { count: photoAuditCount } = await admin
         .from("audit_log")
         .select("id", { count: "exact", head: true })
         .eq("entity_table", "attendance_photos")
+        .eq("actor_user_id", actorUserId)
         .gt("created_at", checkpoint);
 
       expect(recordAuditCount).toBe(1);

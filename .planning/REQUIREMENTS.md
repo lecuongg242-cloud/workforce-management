@@ -73,10 +73,10 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 
 ### Cài đặt doanh nghiệp (SET)
 
-- [ ] **SET-01**: Chủ doanh nghiệp cấu hình giờ làm chuẩn và thời gian ân hạn đi muộn cho từng ca
-- [ ] **SET-02**: Chủ doanh nghiệp tự khai danh sách ngày nghỉ lễ của doanh nghiệp mình; hệ thống không áp cứng ngày nào
-- [ ] **SET-03**: Chủ doanh nghiệp tự khai quy tắc và hệ số tăng ca (ngày thường, ngày nghỉ, ngày lễ, ca đêm); hệ thống không áp cứng hệ số nào
-- [ ] **SET-04**: Bản ghi chấm công được phân loại theo đúng quy tắc mà doanh nghiệp đã khai, tại thời điểm phát sinh
+- [x] **SET-01**: Chủ doanh nghiệp cấu hình giờ làm chuẩn và thời gian ân hạn đi muộn cho từng ca
+- [x] **SET-02**: Chủ doanh nghiệp tự khai danh sách ngày nghỉ lễ của doanh nghiệp mình; hệ thống không áp cứng ngày nào
+- [x] **SET-03**: Chủ doanh nghiệp tự khai quy tắc và hệ số tăng ca (ngày thường, ngày nghỉ, ngày lễ, ca đêm); hệ thống không áp cứng hệ số nào
+- [x] **SET-04**: Bản ghi chấm công được phân loại theo đúng quy tắc mà doanh nghiệp đã khai, tại thời điểm phát sinh
 - [ ] **SET-05**: Chủ doanh nghiệp đặt trần tăng ca của riêng mình; vượt trần thì cảnh báo khi duyệt, không chặn cứng
 
 ### Duyệt yêu cầu (APRV)
@@ -169,10 +169,10 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | ATT-06 | Phase 3 | Complete |
 | ATT-07 | Phase 3 | Complete |
 | ATT-08 | Phase 3 | Complete |
-| SET-01 | Phase 4 | Pending |
-| SET-02 | Phase 4 | Pending |
-| SET-03 | Phase 4 | Pending |
-| SET-04 | Phase 4 | Pending |
+| SET-01 | Phase 4 | Complete |
+| SET-02 | Phase 4 | Complete |
+| SET-03 | Phase 4 | Complete |
+| SET-04 | Phase 4 | Complete |
 | SET-05 | Phase 5 | Pending |
 | APRV-01 | Phase 5 | Pending |
 | APRV-02 | Phase 5 | Pending |

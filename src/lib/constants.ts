@@ -661,3 +661,30 @@ export const SETTINGS_OVERTIME_LABEL = {
  */
 export const OVERTIME_DISCLAIMER =
   "Giờ quy đổi là số liệu công theo quy tắc doanh nghiệp đã khai, chưa phải căn cứ tính lương theo luật lao động.";
+
+/** Nhãn ba loại ngày công (SET-04). Enum giữ tiếng Anh theo quy ước dự án. */
+export const WORK_DAY_TYPE_LABEL: Record<
+  "weekday" | "weekend" | "holiday",
+  string
+> = {
+  weekday: "Ngày thường",
+  weekend: "Ngày nghỉ",
+  holiday: "Ngày lễ",
+};
+
+/**
+ * Hiển thị giờ tăng ca quy đổi (SET-04, plan 04-05).
+ *
+ * `notDeclared` được dùng ở MỌI nơi hiển thị giờ quy đổi khi doanh nghiệp chưa
+ * khai hệ số — không nơi nào được hiện số 0 thay cho nó. Số 0 nói với nhân
+ * viên rằng họ không có giờ tăng ca nào, đó là một lời nói dối khác hẳn với
+ * "hệ thống chưa biết quy đổi thế nào".
+ */
+export const OVERTIME_DISPLAY_LABEL = {
+  overtimeRawLabel: "Giờ tăng ca",
+  overtimeConvertedLabel: "Quy đổi",
+  notDeclared: "Chưa khai hệ số",
+  notDeclaredAction: "Khai hệ số tăng ca",
+  nightPortionPrefix: "trong đó",
+  nightPortionSuffix: "giờ đêm",
+} as const;

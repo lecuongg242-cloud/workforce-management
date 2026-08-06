@@ -10,27 +10,28 @@ import {
 import {
   classifyDay,
   loadCompanyRules,
-  sumConvertedOvertimeHours,
   type ShiftRuleInfo,
 } from "@/lib/attendance/classification-context";
 import { groupAttendanceByDay, shiftBreakInfoById } from "@/lib/attendance/day";
 import { shiftMonth } from "@/lib/format";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
+  attendanceClassificationListResponseSchema,
   attendanceRecordSchema,
   attendanceSummaryQuerySchema,
-  monthlySummarySchema,
 } from "@/lib/validation/api/attendance";
 
 /**
- * Khuon 02-04 (D-12c): chi xuat `dynamic` va `GET`. Tra `MonthlySummary`
- * tinh tu tap ban ghi chuan cong trong thang o tang ung dung (quy mo du an
- * chua can toi uu bang mot RPC tong hop, xem CLAUDE.md §Constraints). Thang
- * khong co ban ghi tra ve ban tong hop TOAN SO 0 voi `month` dung bang tham
- * so — khong tra `null`, khong tra loi (edge DATA-05 empty).
+ * Phan loai TUNG NGAY cong cua mot nhan vien trong mot thang (SET-04, plan
+ * 04-05): loai ngay, phut dem, phut tang ca, gio quy doi.
  *
- * Lop quyen (AUTH-03): vai tro `employee`/`manager` hoi `employeeId` khac
- * cua chinh phien bi tu choi (403).
+ * Khuon 02-04 (D-12c): chi xuat `dynamic` va `GET`. Dung CHUNG phep gop ngay
+ * (`groupAttendanceByDay`) va CHUNG mo-dun phan loai
+ * (`classification-context.ts`) voi `GET /api/attendance/summary`, nen tong
+ * thang va tung ngay khong the lech nhau.
+ *
+ * Lop quyen (AUTH-03) giong `summary`: `employee`/`manager` chi hoi duoc
+ * chinh minh.
  */
 export const dynamic = "force-dynamic";
 
@@ -55,10 +56,6 @@ export async function GET(request: Request): Promise<NextResponse> {
     const start = `${queryParams.month}-01`;
     const end = `${shiftMonth(queryParams.month, 1)}-01`;
 
-    // Doc CA cung voi ban ghi: tu migration 0014, gio nghi duoc tru mot lan
-    // cho moi NGAY (khong phai moi dong), nen tong hop thang phai di qua
-    // dung phep gop ngay ma giao dien dung — neu tinh rieng o day thi hai
-    // noi se lech nhau va khong ai biet ben nao dung.
     const [
       { data, error },
       { data: shiftRows, error: shiftsError },
@@ -78,7 +75,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     if (error || shiftsError) {
       return NextResponse.json(
-        { error: "Không thể tải tổng hợp công tháng." },
+        { error: "Không thể tải phân loại công." },
         { status: 500 },
       );
     }
@@ -98,15 +95,11 @@ export async function GET(request: Request): Promise<NextResponse> {
       rawShifts.map((row) => ({
         id: row.id,
         breakMinutes: row.break_minutes,
-        // `time` cua Postgres ve dang "HH:mm:ss" — cat con "HH:mm" cho khop
-        // voi `minutesBetween()`.
         startTime: row.start_time.slice(0, 5),
         endTime: row.end_time.slice(0, 5),
       })),
     );
 
-    // Quy tac cua ca, dung cho phep phan loai: lich lam viec (quyet dinh ngay
-    // nao la "ngay nghi") va do dai ca DA TRU gio nghi (moc de tinh phan vuot).
     const shiftRules = new Map<string, ShiftRuleInfo>(
       rawShifts.map((row) => {
         const info = breaks[row.id];
@@ -123,48 +116,25 @@ export async function GET(request: Request): Promise<NextResponse> {
       }),
     );
 
-    // Tu migration 0013 mot ngay co the co NHIEU dong (nhieu luot vao/ra), va
-    // tu 0014 gio nghi duoc tru mot lan cho moi ngay. Gop ngay roi mo, khong
-    // cong thang cac dong: cong dong se ra tong LON HON so gio duoc tinh
-    // cong, va se dem mot ngay ra ngoai an trua thanh hai "ngay cong".
     const days = groupAttendanceByDay(records, breaks);
+    const rules = await loadCompanyRules({ companyId, fromDate: start, toDate: end });
 
-    // SET-04: phan loai tung ngay theo quy tac DANG HIEU LUC TAI NGAY DO
-    // (khong phai quy tac hom nay) — xem `classification-context.ts`.
-    const rules = await loadCompanyRules({
-      companyId,
-      fromDate: start,
-      toDate: end,
+    const items = days.map((day) => {
+      const classification = classifyDay({
+        day,
+        shift: shiftRules.get(day.shiftId),
+        rules,
+      });
+      return {
+        date: day.date,
+        workedMinutes: day.workedMinutes,
+        ...classification,
+      };
     });
-    const classifications = days.map((day) =>
-      classifyDay({ day, shift: shiftRules.get(day.shiftId), rules }),
+
+    return NextResponse.json(
+      attendanceClassificationListResponseSchema.parse(items),
     );
-    const converted = sumConvertedOvertimeHours(classifications);
-
-    const summary = {
-      month: queryParams.month,
-      workedDays: days.filter((day) => day.workedMinutes > 0).length,
-      totalMinutes: days.reduce((sum, day) => sum + day.workedMinutes, 0),
-      // Chi luot DAU TIEN cua ngay mang status "late" (xem `checkIn`), va
-      // `day.status` da lay tu luot do — dem ngay o day chinh la so ngay di
-      // muon.
-      lateCount: days.filter((day) => day.status === "late").length,
-      leaveDays: days.filter(
-        (day) => day.status === "leave_paid" || day.status === "leave_unpaid",
-      ).length,
-      overtimeMinutes: classifications.reduce(
-        (sum, item) => sum + item.overtimeMinutes,
-        0,
-      ),
-      overtimeNightMinutes: classifications.reduce(
-        (sum, item) => sum + item.overtimeNightMinutes,
-        0,
-      ),
-      convertedOvertimeHours: converted.hours,
-      missingMultiplierKeys: converted.missingKeys,
-    };
-
-    return NextResponse.json(monthlySummarySchema.parse(summary));
   } catch (cause) {
     if (cause instanceof UnauthenticatedError) {
       return NextResponse.json({ error: cause.message }, { status: 401 });
@@ -173,17 +143,13 @@ export async function GET(request: Request): Promise<NextResponse> {
       return NextResponse.json({ error: cause.message }, { status: 403 });
     }
     if (cause instanceof NoMembershipError || cause instanceof NoActiveCompanyError) {
-      // Chua thuoc/chua chon duoc doanh nghiep nao -- KHONG the suy ra
-      // `month` tu query (chua chac hop le), nen van chan lai o day thanh
-      // loi 400 thay vi doan mo mot ban tong hop toan so 0.
       return NextResponse.json(
-        { error: "Vui lòng chọn doanh nghiệp bạn muốn truy cập." },
-        { status: 400 },
+        attendanceClassificationListResponseSchema.parse([]),
       );
     }
-    console.error("Lỗi không xác định ở GET /api/attendance/summary:", cause);
+    console.error("Lỗi không xác định ở GET /api/attendance/classification:", cause);
     return NextResponse.json(
-      { error: "Không thể tải tổng hợp công tháng." },
+      { error: "Không thể tải phân loại công." },
       { status: 500 },
     );
   }

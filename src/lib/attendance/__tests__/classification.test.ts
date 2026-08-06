@@ -22,7 +22,6 @@ import type { WeekdayNumber } from "@/lib/types/domain";
  */
 
 const MON_TO_FRI: WeekdayNumber[] = [1, 2, 3, 4, 5];
-const ALL_DAYS: WeekdayNumber[] = [1, 2, 3, 4, 5, 6, 7];
 
 describe("isoWeekday", () => {
   it("1. trả đúng thứ theo quy ước ISO, không lệch vì múi giờ", () => {

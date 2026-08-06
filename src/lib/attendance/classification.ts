@@ -322,8 +322,13 @@ export function convertedOvertimeHours({
 
   if (missingKeys.length > 0) return { hours: null, missingKeys };
 
-  const weighted =
-    overtime * (dayMultiplier as number) + overtimeNight * (nightPremium ?? 0);
+  // Khong dung `?? 0` cho phu cap dem: tai day `missingKeys` da rong, nen
+  // `nightPremium` chac chan khac null MOI KHI co phut dem. Viet tuong minh
+  // dieu do thay vi mot gia tri du phong — mot `?? 0` o day se lang le nuot
+  // mat truong hop thieu he so neu dieu kien o tren doi ve sau.
+  const nightPortion =
+    overtimeNight > 0 ? overtimeNight * (nightPremium as number) : 0;
+  const weighted = overtime * (dayMultiplier as number) + nightPortion;
   // Lam tron toi hai chu so thap phan — don vi hien thi la GIO, khong phai
   // tien; khong lam tron sau hon vi con so nay khong dung de thanh toan.
   return { hours: Math.round((weighted / 60) * 100) / 100, missingKeys: [] };

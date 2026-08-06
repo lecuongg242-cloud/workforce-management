@@ -132,4 +132,35 @@ export const monthlySummarySchema = z.object({
   totalMinutes: z.number(),
   lateCount: z.number(),
   leaveDays: z.number(),
+  /* ---- SET-04 (plan 04-05): tang ca quy doi theo quy tac cua doanh nghiep --
+   * Bon truong duoi day TUY CHON de moi noi dang doc schema nay khong vo khi
+   * chua co du lieu — nhung o duong tra ve cua Route Handler chung LUON co
+   * mat. `convertedOvertimeHours` bang `null` nghia la THIEU HE SO (D-26),
+   * KHONG phai "khong co gio tang ca nao" — hai thu do phai phan biet duoc o
+   * giao dien.
+   */
+  overtimeMinutes: z.number().optional(),
+  overtimeNightMinutes: z.number().optional(),
+  convertedOvertimeHours: z.number().nullable().optional(),
+  missingMultiplierKeys: z
+    .array(z.enum(["weekday", "weekend", "holiday", "night"]))
+    .optional(),
 });
+
+/** Mot ngay cong kem phan loai theo quy tac cua doanh nghiep (SET-04). */
+export const attendanceDayClassificationSchema = z.object({
+  date: z.string(),
+  dayType: z.enum(["weekday", "weekend", "holiday"]),
+  workedMinutes: z.number(),
+  nightMinutes: z.number(),
+  overtimeMinutes: z.number(),
+  overtimeNightMinutes: z.number(),
+  convertedOvertimeHours: z.number().nullable(),
+  missingMultiplierKeys: z.array(
+    z.enum(["weekday", "weekend", "holiday", "night"]),
+  ),
+});
+
+export const attendanceClassificationListResponseSchema = z.array(
+  attendanceDayClassificationSchema,
+);

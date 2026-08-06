@@ -415,6 +415,18 @@ export interface DashboardSummary {
 }
 
 /** Tong hop cong thang cua mot nhan vien */
+export interface AttendanceDayClassification {
+  date: string;
+  dayType: "weekday" | "weekend" | "holiday";
+  workedMinutes: number;
+  nightMinutes: number;
+  overtimeMinutes: number;
+  overtimeNightMinutes: number;
+  /** `null` nghia la THIEU HE SO (D-26), khong phai "khong co tang ca". */
+  convertedOvertimeHours: number | null;
+  missingMultiplierKeys: OvertimeRuleKey[];
+}
+
 export interface MonthlySummary {
   /** "YYYY-MM" */
   month: string;
@@ -422,6 +434,12 @@ export interface MonthlySummary {
   totalMinutes: number;
   lateCount: number;
   leaveDays: number;
+  /* SET-04 (plan 04-05) — tang ca quy doi theo quy tac doanh nghiep da khai. */
+  overtimeMinutes?: number;
+  overtimeNightMinutes?: number;
+  /** `null` nghia la THIEU HE SO (D-26), khong phai "khong co gio tang ca". */
+  convertedOvertimeHours?: number | null;
+  missingMultiplierKeys?: OvertimeRuleKey[];
 }
 
 /* -------------------------------------------------------------------------- */

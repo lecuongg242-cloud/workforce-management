@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 4
-current_phase_name: Quy tắc công do doanh nghiệp tự khai
-status: planned
-stopped_at: Phase 4 da lap ke hoach (6 plan, 5 wave); chua bat dau 04-01
-last_updated: "2026-08-05T00:00:00.000Z"
-last_activity: 2026-08-05
-last_activity_desc: Lap ke hoach Phase 4 — 04-CONTEXT.md + 04-01..04-06-PLAN.md
+current_phase: 5
+current_phase_name: Duyệt yêu cầu và chốt kỳ công
+status: ready
+stopped_at: Phase 4 hoan tat (6/6 plan); Phase 5 chua bat dau
+last_updated: "2026-08-06T00:00:00.000Z"
+last_activity: 2026-08-06
+last_activity_desc: Phase 4 complete — SET-01..SET-04, 346 test xanh, e2e doanh nghiep trang xanh
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 24
-  completed_plans: 24
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 30
+  completed_plans: 30
 ---
 
 # Project State
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-31)
 
 **Core value:** Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng nơi, đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
-**Current focus:** Phase 03 — ch-m-c-ng-c-b-ng-ch-ng
+**Current focus:** Phase 5 — duyệt yêu cầu và chốt kỳ công
 
 ## Current Position
 
-Phase: 4 — Quy tắc công do doanh nghiệp tự khai
-Plan: 04-01 (chưa bắt đầu) — 6 plan đã lập, xếp thành 5 wave
-Status: Planned, ready to execute
-Last activity: 2026-08-05 — Lập kế hoạch Phase 4 (04-CONTEXT.md + 04-01…04-06-PLAN.md)
+Phase: 5 — Duyệt yêu cầu và chốt kỳ công
+Plan: Chưa lập kế hoạch
+Status: Ready to plan
+Last activity: 2026-08-06 — Phase 4 hoàn tất: SET-01…SET-04, biên bản nghiệm thu ở 04-UAT.md
 
 Progress: [██████████] 96%
 
@@ -148,13 +148,13 @@ Recent decisions affecting current work:
 - [Phase ?]: 03-07: RLS storage.objects thieu hoan toan cho bucket attendance-photos (broker route + checkIn/checkOut deu bi chan) -- them migration 0012, dung lai tf_is_member() qua split_part(name,'/',1)
 - [Phase ?]: 03-07: seed.sql attendance_photos fixture thieu GPS gay 500 tren metadata route -- them toa do that khop work_sites
 
-Quyết định của Phase 4 (lập kế hoạch 2026-08-05, chi tiết ở `04-CONTEXT.md`):
+Quyết định của Phase 4 (lập kế hoạch 2026-08-05, thực thi 2026-08-06; chi tiết ở `04-CONTEXT.md`):
 
 - D-24: hệ số tăng ca phải dẫn tới giờ quy đổi nhìn thấy được trên bản ghi và tổng hợp kỳ
 - D-25: hệ số tăng ca append-only theo `effective_from`; D-25a cưỡng chế bằng trigger ở database; D-25b ngày lễ vẫn sửa được nhưng cảnh báo kèm số bản ghi bị ảnh hưởng
 - D-26: doanh nghiệp mới có 0 ngày lễ và 0 hệ số; thiếu hệ số trả `null` + nhãn "chưa khai", tuyệt đối không ngầm lấy 1.0
 - D-27: khung giờ đêm (mặc định 22:00–06:00) là định nghĩa pháp lý, nằm trong `company_settings` và sửa được
-- D-28: mỗi phút thuộc đúng một loại, ưu tiên lễ > cuối tuần > đêm > thường, **không cộng dồn** — thấp hơn cách tính của luật lao động, cần chủ dự án chốt ở 04-04 Task 4 trước khi 04-05 chạy
+- D-28a (**chốt 2026-08-06 tại checkpoint 04-04 Task 4**): chủ dự án chọn **cộng dồn**. `rule_key='night'` đổi nghĩa từ *hệ số nhân* sang **phụ cấp cộng thêm**: hệ số một phút = hệ số loại ngày + phụ cấp đêm. Lễ 3.0 + đêm 0.3 → một giờ tăng ca đêm ngày lễ quy đổi ×3.3. Giới hạn còn lại: Điều 98.3 (thêm 20% cho phần tăng ca ban đêm) **không** làm ở V2
 - D-29: `SUSPICIOUS_DISTANCE_MULTIPLIER` và `SHIFT_WINDOW_GRACE_MINUTES` chuyển thành cấu hình doanh nghiệp — đóng lời hứa D-21a của Phase 3
 
 ### Pending Todos
@@ -173,7 +173,9 @@ None yet.
 - 01-05: git push to origin denied (403) - local identity LeeCuongg is not a collaborator on lecuongg242-cloud/workforce-management; human must push with an authorized account and confirm db CI workflow is green (WINDOWS.md entry 3, same root cause as entry 1)
 - 02-03/02-04: khong co SUMMARY.md tren dia mac du code da duoc feat()/test() commit va migration da push (chi 02-01/02-02/02-05 co SUMMARY trong thu muc phase 02) -- can mot lan finalize rieng (SUMMARY + docs commit) cho hai plan nay de dong bo STATE/ROADMAP.
 - 03-01: Xac nhan cuoi (UAT) con thieu — mot lan cham cong that qua trinh duyet that voi camera/GPS that (dung human_verify_mode: end-of-phase cua config.json, khong chan cac plan tiep theo cua phase 3).
-- 03-07: Task 1 xong (commit 6a8a246), Task 2 (checkpoint device UAT, gate=blocking) CHUA thuc hien. Blocker moi: npm run test:db chay trong phien nay nap fixture pgTAP vao auth.users cloud that, lam Admin API listUsers tra 500 -> npm run seed:auth khong chay duoc -> memberships rong -> app khong dung duoc du login token van hop le. Can chu du an xoa 4 tai khoan (owner1/owner2/dualmember/nomember@timeflow.test) qua Supabase Dashboard, roi chay seed:auth+reset:passwords, truoc khi lam Task 2. Chi tiet: 03-07-SUMMARY.md muc 'Blocker moi phat sinh'.
+- ~~03-07: blocker auth.users (4 tai khoan fixture pgTAP lam listUsers tra 500)~~ — **DA DUOC DON**, xac nhan 2026-08-06 trong 04-06: `admin.auth.admin.listUsers()` tra 200 va khong con tai khoan nao trong owner1|owner2|dualmember|nomember@timeflow.test. Task 2 cua 03-07 (device UAT voi camera/GPS that) VAN CHUA thuc hien.
+- 04-06: `npm run test:db` chua chay duoc trong moi truong phat trien hien tai (khong co `psql`, database dev la Supabase cloud nen bo chay tu choi nap fixture pgTAP). Hai file test moi cua Phase 4 (`10_company_settings.sql`, `11_overtime_rules_append_only.sql` — 13 assertion) da viet va da vao cong dem nhung CHUA CHAY THAT lan nao; can chay tren Postgres tam cua CI.
+- 04-06: fixture cua test tich hop de lai dong tren database dev o `overtime_rules` (trigger append-only chan xoa) va vai doanh nghiep test mang id ngau nhien. Mot lan `npm run db:seed` se don sach (truncate khong bi trigger chan).
 
 ### Quick Tasks Completed
 
@@ -192,5 +194,5 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-08-02T16:33:30.939Z
-Stopped at: 03-07 Task 1 xong (6a8a246); Task 2 checkpoint cho device UAT, blocked them boi su co auth.users
-Resume file: 03-07-SUMMARY.md
+Stopped at: Phase 4 hoan tat (6/6 plan) — bien ban nghiem thu o 04-UAT.md
+Resume file: 04-UAT.md

@@ -21,7 +21,8 @@
     "check:signup": "node --env-file=.env.local scripts/check-signup-disabled.mjs",
     "test:e2e": "node --env-file=.env.local scripts/e2e-auth.mjs",
     "test:e2e-photo": "node --env-file=.env.local scripts/e2e-photo.mjs",
-    "test:walkthrough": "node --env-file=.env.local scripts/e2e-walkthrough.mjs"
+    "test:walkthrough": "node --env-file=.env.local scripts/e2e-walkthrough.mjs",
+    "test:e2e-settings": "node --env-file=.env.local scripts/e2e-settings.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
