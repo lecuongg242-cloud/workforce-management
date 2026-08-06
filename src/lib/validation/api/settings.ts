@@ -31,6 +31,10 @@ export const companySettingsRowSchema = z
     shift_window_grace_minutes: z.number(),
     night_start_time: z.string(),
     night_end_time: z.string(),
+    // `numeric` nullable: `null` la KHONG GIOI HAN (SET-05). `z.coerce` chi ap
+    // khi co gia tri — `nullable()` dat NGOAI de `null` di thang qua, khong bi
+    // ep thanh 0.
+    overtime_cap_hours_per_month: z.coerce.number().nullable(),
     updated_at: z.string(),
     updated_by: z.string().nullable(),
   })
@@ -40,6 +44,7 @@ export const companySettingsRowSchema = z
     shiftWindowGraceMinutes: row.shift_window_grace_minutes,
     nightStartTime: toHourMinute(row.night_start_time),
     nightEndTime: toHourMinute(row.night_end_time),
+    overtimeCapHoursPerMonth: row.overtime_cap_hours_per_month,
     updatedAt: row.updated_at,
     updatedBy: row.updated_by,
   }));
@@ -50,6 +55,7 @@ export const companySettingsSchema = z.object({
   shiftWindowGraceMinutes: z.number(),
   nightStartTime: z.string(),
   nightEndTime: z.string(),
+  overtimeCapHoursPerMonth: z.number().nullable(),
   updatedAt: z.string(),
   updatedBy: z.string().nullable(),
 });
@@ -80,5 +86,14 @@ export const companySettingsInputSchema = z.object({
   nightEndTime: z
     .string()
     .regex(TIME_PATTERN, "Giờ kết thúc ca đêm phải theo định dạng HH:mm.")
+    .optional(),
+  // SET-05. `nullable()` la mot gia tri CO NGHIA o day (xoa tran = khong gioi
+  // han), khac `optional()` (khong gui truong nay = giu nguyen gia tri cu).
+  // Ca hai deu can, va chung khong thay the nhau duoc.
+  overtimeCapHoursPerMonth: z
+    .number({ invalid_type_error: "Trần tăng ca phải là một con số." })
+    .positive("Trần tăng ca phải lớn hơn 0 — để trống nếu không giới hạn.")
+    .max(9999.99, "Trần tăng ca quá lớn.")
+    .nullable()
     .optional(),
 });

@@ -43,6 +43,24 @@ const generalSettingsFormSchema = z
     nightEndTime: z
       .string()
       .regex(TIME_PATTERN, "Giờ kết thúc ca đêm phải theo định dạng HH:mm."),
+    // SET-05 — truong DUY NHAT cua form nay duoc phep de trong. `valueAsNumber`
+    // cua react-hook-form tra `NaN` cho o rong, nen phai doi NaN -> null TRUOC
+    // khi kiem; neu khong, "de trong" se thanh mot loi nhap lieu thay vi mot
+    // cau tra loi hop le ("khong gioi han").
+    overtimeCapHoursPerMonth: z.preprocess(
+      (value) =>
+        value === "" ||
+        value === null ||
+        value === undefined ||
+        (typeof value === "number" && Number.isNaN(value))
+          ? null
+          : value,
+      z
+        .number({ invalid_type_error: "Trần tăng ca phải là một con số." })
+        .positive("Trần tăng ca phải lớn hơn 0 — để trống nếu không giới hạn.")
+        .max(9999.99, "Trần tăng ca quá lớn.")
+        .nullable(),
+    ),
   })
   .refine((values) => values.nightStartTime !== values.nightEndTime, {
     path: ["nightEndTime"],
@@ -57,6 +75,7 @@ function toFormValues(settings: CompanySettings): GeneralSettingsFormValues {
     shiftWindowGraceMinutes: settings.shiftWindowGraceMinutes,
     nightStartTime: settings.nightStartTime,
     nightEndTime: settings.nightEndTime,
+    overtimeCapHoursPerMonth: settings.overtimeCapHoursPerMonth,
   };
 }
 
@@ -154,6 +173,24 @@ export function GeneralSettingsForm({
           required
         >
           <Input type="time" className="num" {...register("nightEndTime")} />
+        </Field>
+
+        {/* Truong duy nhat khong `required`: de trong la mot cau tra loi hop
+            le ("khong gioi han"), khong phai mot o bi bo quen. */}
+        <Field
+          id="settings-overtime-cap"
+          label={SETTINGS_GENERAL_LABEL.overtimeCapLabel}
+          hint={SETTINGS_GENERAL_LABEL.overtimeCapHelp}
+          error={errors.overtimeCapHoursPerMonth?.message}
+        >
+          <Input
+            type="number"
+            step="0.5"
+            min="0.5"
+            placeholder="Không giới hạn"
+            className="num"
+            {...register("overtimeCapHoursPerMonth", { valueAsNumber: true })}
+          />
         </Field>
       </div>
 

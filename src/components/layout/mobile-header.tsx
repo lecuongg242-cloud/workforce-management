@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bell } from "lucide-react";
 
 import { AppLogo } from "@/components/brand/app-logo";
 import { EmployeeAvatar } from "@/components/common/employee-avatar";
-import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/employee-app/notification-bell";
 
 /** Thanh tren cung cua man hinh nhan vien — thap, gon, khong chiem cho */
 export function MobileHeader({
@@ -24,18 +23,7 @@ export function MobileHeader({
         </Link>
 
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon-mobile"
-            aria-label="Thông báo (có 2 thông báo mới)"
-            className="relative"
-          >
-            <Bell aria-hidden="true" />
-            <span
-              aria-hidden="true"
-              className="absolute top-2.5 right-2.5 size-1.5 rounded-full bg-danger ring-2 ring-white"
-            />
-          </Button>
+          <NotificationBell />
           <Link
             href="/employee/profile"
             aria-label="Hồ sơ cá nhân"

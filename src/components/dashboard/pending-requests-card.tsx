@@ -22,7 +22,14 @@ const requestIcon: Record<RequestType, LucideIcon> = {
   overtime: ClipboardCheck,
 };
 
-/** The "Yeu cau cho duyet" ben phai dashboard */
+/**
+ * The "Yeu cau cho duyet" ben phai dashboard.
+ *
+ * Hai lien ket tro toi `/admin/requests` — the nay CHI render trong dashboard
+ * quan tri, nen dich cua no phai la man hinh DUYET. Truoc plan 05-01 chung tro
+ * sang khu nhan vien — tuc la day nguoi duyet toi noi ho chi thay yeu cau cua
+ * CHINH MINH va khong co nut duyet nao.
+ */
 export function PendingRequestsCard({
   items,
 }: {
@@ -41,7 +48,7 @@ export function PendingRequestsCard({
           </p>
         </div>
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/employee/requests">Xem tất cả</Link>
+          <Link href="/admin/requests">Xem tất cả</Link>
         </Button>
       </header>
 
@@ -59,7 +66,7 @@ export function PendingRequestsCard({
             return (
               <li key={item.type}>
                 <Link
-                  href="/employee/requests"
+                  href="/admin/requests"
                   className="flex items-center gap-3 rounded-control px-2.5 py-2.5 transition-colors hover:bg-canvas-soft"
                 >
                   <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-warning-soft text-warning">

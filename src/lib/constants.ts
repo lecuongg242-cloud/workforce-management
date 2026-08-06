@@ -104,6 +104,40 @@ export const REQUEST_STATUS_TONE: Record<RequestStatus, SemanticTone> = {
   rejected: "danger",
 };
 
+/** Nhan man hinh duyet yeu cau cua quan tri (`/admin/requests`, plan 05-01) */
+export const REQUEST_REVIEW_LABEL = {
+  pageTitle: "Yêu cầu",
+  pageDescription: "Duyệt hoặc từ chối yêu cầu của nhân viên trong doanh nghiệp.",
+  approveAction: "Duyệt",
+  rejectAction: "Từ chối",
+  historyAction: "Lịch sử xử lý",
+  approveTitle: "Duyệt yêu cầu",
+  rejectTitle: "Từ chối yêu cầu",
+  approveDescription:
+    "Ghi chú là tuỳ chọn — người gửi sẽ thấy ghi chú này cùng kết quả.",
+  rejectDescription:
+    "Lý do là bắt buộc: người bị từ chối cần biết vì sao để gửi lại cho đúng.",
+  noteLabel: "Ghi chú",
+  reasonLabel: "Lý do từ chối",
+  reasonRequired: "Từ chối yêu cầu phải kèm lý do để người gửi biết vì sao.",
+  approveSuccess: "Đã duyệt yêu cầu.",
+  rejectSuccess: "Đã từ chối yêu cầu.",
+  saveError: "Không xử lý được yêu cầu.",
+  // Trang thai rong o day la TIN TOT, khong phai mot man hinh hong.
+  emptyPendingTitle: "Không có yêu cầu nào chờ xử lý",
+  emptyPendingBody: "Mọi yêu cầu của nhân viên đã được xử lý xong.",
+  emptyFilteredTitle: "Không có yêu cầu nào ở trạng thái này",
+  emptyFilteredBody: "Chọn một trạng thái khác để xem các yêu cầu đã xử lý.",
+  historyEmpty: "Yêu cầu này chưa được xử lý lần nào.",
+  historyError: "Không tải được lịch sử xử lý.",
+  unknownReviewer: "Quản trị viên",
+} as const;
+
+export const REQUEST_DECISION_LABEL: Record<"approved" | "rejected", string> = {
+  approved: "Đã duyệt",
+  rejected: "Từ chối",
+};
+
 export const SYSTEM_ROLE_LABEL: Record<SystemRole, string> = {
   owner: "Chủ sở hữu",
   admin: "Quản trị viên",
@@ -503,6 +537,74 @@ export const SETTINGS_GENERAL_LABEL = {
   nightEndLabel: "Ca đêm kết thúc",
   nightHelp:
     "Khoảng giờ được tính là làm đêm, dùng cho hệ số ca đêm ở tab Tăng ca. Mặc định 22:00–06:00 theo Bộ luật Lao động.",
+  // SET-05. Đơn vị nằm ngay trên nhãn: "trần tăng ca" có thể hiểu là mỗi tuần,
+  // mỗi tháng hay mỗi năm, và đoán sai đơn vị thì con số vô nghĩa.
+  overtimeCapLabel: "Trần tăng ca (giờ / nhân viên / tháng)",
+  overtimeCapHelp:
+    "Để trống nghĩa là không giới hạn. Khi duyệt một yêu cầu tăng ca làm nhân viên vượt trần, hệ thống chỉ hiện cảnh báo kèm số giờ — người duyệt vẫn quyết định.",
+} as const;
+
+/**
+ * Cảnh báo vượt trần tăng ca ở hộp thoại duyệt (SET-05, plan 05-03).
+ *
+ * Không nhãn nào ở đây nói yêu cầu bị từ chối hay không duyệt được — vì nó
+ * không bị: SET-05 nói cảnh báo, không chặn cứng.
+ */
+/**
+ * Kỳ công và thao tác chốt kỳ (PERD-01/PERD-02, plan 05-05).
+ *
+ * Không nhãn nào ở đây hứa một nút mở lại kỳ đã chốt — vì nó không tồn tại
+ * (D-32b). Chỗ duy nhất nhắc tới việc đó là câu nói rõ rằng **không có**.
+ */
+export const PERIOD_LABEL = {
+  pageTitle: "Kỳ công",
+  pageDescription:
+    "Chốt kỳ để khoá số liệu chấm công của một tháng. Sau khi chốt, dữ liệu của kỳ chỉ đổi được qua một yêu cầu được duyệt.",
+  statusOpen: "Đang mở",
+  statusClosed: "Đã chốt",
+  closeAction: "Chốt kỳ",
+  closeConfirmTitle: "Chốt kỳ công",
+  closeConfirmLabel: "Chốt kỳ",
+  // Ba điều hộp xác nhận phải nói, và điều thứ ba là điều dễ bị bỏ quên nhất.
+  closeConfirmBody:
+    "Sau khi chốt, mọi thay đổi vào dữ liệu chấm công của kỳ này chỉ đi được qua một yêu cầu được duyệt — kể cả chấm công hằng ngày cũng bị từ chối. Phiên bản này KHÔNG có đường mở lại kỳ đã chốt.",
+  pendingWarning:
+    "yêu cầu của kỳ này còn chờ xử lý. Chốt kỳ không xoá chúng, nhưng sau khi chốt thì duyệt một trong số đó là cách duy nhất để số liệu kỳ thay đổi.",
+  notEndedHint: "Kỳ chưa kết thúc",
+  closeSuccess: "Đã chốt kỳ công.",
+  closeError: "Không chốt được kỳ công.",
+  emptyTitle: "Chưa có kỳ công nào",
+  emptyBody: "Kỳ công được dựng theo tháng dương lịch khi doanh nghiệp có dữ liệu chấm công.",
+  employeeCountLabel: "nhân viên có công",
+  recordCountLabel: "bản ghi",
+  pendingCountLabel: "yêu cầu chờ",
+  closedByLabel: "Chốt bởi",
+} as const;
+
+/** Thông báo trong ứng dụng (APRV-05, plan 05-04) */
+export const NOTIFICATION_LABEL = {
+  bellLabel: "Thông báo",
+  pageTitle: "Thông báo",
+  pageDescription: "Kết quả xử lý các yêu cầu bạn đã gửi.",
+  // Trạng thái rỗng nói đúng sự thật: chưa có gì, không phải hỏng.
+  emptyTitle: "Chưa có thông báo nào",
+  emptyBody:
+    "Khi một yêu cầu của bạn được duyệt hoặc bị từ chối, thông báo sẽ hiện ở đây.",
+  errorTitle: "Không tải được thông báo",
+  // Trạng thái phân biệt bằng dấu chấm + NHÃN CHỮ, không bằng màu đơn thuần.
+  unreadLabel: "Chưa đọc",
+  openRequestAction: "Xem yêu cầu",
+} as const;
+
+export const OVERTIME_CAP_LABEL = {
+  warningTitle: "Yêu cầu này vượt trần tăng ca của doanh nghiệp",
+  usedLabel: "Đã dùng trong tháng",
+  requestedLabel: "Yêu cầu này thêm",
+  capLabel: "Trần doanh nghiệp",
+  overLabel: "Vượt",
+  hourUnit: "giờ",
+  approveAnywayAction: "Vẫn duyệt (vượt trần)",
+  noteSuffix: "Duyệt khi đã vượt trần tăng ca",
 } as const;
 
 /**

@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 5
-current_phase_name: Duyệt yêu cầu và chốt kỳ công
-status: ready
-stopped_at: Phase 4 hoan tat (6/6 plan); Phase 5 chua bat dau
-last_updated: "2026-08-06T00:00:00.000Z"
+current_phase: 6
+current_phase_name: Super admin và hỗ trợ nhiều doanh nghiệp
+status: planning
+stopped_at: Phase 5 hoan tat (6/6 plan); bien ban nghiem thu o 05-UAT.md — con cho chu du an bam tay ba man hinh moi
+last_updated: "2026-08-06T09:00:00.000Z"
 last_activity: 2026-08-06
-last_activity_desc: Phase 4 complete — SET-01..SET-04, 346 test xanh, e2e doanh nghiep trang xanh
+last_activity_desc: Thuc thi Phase 5 tron ven — 05-01..05-06 (migration 0017-0021, 4 file pgTAP moi, e2e vong doi)
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 30
-  completed_plans: 30
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 36
+  completed_plans: 36
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-31)
 
 **Core value:** Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng nơi, đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
-**Current focus:** Phase 5 — duyệt yêu cầu và chốt kỳ công
+**Current focus:** Phase 6 — super admin và hỗ trợ nhiều doanh nghiệp
 
 ## Current Position
 
-Phase: 5 — Duyệt yêu cầu và chốt kỳ công
-Plan: Chưa lập kế hoạch
-Status: Ready to plan
-Last activity: 2026-08-06 — Phase 4 hoàn tất: SET-01…SET-04, biên bản nghiệm thu ở 04-UAT.md
+Phase: 6 — Super admin và hỗ trợ nhiều doanh nghiệp (chưa lập kế hoạch)
+Plan: —
+Status: Phase 5 đã xong 6/6 plan; sẵn sàng lập kế hoạch Phase 6
+Last activity: 2026-08-06 — Thực thi Phase 5 (05-01…05-06)
 
-Progress: [██████████] 96%
+Progress: [██████████] 100% của 5/6 phase đã có kế hoạch
 
 ## Performance Metrics
 
@@ -157,6 +157,40 @@ Quyết định của Phase 4 (lập kế hoạch 2026-08-05, thực thi 2026-08
 - D-28a (**chốt 2026-08-06 tại checkpoint 04-04 Task 4**): chủ dự án chọn **cộng dồn**. `rule_key='night'` đổi nghĩa từ *hệ số nhân* sang **phụ cấp cộng thêm**: hệ số một phút = hệ số loại ngày + phụ cấp đêm. Lễ 3.0 + đêm 0.3 → một giờ tăng ca đêm ngày lễ quy đổi ×3.3. Giới hạn còn lại: Điều 98.3 (thêm 20% cho phần tăng ca ban đêm) **không** làm ở V2
 - D-29: `SUSPICIOUS_DISTANCE_MULTIPLIER` và `SHIFT_WINDOW_GRACE_MINUTES` chuyển thành cấu hình doanh nghiệp — đóng lời hứa D-21a của Phase 3
 
+Quyết định của Phase 5 (lập kế hoạch 2026-08-06, chi tiết ở `05-CONTEXT.md`):
+
+- D-30: chỉ `owner`/`admin` duyệt; `manager` giữ nguyên ngoài khu `/admin` — giới hạn có ý thức, mở rộng được mà không đổi mô hình dữ liệu
+- D-31: duyệt tăng ca là **cho phép trước**, giờ vẫn do chấm công thật quyết định — không tạo nguồn sự thật thứ hai cho con số Phase 4 vừa dựng
+- D-32: kỳ đã chốt được bảo vệ bằng **trigger ở database**; D-32a: hệ quả bắt buộc là phần ghi của yêu cầu được duyệt phải nằm trong hàm SQL (cờ là transaction-local); D-32b: chưa có đường mở lại kỳ đã chốt, có chủ đích
+- D-33: lịch sử xử lý là bảng `request_reviews` append-only, không phải ba cột trên `work_requests` (ba cột cũ giữ nguyên làm ảnh chụp trạng thái)
+- D-34: thông báo có bảng riêng, RLS theo **người nhận** chứ không theo doanh nghiệp — nội dung mang lý do từ chối
+- D-35: duyệt nghỉ phép sinh bản ghi công theo **lịch làm việc của ca**, bỏ qua ngày nghỉ và ngày lễ
+
+Quyết định phát sinh **khi thực thi** Phase 5 (2026-08-06; chi tiết ở từng file SUMMARY):
+
+- 05-01: thứ tự ghi của `reviewRequest()` là **lịch sử trước, cập nhật `work_requests` sau** —
+  PostgREST không cho hai lệnh ghi trong một transaction ở tầng này, nên chọn hướng hỏng an
+  toàn hơn (cập nhật trước mà lịch sử hỏng thì quyết định không có vết và yêu cầu đã rời khỏi
+  `pending` nên không làm lại được)
+- 05-01: chiều sắp xếp của `GET /api/requests` đổi theo bộ lọc — `status=pending` là **hàng
+  đợi** (người chờ lâu nhất trước), mọi nhánh còn lại là **lịch sử** (mới nhất trước)
+- 05-02: hàm SQL trả **kiểu composite** `tf_request_effect` thay vì `returns table` — PostgREST
+  trả một object thay vì mảng một phần tử
+- 05-02: `conflicted` của đơn nghỉ tính theo "ngày đó đã có **bất kỳ** dòng `attendance_records`
+  nào", không chỉ "đã có chấm công thật"
+- 05-03: "giờ đã dùng" tách làm hai đại lượng trả về riêng — `actualHours` (từ chấm công qua
+  mô-đun Phase 4) và `registeredHours` (các yêu cầu tăng ca **khác** đã duyệt trong tháng)
+- 05-04: **không** thêm mục thứ năm vào thanh điều hướng dưới của giao diện nhân viên; chuông ở
+  header là chỗ đúng cho một thứ được xem lướt và có số đếm
+- 05-04: `markNotificationsRead` **không** ghi `audit_log` — ngoại lệ có cân nhắc với D-17
+- 05-05: **"kỳ đã chốt" không phải lý do từ chối thứ tư của D-20b** — nó là trạng thái của KỲ,
+  chặn cả những đường ghi không phải chấm công, và không sinh ra từ việc người lao động làm gì
+  sai. Nó là một `Error` thường mang thông điệp của chính trigger (SQLSTATE riêng `TF001`)
+- 05-05: `closed_by = coalesce(auth.uid(), p_closed_by)` — `auth.uid()` **luôn thắng** nên tham
+  số không thể dùng để ghi tên người khác vào vết
+- 05-06: hai migration của phase (0018, 0021) được làm **chạy lại được** (`drop … if exists` ở
+  đầu) để sửa được tại chỗ khi chưa phát hành, thay vì để lại một file chỉ để vá một dòng
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -176,6 +210,10 @@ None yet.
 - ~~03-07: blocker auth.users (4 tai khoan fixture pgTAP lam listUsers tra 500)~~ — **DA DUOC DON**, xac nhan 2026-08-06 trong 04-06: `admin.auth.admin.listUsers()` tra 200 va khong con tai khoan nao trong owner1|owner2|dualmember|nomember@timeflow.test. Task 2 cua 03-07 (device UAT voi camera/GPS that) VAN CHUA thuc hien.
 - 04-06: `npm run test:db` chua chay duoc trong moi truong phat trien hien tai (khong co `psql`, database dev la Supabase cloud nen bo chay tu choi nap fixture pgTAP). Hai file test moi cua Phase 4 (`10_company_settings.sql`, `11_overtime_rules_append_only.sql` — 13 assertion) da viet va da vao cong dem nhung CHUA CHAY THAT lan nao; can chay tren Postgres tam cua CI.
 - 04-06: fixture cua test tich hop de lai dong tren database dev o `overtime_rules` (trigger append-only chan xoa) va vai doanh nghiep test mang id ngau nhien. Mot lan `npm run db:seed` se don sach (truncate khong bi trigger chan).
+- ~~Nghien cuu con khoang trong: mo hinh duyet mot cap co du cho doanh nghiep pilot khong~~ — **DA QUYET** 2026-08-06 (D-30): mot cap, chi `owner`/`admin`. Gioi han duoc ghi ro trong `05-UAT.md` §Gioi han da biet muc 1; mo rong cho `manager` la viec dau tien nen lam o phase sau neu pilot thay nang.
+- 05-06: `npm run test:db` **van chua chay duoc** (khong co `psql`; da kiem lai trong phien 2026-08-06). Bon file pgTAP moi cua Phase 5 — `12_request_reviews.sql` (8), `13_apply_approved_request.sql` (13), `14_notifications.sql` (6), `15_period_close.sql` (11), tong **38 assertion** — da viet va da vao cong `check:assertions` (san 212 -> **250**) nhung CHUA CHAY THAT lan nao; can Postgres tam cua CI. Toan bo hanh vi chung khang dinh da duoc phu doc lap bang test tich hop Vitest tren database that.
+- 05-06: **chu du an chua bam tay** qua ba man hinh moi (`/admin/requests`, `/admin/periods`, `/employee/notifications`). Toan bo nghiem thu hien tai la quan sat cua may tren he thong chay that (test tich hop + `npm run test:e2e-approval` qua HTTP that). Dang chu y nhat la hop xac nhan **chot ky** — thao tac duy nhat cua san pham khong hoan tac duoc.
+- 05-06: fixture cua test tich hop Phase 5 de lai vai doanh nghiep `cty-05xx-<ngau nhien>` tren database dev khong xoa duoc (cascade xuong `request_reviews`/`overtime_rules` bi trigger append-only chan). Cung cach don voi 04-06: mot lan `npm run db:seed`.
 
 ### Quick Tasks Completed
 
@@ -193,6 +231,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-02T16:33:30.939Z
-Stopped at: Phase 4 hoan tat (6/6 plan) — bien ban nghiem thu o 04-UAT.md
-Resume file: 04-UAT.md
+Last session: 2026-08-06T09:00:00.000Z
+Stopped at: Phase 5 hoan tat (6/6 plan) — bien ban nghiem thu o 05-UAT.md; con cho chu du an bam tay ba man hinh moi
+Resume file: 05-UAT.md

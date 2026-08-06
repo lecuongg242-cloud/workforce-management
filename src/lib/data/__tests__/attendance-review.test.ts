@@ -60,6 +60,8 @@ function settingsRow(overrides: Record<string, unknown> = {}): Record<string, un
     shift_window_grace_minutes: 120,
     night_start_time: "22:00:00",
     night_end_time: "06:00:00",
+    // SET-05 (plan 05-03): `null` = chua dat tran tang ca.
+    overtime_cap_hours_per_month: null,
     updated_at: "2026-08-06T00:00:00.000Z",
     updated_by: null,
     ...overrides,

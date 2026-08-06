@@ -252,6 +252,11 @@ export interface CompanySettings {
   nightStartTime: string;
   /** "HH:mm" — mac dinh 06:00 */
   nightEndTime: string;
+  /**
+   * SET-05: tran tang ca, don vi GIO / NHAN VIEN / THANG. `null` nghia la
+   * KHONG GIOI HAN — khong phai 0, va khong phai "chua tai xong".
+   */
+  overtimeCapHoursPerMonth: number | null;
   /** ISO date-time */
   updatedAt: string;
   updatedBy: string | null;
@@ -304,6 +309,148 @@ export interface WorkRequest {
   createdAt: string;
   reviewerId: string | null;
   reviewNote: string | null;
+  /**
+   * Ngu canh nguoi gui, do `GET /api/requests` gan them (plan 05-01). `null`
+   * khi noi goi khong can den (hoac du lieu khong dong bo) — man hinh duyet
+   * lui ve hien `employeeId`, khong bao gio bia mot cai ten.
+   */
+  employeeName?: string | null;
+  employeeCode?: string | null;
+  departmentName?: string | null;
+}
+
+/** Mot quyet dinh xu ly. `pending` khong phai quyet dinh nen khong co o day. */
+export type ReviewDecision = "approved" | "rejected";
+
+/**
+ * Mot lan xu ly yeu cau (bang `request_reviews`, migration 0017 — D-33).
+ * Append-only: mot dong o day khong bao gio bi sua hay xoa, nen no la cau tra
+ * loi duy nhat dang tin cho "ai duyet cai nay, luc nao, vi sao" (APRV-04).
+ */
+export interface RequestReview {
+  id: string;
+  companyId: string;
+  requestId: string;
+  decision: ReviewDecision;
+  /** Bat buoc khi tu choi, tuy chon khi duyet */
+  note: string | null;
+  reviewerUserId: string | null;
+  reviewerEmployeeId: string | null;
+  /** `null` khi nguoi duyet khong co ho so nhan vien */
+  reviewerName: string | null;
+  /** ISO date-time, do database cap (D-19) */
+  createdAt: string;
+}
+
+/** Dau vao cua `reviewRequest()` — khong mang dinh danh doanh nghiep (D-12b). */
+export interface ReviewRequestInput {
+  decision: ReviewDecision;
+  note?: string | null;
+}
+
+/**
+ * Ban tong ket tac dong cua mot yeu cau len du lieu cong (kieu SQL
+ * `tf_request_effect`, migration 0018 — APRV-03).
+ *
+ * `skippedDates` la nhung ngay bi bo qua vi ngay do DA co du lieu cham cong:
+ * mot mau thuan giua don nghi va thuc te, va nguoi duyet la nguoi duy nhat
+ * giai quyet duoc. Khong bao gio ghi de len du lieu do (D-35).
+ */
+export interface RequestEffect {
+  insertedCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  /** "YYYY-MM-DD" */
+  skippedDates: string[];
+}
+
+/** Ket qua cua `reviewRequest()`: quyet dinh + he qua cua no len du lieu cong. */
+export interface ReviewRequestResult {
+  request: WorkRequest;
+  effect: RequestEffect;
+}
+
+export type PeriodStatus = "open" | "closed";
+
+/**
+ * Ky cong — mot thang duong lich (D-09, bang `periods`). Trang thai `closed`
+ * la mot cua MOT CHIEU: chua co duong mo lai trong V2 (D-32b, co chu dich).
+ */
+export interface Period {
+  id: string;
+  companyId: string;
+  /** "YYYY-MM-DD" — luon la ngay dau thang */
+  startDate: string;
+  /** "YYYY-MM-DD" — luon la ngay cuoi thang */
+  endDate: string;
+  status: PeriodStatus;
+  /** ISO date-time, do dong ho database cap (D-19); `null` khi chua chot */
+  closedAt: string | null;
+  closedBy: string | null;
+}
+
+/**
+ * Mot ky kem so lieu du de quyet dinh co chot hay khong. Cac con so duoc DEM
+ * TAI THOI DIEM TRUY VAN, khong cot nao luu san.
+ */
+export interface PeriodSummary extends Period {
+  /** "YYYY-MM" — tien cho giao dien, suy tu `startDate` */
+  month: string;
+  /** So nhan vien co it nhat mot ban ghi cong trong ky */
+  employeeCount: number;
+  /** So ban ghi cham cong trong ky */
+  recordCount: number;
+  /** So yeu cau con CHO XU LY co ngay bat dau roi vao ky */
+  pendingRequestCount: number;
+  /** Ky da ket thuc chua (so voi ngay cua server) — dieu kien de chot */
+  hasEnded: boolean;
+}
+
+/** Loai thong bao trong ung dung. Phase 5 chi sinh mot loai. */
+export type NotificationKind = "request_reviewed";
+
+/**
+ * Mot thong bao trong ung dung (bang `notifications`, migration 0020 —
+ * APRV-05/D-34). Ranh gioi doc la NGUOI NHAN, khong phai doanh nghiep: noi
+ * dung mang ly do tu choi.
+ */
+export interface AppNotification {
+  id: string;
+  companyId: string;
+  userId: string;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  /** Yeu cau lien quan, de mo thang toi no; `null` voi cac loai khac. */
+  requestId: string | null;
+  /** `null` = CHUA DOC. Dau thoi gian, khong phai boolean. */
+  readAt: string | null;
+  createdAt: string;
+}
+
+/** Danh sach thong bao cua chinh phien, kem so chua doc. */
+export interface NotificationFeed {
+  items: AppNotification[];
+  unreadCount: number;
+}
+
+/**
+ * Gio tang ca da dung trong mot thang cua mot nhan vien, kem tran cua doanh
+ * nghiep (SET-05). Khong cot nao luu san nhung con so nay — chung duoc tinh
+ * tai thoi diem truy van, cung khuon voi moi so lieu tang ca cua Phase 4.
+ */
+export interface OvertimeUsage {
+  employeeId: string;
+  /** "YYYY-MM" */
+  month: string;
+  /** Gio tang ca THUC TE tu du lieu cham cong. */
+  actualHours: number;
+  /** Gio da DANG KY o cac yeu cau tang ca KHAC da duoc duyet trong thang. */
+  registeredHours: number;
+  /** `actualHours + registeredHours`. */
+  usedHours: number;
+  /** `null` nghia la KHONG GIOI HAN. */
+  capHours: number | null;
 }
 
 export interface AppUser {

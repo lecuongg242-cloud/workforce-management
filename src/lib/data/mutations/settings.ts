@@ -23,7 +23,7 @@ import type { CompanySettings, CompanySettingsInput } from "@/lib/types/domain";
  */
 
 const COMPANY_SETTINGS_COLUMNS =
-  "company_id, suspicious_distance_multiplier, shift_window_grace_minutes, night_start_time, night_end_time, updated_at, updated_by";
+  "company_id, suspicious_distance_multiplier, shift_window_grace_minutes, night_start_time, night_end_time, overtime_cap_hours_per_month, updated_at, updated_by";
 
 export async function updateCompanySettings(
   patch: CompanySettingsInput,
@@ -68,6 +68,14 @@ export async function updateCompanySettings(
       parsedPatch.nightEndTime !== undefined
         ? parsedPatch.nightEndTime
         : before.nightEndTime,
+    // SET-05: `null` la mot GIA TRI duoc gui co chu dich (xoa tran = khong
+    // gioi han), con `undefined` la "khong dong toi truong nay". Phep kiem
+    // `!== undefined` phan biet dung hai truong hop do — mot `??` o day se
+    // lang le bien "xoa tran" thanh "giu nguyen tran cu".
+    overtime_cap_hours_per_month:
+      parsedPatch.overtimeCapHoursPerMonth !== undefined
+        ? parsedPatch.overtimeCapHoursPerMonth
+        : before.overtimeCapHoursPerMonth,
   };
 
   // Rang buoc lien truong: chi kiem duoc SAU khi hop nhat, vi patch co the chi

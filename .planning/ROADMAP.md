@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Phiên thật và cắt tầng dữ liệu giả** - Supabase Auth qua cookie, phân quyền bốn vai trò, toàn bộ `service.ts` chạy trên Postgres, xóa mock (completed 2026-08-02)
 - [x] **Phase 3: Chấm công có bằng chứng** - Ảnh hiện trường chụp trực tiếp, GPS kiểm ở server theo bán kính điểm làm việc, màn hình quản trị xem lại (completed 2026-08-03)
 - [x] **Phase 4: Quy tắc công do doanh nghiệp tự khai** - Trang cài đặt: giờ làm, ân hạn, ngày lễ, hệ số tăng ca; phân loại công theo quy tắc đang hiệu lực (completed 2026-08-06)
-- [ ] **Phase 5: Duyệt yêu cầu và chốt kỳ công** - Duyệt/từ chối có lý do, tác động đúng vào dữ liệu kỳ, lịch sử xử lý, thông báo, chốt kỳ có ghi vết
+- [x] **Phase 5: Duyệt yêu cầu và chốt kỳ công** - Duyệt/từ chối có lý do, tác động đúng vào dữ liệu kỳ, lịch sử xử lý, thông báo, chốt kỳ có ghi vết (completed 2026-08-06)
 - [ ] **Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp** - Danh sách toàn hệ thống, tra cứu sâu một doanh nghiệp, đường ghi riêng có kiểm soát
 
 ## Phase Details
@@ -205,7 +205,30 @@ Plans:
   4. Duyệt tăng ca vượt trần mà doanh nghiệp tự đặt thì hiện cảnh báo cho người duyệt, nhưng vẫn cho phép duyệt tiếp — không chặn cứng.
   5. Quản trị chốt được kỳ công và trạng thái đã chốt hiển thị rõ; sau khi chốt, mọi thay đổi vào dữ liệu của kỳ chỉ đi được qua một yêu cầu được duyệt và đều để lại vết trong audit log.
 
-**Plans**: TBD
+**Plans:** 6/6 plans executed
+
+Plans:
+**Wave 1**
+
+- [x] 05-01-PLAN.md — Tracer: bảng `request_reviews` append-only, `reviewRequest()` (từ chối bắt buộc lý do), màn hình `/admin/requests`, lịch sử xử lý (APRV-01, APRV-02, APRV-04)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 05-02-PLAN.md — APRV-03: `tf_apply_approved_request()` ở tầng SQL (D-32a), tác động đúng theo bốn loại yêu cầu, người duyệt thấy trước tác động
+- [x] 05-03-PLAN.md — SET-05: trần tăng ca trong cấu hình doanh nghiệp, cảnh báo vượt trần kèm ba con số thật — không chặn cứng
+
+**Wave 3** *(blocked on 05-02)*
+
+- [x] 05-04-PLAN.md — APRV-05: bảng `notifications` cô lập theo NGƯỜI NHẬN, sinh trong cùng thao tác xử lý, chuông trên giao diện nhân viên
+
+**Wave 4** *(blocked on 05-02 + 05-03)*
+
+- [x] 05-05-PLAN.md — PERD-01/PERD-02: chốt kỳ, trigger bảo vệ kỳ đã chốt (D-32), đường ghi hợp lệ duy nhất qua yêu cầu được duyệt
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [x] 05-06-PLAN.md — Cổng cuối phase: chặn ghi thẳng vào dữ liệu chấm công (có kiểm răng), e2e vòng đời đầy đủ, nghiệm thu tám yêu cầu
+
 **UI hint**: yes
 
 ### Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp
@@ -234,7 +257,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Phiên thật và cắt tầng dữ liệu giả | 11/11 | Complete    | 2026-08-02 |
 | 3. Chấm công có bằng chứng | 7/7 | Complete    | 2026-08-03 |
 | 4. Quy tắc công do doanh nghiệp tự khai | 6/6 | Complete    | 2026-08-06 |
-| 5. Duyệt yêu cầu và chốt kỳ công | 0/TBD | Not started | - |
+| 5. Duyệt yêu cầu và chốt kỳ công | 6/6 | Complete    | 2026-08-06 |
 | 6. Super admin và hỗ trợ nhiều doanh nghiệp | 0/TBD | Not started | - |
 
 ## Requirement Coverage

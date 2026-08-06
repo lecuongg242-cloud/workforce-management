@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  CalendarCheck,
   CalendarClock,
   ClipboardList,
   Clock3,
@@ -39,6 +40,8 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     href: "/admin/attendance/review",
     icon: ShieldAlert,
   },
+  { label: "Yêu cầu", href: "/admin/requests", icon: ClipboardList },
+  { label: "Kỳ công", href: "/admin/periods", icon: CalendarCheck },
   { label: "Bảng lương", href: "/admin/payroll", icon: Wallet, comingSoon: true },
   { label: "Cài đặt", href: "/admin/settings", icon: Settings },
 ];
@@ -69,6 +72,8 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   "work-sites": "Điểm làm việc",
   attendance: "Chấm công",
   review: "Cần xem lại",
+  requests: "Yêu cầu",
+  periods: "Kỳ công",
   payroll: "Bảng lương",
   settings: "Cài đặt",
 };

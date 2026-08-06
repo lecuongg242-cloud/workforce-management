@@ -22,7 +22,11 @@
  *
  * Nang len 205 ngay 2026-08-06 (plan 04-01 Task 1): + 6
  * (10_company_settings.sql). Nang len 212 cung ngay (plan 04-04 Task 1): + 7
- * (11_overtime_rules_append_only.sql). Moc nay
+ * (11_overtime_rules_append_only.sql). Nang len 220 ngay 2026-08-06 (plan
+ * 05-01 Task 1): + 8 (12_request_reviews.sql). Nang len 233 cung ngay (plan
+ * 05-02 Task 1): + 13 (13_apply_approved_request.sql). Nang len 239 cung ngay
+ * (plan 05-04 Task 1): + 6 (14_notifications.sql). Nang len 250 cung ngay
+ * (plan 05-05 Task 1): + 11 (15_period_close.sql). Moc nay
  * CHI DUOC NANG LEN, khong bao gio ha xuong — ha moc la cach am tham bien
  * mot bo test dang co lai thanh mot cong van bao xanh (xem <prohibitions>
  * cua 02-02-PLAN.md).
@@ -32,7 +36,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const MIN_ASSERTIONS = 212;
+const MIN_ASSERTIONS = 250;
 
 const TESTS_DIR = path.join("supabase", "tests");
 const RUN_ALL_PATH = path.join(TESTS_DIR, "run-all.sql");

@@ -77,20 +77,26 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 - [x] **SET-02**: Chủ doanh nghiệp tự khai danh sách ngày nghỉ lễ của doanh nghiệp mình; hệ thống không áp cứng ngày nào
 - [x] **SET-03**: Chủ doanh nghiệp tự khai quy tắc và hệ số tăng ca (ngày thường, ngày nghỉ, ngày lễ, ca đêm); hệ thống không áp cứng hệ số nào
 - [x] **SET-04**: Bản ghi chấm công được phân loại theo đúng quy tắc mà doanh nghiệp đã khai, tại thời điểm phát sinh
-- [ ] **SET-05**: Chủ doanh nghiệp đặt trần tăng ca của riêng mình; vượt trần thì cảnh báo khi duyệt, không chặn cứng
+- [x] **SET-05**: Chủ doanh nghiệp đặt trần tăng ca của riêng mình; vượt trần thì cảnh báo khi duyệt, không chặn cứng
 
 ### Duyệt yêu cầu (APRV)
 
-- [ ] **APRV-01**: Người có quyền duyệt xem được danh sách yêu cầu chờ xử lý của doanh nghiệp mình
-- [ ] **APRV-02**: Người duyệt chấp thuận hoặc từ chối yêu cầu; từ chối bắt buộc nhập lý do
-- [ ] **APRV-03**: Yêu cầu được chấp thuận tác động đúng vào dữ liệu công của kỳ (nghỉ phép trừ công, bổ sung công thêm bản ghi, tăng ca ghi nhận giờ)
-- [ ] **APRV-04**: Mỗi yêu cầu lưu lịch sử xử lý: ai duyệt, lúc nào, lý do gì
-- [ ] **APRV-05**: Nhân viên nhận thông báo trong ứng dụng khi yêu cầu của mình được xử lý
+- [x] **APRV-01**: Người có quyền duyệt xem được danh sách yêu cầu chờ xử lý của doanh nghiệp mình
+- [x] **APRV-02**: Người duyệt chấp thuận hoặc từ chối yêu cầu; từ chối bắt buộc nhập lý do
+- [x] **APRV-03**: Yêu cầu được chấp thuận tác động đúng vào dữ liệu công của kỳ (nghỉ phép trừ công, bổ sung công thêm bản ghi, tăng ca ghi nhận giờ)
+  - *Ghi chú 2026-08-06 (D-31, chốt khi lập kế hoạch Phase 5):* vế **"tăng ca ghi nhận giờ"**
+    được đọc là **cho phép trước**, không phải ghi số giờ vào dữ liệu công. Phase 4 vừa dựng
+    xong một nguồn sự thật duy nhất cho giờ tăng ca (tính từ chấm công thật); cho đường duyệt
+    ghi thẳng số giờ khai trong đơn là tạo **nguồn thứ hai** cho cùng một con số, và khi hai
+    nguồn lệch thì không ai biết tin cái nào. Hệ quả đã biết: doanh nghiệp không chấm công
+    ngoài giờ sẽ thấy giờ tăng ca bằng 0 dù đã duyệt.
+- [x] **APRV-04**: Mỗi yêu cầu lưu lịch sử xử lý: ai duyệt, lúc nào, lý do gì
+- [x] **APRV-05**: Nhân viên nhận thông báo trong ứng dụng khi yêu cầu của mình được xử lý
 
 ### Chốt kỳ công (PERD)
 
-- [ ] **PERD-01**: Quản trị chốt được kỳ công; kỳ đã chốt hiển thị rõ trạng thái
-- [ ] **PERD-02**: Sau khi chốt, mọi thay đổi vào dữ liệu của kỳ đều phải qua một yêu cầu được duyệt và để lại vết trong audit log
+- [x] **PERD-01**: Quản trị chốt được kỳ công; kỳ đã chốt hiển thị rõ trạng thái
+- [x] **PERD-02**: Sau khi chốt, mọi thay đổi vào dữ liệu của kỳ đều phải qua một yêu cầu được duyệt và để lại vết trong audit log
 
 ### Super admin (SADM)
 
@@ -173,14 +179,14 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | SET-02 | Phase 4 | Complete |
 | SET-03 | Phase 4 | Complete |
 | SET-04 | Phase 4 | Complete |
-| SET-05 | Phase 5 | Pending |
-| APRV-01 | Phase 5 | Pending |
-| APRV-02 | Phase 5 | Pending |
-| APRV-03 | Phase 5 | Pending |
-| APRV-04 | Phase 5 | Pending |
-| APRV-05 | Phase 5 | Pending |
-| PERD-01 | Phase 5 | Pending |
-| PERD-02 | Phase 5 | Pending |
+| SET-05 | Phase 5 | Complete |
+| APRV-01 | Phase 5 | Complete |
+| APRV-02 | Phase 5 | Complete |
+| APRV-03 | Phase 5 | Complete |
+| APRV-04 | Phase 5 | Complete |
+| APRV-05 | Phase 5 | Complete |
+| PERD-01 | Phase 5 | Complete |
+| PERD-02 | Phase 5 | Complete |
 | SADM-01 | Phase 6 | Pending |
 | SADM-02 | Phase 6 | Pending |
 | SADM-03 | Phase 6 | Pending |

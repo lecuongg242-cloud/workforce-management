@@ -19,3 +19,7 @@
 \ir 09_attendance_evidence.sql
 \ir 10_company_settings.sql
 \ir 11_overtime_rules_append_only.sql
+\ir 12_request_reviews.sql
+\ir 13_apply_approved_request.sql
+\ir 14_notifications.sql
+\ir 15_period_close.sql

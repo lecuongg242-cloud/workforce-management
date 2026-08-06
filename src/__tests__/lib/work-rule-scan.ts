@@ -16,8 +16,19 @@ export interface WorkRuleViolation {
   rule: string;
 }
 
-/** Bo comment (`//`, `/* *\/`) va noi dung chuoi de chi con ma thuc thi. */
-export function stripCommentsAndStrings(source: string): string[] {
+/**
+ * Bo comment (`//`, `/* *\/`), GIU noi dung chuoi. Giu dung so dong de bao cao
+ * chi dung vi tri.
+ *
+ * Tach ra tu `stripCommentsAndStrings` o plan 05-06: cong
+ * `no-silent-period-write` phai NHIN THAY noi dung chuoi (ten bang nam trong
+ * `from("attendance_records")`) nhung van phai bo comment.
+ *
+ * GIOI HAN DA BIET: mot chuoi chua `//` (vi du mot URL) se lam phan con lai
+ * cua dong bi cat. Huong sai la BO SOT, khong phai bao nham — va khong file
+ * nao trong pham vi quet hien tai co hinh dang do.
+ */
+export function stripComments(source: string): string[] {
   const lines = source.split(/\r?\n/);
   const output: string[] = [];
   let inBlockComment = false;
@@ -51,14 +62,19 @@ export function stripCommentsAndStrings(source: string): string[] {
     const lineComment = line.indexOf("//");
     if (lineComment !== -1) line = line.slice(0, lineComment);
 
-    // Noi dung chuoi bi thay bang chuoi rong: nhan hien thi khong phai ma
-    // (vi du mot vi du trong chu tro giup cua form).
-    line = line.replace(/(["'`])(?:\\.|(?!\1)[^\\])*\1/g, "''");
-
     output.push(line);
   }
 
   return output;
+}
+
+/** Bo comment VA noi dung chuoi de chi con ma thuc thi. */
+export function stripCommentsAndStrings(source: string): string[] {
+  // Noi dung chuoi bi thay bang chuoi rong: nhan hien thi khong phai ma
+  // (vi du mot vi du trong chu tro giup cua form).
+  return stripComments(source).map((line) =>
+    line.replace(/(["'`])(?:\\.|(?!\1)[^\\])*\1/g, "''"),
+  );
 }
 
 interface ScanRule {

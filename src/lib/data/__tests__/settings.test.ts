@@ -36,6 +36,7 @@ const rawSettingsRow = {
   shift_window_grace_minutes: 120,
   night_start_time: "22:00:00",
   night_end_time: "06:00:00",
+  overtime_cap_hours_per_month: null,
   updated_at: "2026-08-06T02:00:00.000Z",
   updated_by: null,
 };
@@ -46,6 +47,7 @@ const finalSettings = {
   shiftWindowGraceMinutes: 120,
   nightStartTime: "22:00",
   nightEndTime: "06:00",
+  overtimeCapHoursPerMonth: null,
   updatedAt: "2026-08-06T02:00:00.000Z",
   updatedBy: null,
 };
@@ -116,6 +118,48 @@ describe("companySettingsInputSchema — chặn giá trị vô lý trước khi 
 
     expect(result).not.toHaveProperty("companyId");
     expect(result).not.toHaveProperty("company_id");
+  });
+});
+
+describe("companySettingsInputSchema — trần tăng ca để trống là câu trả lời hợp lệ (SET-05)", () => {
+  it("11. `null` được chấp nhận và giữ nguyên `null` — 'không giới hạn', không bị ép về 0", () => {
+    const result = companySettingsInputSchema.parse({
+      overtimeCapHoursPerMonth: null,
+    });
+
+    expect(result).toEqual({ overtimeCapHoursPerMonth: null });
+    expect(result.overtimeCapHoursPerMonth).not.toBe(0);
+  });
+
+  it("12. trần bằng 0 hoặc âm bị từ chối (CHECK > 0) — 0 không phải một trần hợp lệ", () => {
+    expect(() =>
+      companySettingsInputSchema.parse({ overtimeCapHoursPerMonth: 0 }),
+    ).toThrow();
+    expect(() =>
+      companySettingsInputSchema.parse({ overtimeCapHoursPerMonth: -5 }),
+    ).toThrow();
+  });
+
+  it("13. `null` (xoá trần) và không gửi trường (giữ nguyên) là HAI trường hợp khác nhau", () => {
+    // Truong CO mat mang gia tri null -> duong ghi phai ap dung no.
+    expect(
+      "overtimeCapHoursPerMonth" in
+        companySettingsInputSchema.parse({ overtimeCapHoursPerMonth: null }),
+    ).toBe(true);
+    // Truong KHONG co mat -> duong ghi giu nguyen gia tri cu.
+    expect(
+      "overtimeCapHoursPerMonth" in
+        companySettingsInputSchema.parse({ shiftWindowGraceMinutes: 45 }),
+    ).toBe(false);
+  });
+
+  it("14. dòng DB có trần -> ra số; numeric dạng chuỗi vẫn ra số", () => {
+    expect(
+      companySettingsRowSchema.parse({
+        ...rawSettingsRow,
+        overtime_cap_hours_per_month: "40.00",
+      }).overtimeCapHoursPerMonth,
+    ).toBe(40);
   });
 });
 

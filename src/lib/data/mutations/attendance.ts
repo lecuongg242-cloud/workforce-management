@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
+import { periodGuardError } from "@/lib/attendance/period-guard";
 import { AttendanceRejectedError } from "@/lib/attendance/rejection";
 import { logMutation } from "@/lib/data/audit";
 import { loadCompanySettings } from "@/lib/settings/company-settings";
@@ -494,7 +495,7 @@ export async function checkIn(
     .select(ATTENDANCE_COLUMNS)
     .single();
   if (insertError || !inserted) {
-    throw new Error("Không thể ghi nhận giờ vào ca.");
+    throw periodGuardError(insertError, "Không thể ghi nhận giờ vào ca.");
   }
   const resultRow = inserted as RawAttendanceRow;
 
@@ -667,7 +668,7 @@ export async function checkOut(
     .single();
 
   if (updateError || !afterRow) {
-    throw new Error("Không thể ghi nhận giờ tan ca.");
+    throw periodGuardError(updateError, "Không thể ghi nhận giờ tan ca.");
   }
 
   await logMutation({
