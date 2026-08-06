@@ -37,6 +37,9 @@ const rawSettingsRow = {
   night_start_time: "22:00:00",
   night_end_time: "06:00:00",
   overtime_cap_hours_per_month: null,
+  work_mode: "shift",
+  standard_hours_per_day: null,
+  standard_days_per_month: null,
   updated_at: "2026-08-06T02:00:00.000Z",
   updated_by: null,
 };
@@ -48,6 +51,9 @@ const finalSettings = {
   nightStartTime: "22:00",
   nightEndTime: "06:00",
   overtimeCapHoursPerMonth: null,
+  workMode: "shift" as const,
+  standardHoursPerDay: null,
+  standardDaysPerMonth: null,
   updatedAt: "2026-08-06T02:00:00.000Z",
   updatedBy: null,
 };
@@ -160,6 +166,73 @@ describe("companySettingsInputSchema — trần tăng ca để trống là câu 
         overtime_cap_hours_per_month: "40.00",
       }).overtimeCapHoursPerMonth,
     ).toBe(40);
+  });
+});
+
+describe("companySettingsInputSchema — cách tính công và hai mẫu số quy đổi (D-36/D-38)", () => {
+  it("15. `work_mode` chỉ nhận đúng ba giá trị đã khai", () => {
+    for (const mode of ["daily_hours", "shift", "shift_hourly"] as const) {
+      expect(companySettingsInputSchema.parse({ workMode: mode }).workMode).toBe(mode);
+    }
+    expect(() =>
+      companySettingsInputSchema.parse({ workMode: "theo_tuan" }),
+    ).toThrow();
+  });
+
+  it("16. hai mẫu số ĐỂ TRỐNG (`null`) là câu trả lời hợp lệ — 'chưa khai', không bị ép về 0 (D-38)", () => {
+    const result = companySettingsInputSchema.parse({
+      standardHoursPerDay: null,
+      standardDaysPerMonth: null,
+    });
+
+    expect(result).toEqual({
+      standardHoursPerDay: null,
+      standardDaysPerMonth: null,
+    });
+    expect(result.standardHoursPerDay).not.toBe(0);
+    expect(result.standardDaysPerMonth).not.toBe(0);
+  });
+
+  it("17. mẫu số bằng 0 hoặc âm bị từ chối — 0 không phải 'chưa khai', nó là một mẫu số vô nghĩa", () => {
+    expect(() =>
+      companySettingsInputSchema.parse({ standardHoursPerDay: 0 }),
+    ).toThrow();
+    expect(() =>
+      companySettingsInputSchema.parse({ standardDaysPerMonth: -1 }),
+    ).toThrow();
+  });
+
+  it("18. `null` (xoá mẫu số) và không gửi trường (giữ nguyên) là HAI trường hợp khác nhau", () => {
+    expect(
+      "standardDaysPerMonth" in
+        companySettingsInputSchema.parse({ standardDaysPerMonth: null }),
+    ).toBe(true);
+    expect(
+      "standardDaysPerMonth" in
+        companySettingsInputSchema.parse({ shiftWindowGraceMinutes: 45 }),
+    ).toBe(false);
+  });
+
+  it("19. dòng DB chưa khai mẫu số -> `null`, KHÔNG phải một con số đoán ra (D-26)", () => {
+    const result = companySettingsRowSchema.parse(rawSettingsRow);
+
+    expect(result.standardHoursPerDay).toBeNull();
+    expect(result.standardDaysPerMonth).toBeNull();
+    // Va `work_mode` thi NGUOC LAI: luon co gia tri, mac dinh `shift`.
+    expect(result.workMode).toBe("shift");
+  });
+
+  it("20. numeric dạng chuỗi của mẫu số vẫn ra số", () => {
+    const result = companySettingsRowSchema.parse({
+      ...rawSettingsRow,
+      work_mode: "daily_hours",
+      standard_hours_per_day: "10.00",
+      standard_days_per_month: "26.00",
+    });
+
+    expect(result.workMode).toBe("daily_hours");
+    expect(result.standardHoursPerDay).toBe(10);
+    expect(result.standardDaysPerMonth).toBe(26);
   });
 });
 

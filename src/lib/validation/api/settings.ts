@@ -22,6 +22,11 @@ function toHourMinute(time: string): string {
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
+/** Ba che do tinh cong (D-36), khop CHECK cua migration 0022. */
+export const WORK_MODES = ["daily_hours", "shift", "shift_hourly"] as const;
+
+export const workModeSchema = z.enum(WORK_MODES);
+
 export const companySettingsRowSchema = z
   .object({
     company_id: z.string(),
@@ -35,6 +40,12 @@ export const companySettingsRowSchema = z
     // khi co gia tri — `nullable()` dat NGOAI de `null` di thang qua, khong bi
     // ep thanh 0.
     overtime_cap_hours_per_month: z.coerce.number().nullable(),
+    // D-36. `work_mode` CO mac dinh o database (`shift`) nen luon co gia tri.
+    work_mode: workModeSchema,
+    // D-38: hai MAU SO quy doi. `null` = CHUA KHAI, khong phai 0 — `z.coerce`
+    // chi ap khi co gia tri, `nullable()` dat NGOAI de `null` di thang qua.
+    standard_hours_per_day: z.coerce.number().nullable(),
+    standard_days_per_month: z.coerce.number().nullable(),
     updated_at: z.string(),
     updated_by: z.string().nullable(),
   })
@@ -45,6 +56,9 @@ export const companySettingsRowSchema = z
     nightStartTime: toHourMinute(row.night_start_time),
     nightEndTime: toHourMinute(row.night_end_time),
     overtimeCapHoursPerMonth: row.overtime_cap_hours_per_month,
+    workMode: row.work_mode,
+    standardHoursPerDay: row.standard_hours_per_day,
+    standardDaysPerMonth: row.standard_days_per_month,
     updatedAt: row.updated_at,
     updatedBy: row.updated_by,
   }));
@@ -56,6 +70,9 @@ export const companySettingsSchema = z.object({
   nightStartTime: z.string(),
   nightEndTime: z.string(),
   overtimeCapHoursPerMonth: z.number().nullable(),
+  workMode: workModeSchema,
+  standardHoursPerDay: z.number().nullable(),
+  standardDaysPerMonth: z.number().nullable(),
   updatedAt: z.string(),
   updatedBy: z.string().nullable(),
 });
@@ -94,6 +111,25 @@ export const companySettingsInputSchema = z.object({
     .number({ invalid_type_error: "Trần tăng ca phải là một con số." })
     .positive("Trần tăng ca phải lớn hơn 0 — để trống nếu không giới hạn.")
     .max(9999.99, "Trần tăng ca quá lớn.")
+    .nullable()
+    .optional(),
+  // D-36. Khong `nullable()`: khong co "chua chon cach tinh cong" — cot nay
+  // luon co gia tri o database, va bo trong no se lam mo-dun phan loai phai
+  // doan mot dinh nghia ngay cong.
+  workMode: workModeSchema.optional(),
+  // D-38: hai MAU SO quy doi. `nullable()` la mot gia tri CO NGHIA (xoa mau
+  // so = tro lai "chua khai"), khac `optional()` (khong gui = giu nguyen).
+  // Ca hai deu can, va chung khong thay the nhau duoc.
+  standardHoursPerDay: z
+    .number({ invalid_type_error: "Số giờ chuẩn một ngày công phải là một con số." })
+    .positive("Số giờ chuẩn một ngày công phải lớn hơn 0 — để trống nếu chưa khai.")
+    .max(24, "Một ngày công không vượt quá 24 giờ.")
+    .nullable()
+    .optional(),
+  standardDaysPerMonth: z
+    .number({ invalid_type_error: "Số ngày công chuẩn một tháng phải là một con số." })
+    .positive("Số ngày công chuẩn một tháng phải lớn hơn 0 — để trống nếu chưa khai.")
+    .max(31, "Một tháng không vượt quá 31 ngày công.")
     .nullable()
     .optional(),
 });

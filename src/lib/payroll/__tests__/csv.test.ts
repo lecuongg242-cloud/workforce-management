@@ -28,22 +28,78 @@ function row(overrides: Partial<PayrollPrepRow> = {}): PayrollPrepRow {
     overtimeNightMinutes: 0,
     convertedOvertimeHours: 12.75,
     missingMultiplierKeys: [],
+    // D-36/D-39 (plan 05-2-02): che do mac dinh `shift` -> ngay cong tron.
+    creditedDays: 21,
+    regularMinutes: 9_570,
+    hourDeltaMinutes: 0,
+    missingWorkModeInputs: [],
+    // PAY-01 (plan 05-2-04) — phan tien. Bo so nay doi chieu duoc:
+    // 10.500.000 + 796.875 + 0 + 730.000 − 100.000 = 11.926.875
+    payUnit: "month" as const,
+    payAmount: 13_000_000,
+    basePay: 10_500_000,
+    overtimePay: 796_875,
+    hourAdjustment: 0,
+    allowanceItems: [
+      { adjustmentId: "adj-a", name: "Phụ cấp ăn trưa", amount: 730_000, multiplier: 1 },
+    ],
+    deductionItems: [
+      { adjustmentId: "adj-b", name: "Phạt đi muộn", amount: 100_000, multiplier: 2 },
+    ],
+    allowanceTotal: 730_000,
+    deductionTotal: 100_000,
+    netPay: 11_926_875,
+    missing: [],
     ...overrides,
   };
 }
 
 function prep(rows: PayrollPrepRow[]): PayrollPrep {
-  return { month: "2026-07", periodStatus: "closed", rows };
+  return {
+    month: "2026-07",
+    periodStatus: "closed",
+    workMode: "shift",
+    payrollStatus: "open",
+    payrollClosedAt: null,
+    payrollClosedBy: null,
+    rows,
+  };
 }
+
+/**
+ * Vi tri cot, viet ra thanh ten de mot lan them cot khong lam mot bai kiem im
+ * lang kiem nham o ben canh.
+ */
+const COL = {
+  code: 0,
+  name: 1,
+  department: 2,
+  workedDays: 3,
+  creditedDays: 4,
+  totalHours: 5,
+  overtimeHours: 6,
+  overtimeNightHours: 7,
+  convertedHours: 8,
+  leaveDays: 9,
+  lateCount: 10,
+  basePay: 11,
+  overtimePay: 12,
+  hourAdjustment: 13,
+  allowance: 14,
+  deduction: 15,
+  netPay: 16,
+} as const;
+
+const COLUMN_COUNT = 17;
 
 describe("buildPayrollCsv — định dạng cho Excel vi-VN", () => {
   it("1. tách cột bằng dấu CHẤM PHẨY, không phải dấu phẩy", () => {
     const csv = buildPayrollCsv(prep([row()]));
     const [header, first] = csv.split("\r\n");
 
-    expect(header.split(";").length).toBe(10);
-    expect(first.split(";")[0]).toBe("NV001");
-    expect(first.split(";")[1]).toBe("Nguyễn Minh Anh");
+    expect(header.split(";").length).toBe(COLUMN_COUNT);
+    expect(first.split(";")[COL.code]).toBe("NV001");
+    expect(first.split(";")[COL.name]).toBe("Nguyễn Minh Anh");
   });
 
   it("2. số thập phân dùng dấu PHẨY (8,5) — Excel vi-VN đọc '8.5' thành chuỗi", () => {
@@ -51,9 +107,9 @@ describe("buildPayrollCsv — định dạng cho Excel vi-VN", () => {
     const cells = csv.split("\r\n")[1].split(";");
 
     // 10 080 phut = 168 gio (tron), 510 phut = 8,5 gio.
-    expect(cells[4]).toBe("168");
-    expect(cells[5]).toBe("8,5");
-    expect(cells[7]).toBe("12,75");
+    expect(cells[COL.totalHours]).toBe("168");
+    expect(cells[COL.overtimeHours]).toBe("8,5");
+    expect(cells[COL.convertedHours]).toBe("12,75");
     expect(csv).not.toContain("8.5");
   });
 
@@ -63,9 +119,9 @@ describe("buildPayrollCsv — định dạng cho Excel vi-VN", () => {
     );
     const cells = csv.split("\r\n")[1].split(";");
 
-    expect(cells[7]).toBe("chưa khai hệ số");
+    expect(cells[COL.convertedHours]).toBe("chưa khai hệ số");
     // Mot o `0` trong tep gui cho ke toan la mot lo lang khong ai doc ra.
-    expect(cells[7]).not.toBe("0");
+    expect(cells[COL.convertedHours]).not.toBe("0");
   });
 
   it("4. giữ nguyên số dòng: một dòng tiêu đề + một dòng mỗi nhân viên", () => {
@@ -87,7 +143,111 @@ describe("buildPayrollCsv — định dạng cho Excel vi-VN", () => {
     const csv = buildPayrollCsv(prep([row({ departmentName: null })]));
     const cells = csv.split("\r\n")[1].split(";");
 
-    expect(cells[2]).toBe("");
+    expect(cells[COL.department]).toBe("");
+  });
+});
+
+describe("Các cột TIỀN (PAY-01, plan 05-2-04)", () => {
+  it("10. sáu cột tiền xuất đúng giá trị, theo đúng định dạng số của tệp", () => {
+    const csv = buildPayrollCsv(prep([row()]));
+    const cells = csv.split("\r\n")[1].split(";");
+
+    expect(cells[COL.basePay]).toBe("10500000");
+    expect(cells[COL.overtimePay]).toBe("796875");
+    expect(cells[COL.hourAdjustment]).toBe("0");
+    expect(cells[COL.allowance]).toBe("730000");
+    expect(cells[COL.deduction]).toBe("100000");
+    expect(cells[COL.netPay]).toBe("11926875");
+  });
+
+  it("11. cột thực nhận BẰNG ĐÚNG tổng các cột tiền còn lại — tệp đối chiếu được", () => {
+    const csv = buildPayrollCsv(prep([row()]));
+    const cells = csv.split("\r\n")[1].split(";");
+    const value = (index: number) => Number(cells[index].replace(",", "."));
+
+    expect(value(COL.netPay)).toBe(
+      value(COL.basePay) +
+        value(COL.overtimePay) +
+        value(COL.hourAdjustment) +
+        value(COL.allowance) -
+        value(COL.deduction),
+    );
+  });
+
+  it("12. CHƯA KHAI MỨC LƯƠNG -> ô tiền mang CHỮ nói thiếu gì, KHÔNG mang số 0", () => {
+    const csv = buildPayrollCsv(
+      prep([
+        row({
+          basePay: null,
+          overtimePay: null,
+          hourAdjustment: null,
+          allowanceItems: [],
+          deductionItems: [],
+          allowanceTotal: null,
+          deductionTotal: null,
+          netPay: null,
+          missing: ["pay_rate"],
+        }),
+      ]),
+    );
+    const cells = csv.split("\r\n")[1].split(";");
+
+    expect(cells[COL.netPay]).toBe("chưa khai mức lương");
+    expect(cells[COL.basePay]).toBe("chưa khai mức lương");
+    // Mot o `0` o cot "Thuc nhan" doc nhu MOT SU THAT, va nguoi ky se ky.
+    expect(cells[COL.netPay]).not.toBe("0");
+  });
+
+  it("13. thiếu hệ số tăng ca -> ô tiền nói ĐÚNG loại ngày còn thiếu", () => {
+    const csv = buildPayrollCsv(
+      prep([
+        row({
+          overtimePay: null,
+          netPay: null,
+          convertedOvertimeHours: null,
+          missingMultiplierKeys: ["holiday"],
+          missing: ["overtime_rule:holiday"],
+        }),
+      ]),
+    );
+    const cells = csv.split("\r\n")[1].split(";");
+
+    expect(cells[COL.netPay]).toContain("chưa khai hệ số tăng ca");
+    expect(cells[COL.netPay]).toContain("ngày lễ");
+  });
+
+  it("14. LỜI CẢNH BÁO về thuế và bảo hiểm nằm trong TÊN CỘT thực nhận", () => {
+    const csv = buildPayrollCsv(prep([row()]));
+    const header = csv.split("\r\n")[0];
+
+    expect(header).toContain("Thực nhận");
+    expect(header).toContain("CHƯA GỒM thuế TNCN và BHXH/BHYT/BHTN");
+  });
+
+  it("15. tệp vẫn là MỘT BẢNG SẠCH: đúng một dòng tiêu đề, rồi tới dữ liệu", () => {
+    // Mot dong chu thich rieng o dau tep se lam dong tieu de khong con la dong
+    // 1, va moi cong thuc tro theo dong o dau ben kia se lech.
+    const csv = buildPayrollCsv(prep([row(), row({ employeeCode: "NV002" })]));
+    const lines = csv.split("\r\n");
+
+    expect(lines).toHaveLength(3);
+    expect(lines[0].split(";")[COL.code]).toBe("Mã nhân viên");
+    expect(lines[1].split(";")[COL.code]).toBe("NV001");
+  });
+
+  it("16. ngày công quy đổi `null` -> chữ, và nó là cột KHÁC với ngày công", () => {
+    const csv = buildPayrollCsv(
+      prep([
+        row({
+          creditedDays: null,
+          missingWorkModeInputs: ["standard_hours_per_day"],
+        }),
+      ]),
+    );
+    const cells = csv.split("\r\n")[1].split(";");
+
+    expect(cells[COL.workedDays]).toBe("21");
+    expect(cells[COL.creditedDays]).toBe("chưa khai số giờ chuẩn");
   });
 });
 

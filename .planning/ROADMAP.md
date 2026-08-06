@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Quy tắc công do doanh nghiệp tự khai** - Trang cài đặt: giờ làm, ân hạn, ngày lễ, hệ số tăng ca; phân loại công theo quy tắc đang hiệu lực (completed 2026-08-06)
 - [x] **Phase 5: Duyệt yêu cầu và chốt kỳ công** - Duyệt/từ chối có lý do, tác động đúng vào dữ liệu kỳ, lịch sử xử lý, thông báo, chốt kỳ có ghi vết (completed 2026-08-06)
 - [x] **Phase 5.1: Bảng công của quản trị và bàn giao cho kế toán** (INSERTED 2026-08-06) - Lưới tháng + danh sách lượt chấm công, bảng chuẩn bị lương xuất CSV (completed 2026-08-06)
-- [ ] **Phase 5.2: Tính lương do doanh nghiệp tự cấu hình** (INSERTED 2026-08-06) - Ba chế độ tính công, mức lương có phiên bản, phụ cấp/khấu trừ có phạm vi, chốt lương kỳ
+- [x] **Phase 5.2: Tính lương do doanh nghiệp tự cấu hình** (INSERTED 2026-08-06) - Ba chế độ tính công, mức lương có phiên bản, phụ cấp/khấu trừ có phạm vi, chốt lương kỳ
 - [ ] **Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp** - Danh sách toàn hệ thống, tra cứu sâu một doanh nghiệp, đường ghi riêng có kiểm soát
 
 ## Phase Details
@@ -279,29 +279,29 @@ nhân viên (PAY-05) — ba thứ đó vẫn ở V3. Chủ dự án quyết đ�
   5. Chốt lương một kỳ lưu lại bản chốt tự chứa (chế độ, mẫu số, mức lương, từng khoản) — mở
      lại sáu tháng sau vẫn ra đúng con số đã trả.
 
-**Plans:** 0/6 plans executed
+**Plans:** 6/6 plans executed
 
 Plans:
 **Wave 1**
 
-- [ ] 05-2-01-PLAN.md — Tracer: `employee_pay_rates` append-only + trigger, `work_mode` và hai mẫu số, tab "Thông tin lương" chạy thật (PAY-06)
+- [x] 05-2-01-PLAN.md — Tracer: `employee_pay_rates` append-only + trigger, `work_mode` và hai mẫu số, tab "Thông tin lương" chạy thật (PAY-06)
 
 **Wave 2** *(blocked on 05-2-01)*
 
-- [ ] 05-2-02-PLAN.md — Ba chế độ tính công (D-36/D-36a/D-39/D-43); cùng một tập chấm công ra ba kết quả
-- [ ] 05-2-03-PLAN.md — Danh mục phụ cấp/khấu trừ có phạm vi + loại trừ (D-40/D-40a/D-41), xem trước người bị áp (PAY-04)
+- [x] 05-2-02-PLAN.md — Ba chế độ tính công (D-36/D-36a/D-39/D-43); cùng một tập chấm công ra ba kết quả
+- [x] 05-2-03-PLAN.md — Danh mục phụ cấp/khấu trừ có phạm vi + loại trừ (D-40/D-40a/D-41), xem trước người bị áp (PAY-04)
 
 **Wave 3** *(blocked on 05-2-02 + 05-2-03)*
 
-- [ ] 05-2-04-PLAN.md — Phép tính tiền: lương gốc + tăng ca + phụ cấp − khấu trừ − phạt (PAY-01)
+- [x] 05-2-04-PLAN.md — Phép tính tiền: lương gốc + tăng ca + phụ cấp − khấu trừ − phạt (PAY-01)
 
 **Wave 4** *(blocked on 05-2-04)*
 
-- [ ] 05-2-05-PLAN.md — Chốt lương kỳ: bản chốt tự chứa (D-42), huỷ chốt có lý do (D-45)
+- [x] 05-2-05-PLAN.md — Chốt lương kỳ: bản chốt tự chứa (D-42), huỷ chốt có lý do (D-45)
 
 **Wave 5** *(blocked on Wave 4)*
 
-- [ ] 05-2-06-PLAN.md — Cổng cuối phase: chặn con số tiền nhúng cứng (có kiểm răng), e2e một kỳ lương, nghiệm thu
+- [x] 05-2-06-PLAN.md — Cổng cuối phase: chặn con số tiền nhúng cứng (có kiểm răng), e2e một kỳ lương, nghiệm thu
 
 **UI hint**: yes
 
@@ -333,7 +333,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 5.2 → 6
 | 4. Quy tắc công do doanh nghiệp tự khai | 6/6 | Complete    | 2026-08-06 |
 | 5. Duyệt yêu cầu và chốt kỳ công | 6/6 | Complete    | 2026-08-06 |
 | 5.1 Bảng công của quản trị (INSERTED) | — | Complete    | 2026-08-06 |
-| 5.2 Tính lương (INSERTED) | 0/6 | Planned | - |
+| 5.2 Tính lương (INSERTED) | 6/6 | Complete    | 2026-08-06 |
 | 6. Super admin và hỗ trợ nhiều doanh nghiệp | 0/TBD | Not started | - |
 
 ## Requirement Coverage

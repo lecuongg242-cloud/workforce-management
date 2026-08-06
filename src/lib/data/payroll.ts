@@ -14,3 +14,5 @@ export async function getPayrollPrep(month: string): Promise<PayrollPrep> {
     payrollPrepSchema,
   );
 }
+
+export { closePayroll, reopenPayroll } from "@/lib/data/mutations/payroll";

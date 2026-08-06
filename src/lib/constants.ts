@@ -7,6 +7,7 @@ import type {
   DepartmentStatus,
   EmployeeStatus,
   Gender,
+  OvertimeRuleKey,
   PhotoReviewStatus,
   RequestStatus,
   RequestType,
@@ -510,6 +511,7 @@ export const SETTINGS_LABEL = {
   tabShifts: "Ca làm việc",
   tabHolidays: "Ngày lễ",
   tabOvertime: "Tăng ca",
+  tabPayAdjustments: "Phụ cấp & khấu trừ",
   comingSoon: "Đang xây dựng",
   comingSoonBody: "Phần này sẽ có trong bước tiếp theo của Phase 4.",
   saveButton: "Lưu thay đổi",
@@ -542,6 +544,216 @@ export const SETTINGS_GENERAL_LABEL = {
   overtimeCapLabel: "Trần tăng ca (giờ / nhân viên / tháng)",
   overtimeCapHelp:
     "Để trống nghĩa là không giới hạn. Khi duyệt một yêu cầu tăng ca làm nhân viên vượt trần, hệ thống chỉ hiện cảnh báo kèm số giờ — người duyệt vẫn quyết định.",
+  // D-36 + D-38 (plan 05-2-01). Ba lựa chọn dưới đây là ba ĐỊNH NGHĨA khác
+  // nhau về "một ngày công", không phải ba biến thể giao diện — nên nhãn phải
+  // nói HỆ QUẢ, không chỉ nói tên.
+  workModeSectionTitle: "Cách tính công",
+  workModeSectionDescription:
+    "Doanh nghiệp định nghĩa thế nào là một ngày công. Lựa chọn này quyết định giờ nào được tính tăng ca và lương được cộng trừ theo gì.",
+  workModeLabel: "Cách tính công",
+  workModeHelp:
+    "Đổi cách tính công giữa chừng làm số liệu hai kỳ không so sánh được với nhau — cách tính đang dùng sẽ được ghi vào bản chốt lương của từng kỳ.",
+  standardHoursPerDayLabel: "Số giờ chuẩn một ngày công",
+  standardHoursPerDayHelp:
+    "Mẫu số để quy đổi một ngày công ra giờ. Để trống nghĩa là chưa khai — hệ thống sẽ nói rõ là chưa khai chứ không tự đoán 8 giờ.",
+  standardDaysPerMonthLabel: "Số ngày công chuẩn một tháng",
+  standardDaysPerMonthHelp:
+    "Mẫu số để quy đổi lương tháng ra đơn giá ngày, rồi ra đơn giá giờ. 22 hay 26 là chuyện của từng doanh nghiệp, nên không có giá trị mặc định.",
+  standardHoursMissingWarning:
+    "Chế độ này tính một ngày công bằng số giờ chuẩn, nên cần “Số giờ chuẩn một ngày công” mới chạy được. Bạn vẫn lưu được và khai sau — cho tới lúc đó, công của chế độ này chưa quy đổi được.",
+} as const;
+
+/**
+ * Ba chế độ tính công (D-36). Nhãn nói HỆ QUẢ chứ không chỉ tên: người chọn
+ * phải biết mình vừa đổi định nghĩa của "một ngày công" thành gì.
+ */
+export const WORK_MODE_LABEL: Record<
+  "daily_hours" | "shift" | "shift_hourly",
+  string
+> = {
+  daily_hours: "Không có ca — một công tính bằng số giờ chuẩn",
+  shift: "Có ca cụ thể — tăng ca là phần vượt độ dài ca",
+  shift_hourly: "Có ca cụ thể — lương cộng trừ theo giờ thực tế",
+};
+
+export const WORK_MODE_HINT: Record<
+  "daily_hours" | "shift" | "shift_hourly",
+  string
+> = {
+  daily_hours:
+    "Không cần khai ca. Làm đủ số giờ chuẩn là một công; làm thiếu thì ngày công là một số thập phân và lương trả theo giờ thực tế; làm vượt thì phần vượt là tăng ca.",
+  shift:
+    "Cách hệ thống đang chạy. Ngày công đếm theo ngày, tăng ca là phần vượt độ dài ca theo kế hoạch. Nghỉ không phép tự trừ một ngày công.",
+  shift_hourly:
+    "Vẫn khai ca như trên, nhưng lương bám giờ thực tế: thiếu giờ so với ca thì trừ, thừa thì cộng.",
+};
+
+export const WORK_MODE_OPTIONS = (
+  ["daily_hours", "shift", "shift_hourly"] as const
+).map((value) => ({ value, label: WORK_MODE_LABEL[value] }));
+
+/* -------------------------------------------------------------------------- */
+/* Mức lương của nhân viên (PAY-06, plan 05-2-01)                              */
+/* -------------------------------------------------------------------------- */
+
+/** Ba đơn vị lương khai được cho từng người (D-37). */
+export const PAY_RATE_UNIT_LABEL: Record<"month" | "day" | "hour", string> = {
+  month: "Lương tháng",
+  day: "Lương ngày",
+  hour: "Lương giờ",
+};
+
+/** Hậu tố đọc kèm số tiền: "12.000.000 ₫ / tháng". */
+export const PAY_RATE_UNIT_SUFFIX: Record<"month" | "day" | "hour", string> = {
+  month: "tháng",
+  day: "ngày",
+  hour: "giờ",
+};
+
+export const PAY_RATE_UNIT_OPTIONS = (["month", "day", "hour"] as const).map(
+  (value) => ({ value, label: PAY_RATE_UNIT_LABEL[value] }),
+);
+
+/**
+ * Tab "Thông tin lương" ở hồ sơ nhân viên.
+ *
+ * `appendOnlyNote` là câu quan trọng nhất khối này: màn hình không có nút sửa
+ * và không có nút xoá, và người dùng phải hiểu đó là CÓ CHỦ ĐÍCH chứ không
+ * phải một tính năng còn thiếu (D-37a).
+ */
+export const PAY_RATE_LABEL = {
+  sectionTitle: "Mức lương",
+  currentTitle: "Đang hiệu lực hôm nay",
+  notDeclared: "Chưa khai mức lương",
+  notDeclaredHint:
+    "Nhân viên này chưa có mức lương nào. Chưa khai thì bảng lương không tính ra được con số nào cho họ — hệ thống sẽ nói rõ là chưa khai chứ không tự đoán.",
+  futureOnlyHint:
+    "Mức lương đã khai chỉ bắt đầu hiệu lực trong tương lai, nên hôm nay chưa có mức nào áp dụng.",
+  historyTitle: "Lịch sử mức lương",
+  historyEmpty: "Chưa có phiên bản nào.",
+  columnEffectiveFrom: "Hiệu lực từ",
+  columnUnit: "Đơn vị",
+  columnAmount: "Số tiền",
+  columnCreatedBy: "Người khai",
+  unknownAuthor: "—",
+  declareAction: "Khai mức lương mới",
+  appendOnlyNote:
+    "Không có nút sửa và không có nút xoá ở đây: mỗi lần đổi lương là một phiên bản mới. Nhờ vậy bảng lương của kỳ đã trả không đổi theo khi lương hôm nay thay đổi.",
+  dialogTitle: "Khai mức lương mới",
+  dialogDescription:
+    "Mức lương này áp dụng từ ngày hiệu lực trở đi. Phiên bản cũ được giữ nguyên.",
+  fieldUnit: "Đơn vị lương",
+  fieldAmount: "Số tiền (₫)",
+  fieldEffectiveFrom: "Hiệu lực từ ngày",
+  retroWarning:
+    "Ngày hiệu lực nằm trong quá khứ. Mức lương này sẽ áp cho cả những ngày đã qua kể từ ngày đó — hãy chắc chắn đó là điều bạn muốn.",
+  cancel: "Huỷ",
+  save: "Khai mức lương",
+  saveSuccess: "Đã khai mức lương mới.",
+  saveError: "Không thể khai mức lương.",
+  disclaimer:
+    "Con số ở đây là lương gốc theo đơn vị đã khai — chưa gồm phụ cấp, khấu trừ, thuế thu nhập cá nhân và bảo hiểm.",
+} as const;
+
+/* -------------------------------------------------------------------------- */
+/* Phụ cấp và khấu trừ (PAY-04, plan 05-2-03)                                  */
+/* -------------------------------------------------------------------------- */
+
+export const PAY_ADJUSTMENT_KIND_LABEL: Record<"allowance" | "deduction", string> = {
+  allowance: "Phụ cấp (cộng)",
+  deduction: "Khấu trừ (trừ)",
+};
+
+export const PAY_ADJUSTMENT_VALUE_TYPE_LABEL: Record<
+  "fixed_amount" | "percent_of_daily_wage",
+  string
+> = {
+  fixed_amount: "Số tiền cố định",
+  percent_of_daily_wage: "% lương ngày",
+};
+
+export const PAY_ADJUSTMENT_BASIS_LABEL: Record<"per_period" | "per_late", string> = {
+  per_period: "Mỗi kỳ",
+  per_late: "Mỗi lần đi muộn",
+};
+
+export const PAY_ADJUSTMENT_SCOPE_TYPE_LABEL: Record<
+  "company" | "department" | "position" | "employee",
+  string
+> = {
+  company: "Toàn công ty",
+  department: "Theo phòng ban",
+  position: "Theo chức vụ",
+  employee: "Nhân viên cụ thể",
+};
+
+/**
+ * Tab "Phụ cấp & khấu trừ" của `/admin/settings`.
+ *
+ * `previewTitle` gắn với phần quan trọng nhất của màn hình: người khai không
+ * có cách nào tự suy ra "ai bị áp" từ bốn ô cấu hình, và nếu họ đoán sai thì
+ * **không có gì báo động** — người mất phụ cấp đáng có sẽ không biết để hỏi.
+ */
+export const PAY_ADJUSTMENT_LABEL = {
+  sectionTitle: "Phụ cấp và khấu trừ",
+  sectionDescription:
+    "Các khoản cộng thêm và trừ đi khi tính lương. Mỗi khoản áp cho mọi kỳ lương — chưa có khoản “chỉ kỳ này”.",
+  // D-40a: giới hạn nói thẳng ngay tại nơi khai, không để người dùng phát hiện
+  // ra bằng cách đi tìm.
+  perPeriodOnlyNote:
+    "Thưởng tháng, tạm ứng và phạt một lần chưa nhập được ở phiên bản này. Muốn cộng/trừ một lần thì tạo khoản, chạy kỳ lương, rồi tắt khoản đó.",
+  percentNote:
+    "“% lương ngày” tính trên lương một ngày công, không phải lương tháng. Lương ngày được quy đổi từ mức lương của từng người theo mẫu số ở tab Chung.",
+  addAction: "Thêm khoản",
+  emptyTitle: "Chưa khai khoản nào",
+  emptyBody:
+    "Doanh nghiệp chưa có phụ cấp hay khấu trừ nào. Bảng lương sẽ chỉ gồm lương gốc và tăng ca.",
+  columnName: "Tên khoản",
+  columnKind: "Loại",
+  columnValue: "Giá trị",
+  columnBasis: "Cách áp",
+  columnScope: "Phạm vi",
+  columnTargets: "Số người bị áp",
+  columnStatus: "Trạng thái",
+  statusActive: "Đang áp dụng",
+  statusInactive: "Đã tắt",
+  editAction: "Sửa",
+  deactivateAction: "Tắt khoản",
+  activateAction: "Bật lại",
+  // Không có "Xoá" ở bất kỳ đâu — và màn hình nói rõ vì sao.
+  noDeleteNote:
+    "Không có nút xoá: một khoản đã từng vào bảng lương đã chốt là phần giải thích “vì sao ra con số đó”. Tắt khoản để ngừng áp dụng — dữ liệu vẫn còn.",
+  scopeNone: "Chưa khai phạm vi",
+  scopeExcludeSuffix: "trừ {n} người",
+  dialogCreateTitle: "Thêm khoản",
+  dialogEditTitle: "Sửa khoản",
+  dialogDescription:
+    "Khoản này áp cho mọi kỳ lương, cho những người nằm trong phạm vi bên dưới.",
+  fieldName: "Tên khoản",
+  fieldKind: "Loại khoản",
+  fieldValueType: "Cách khai giá trị",
+  fieldValue: "Giá trị",
+  fieldBasis: "Cách áp",
+  fieldBasisHint:
+    "“Mỗi lần đi muộn” nhân giá trị với số lần đi muộn hệ thống đã đếm trong kỳ. Chỉ dùng được cho khoản khấu trừ.",
+  scopeSectionTitle: "Phạm vi áp dụng",
+  scopeSectionHint:
+    "Chưa khai phạm vi thì khoản này không áp cho ai — im lặng không phải là “tất cả”.",
+  scopeAddAction: "Thêm phạm vi",
+  excludeSectionTitle: "Loại trừ",
+  excludeSectionHint:
+    "Người bị loại trừ sẽ không nhận khoản này, kể cả khi họ nằm trong phạm vi ở trên.",
+  excludeAddAction: "Loại trừ một người",
+  previewTitle: "Những người thực sự bị áp",
+  previewEmpty:
+    "Chưa ai bị áp khoản này. Kiểm lại phạm vi — chức vụ gõ sai một chữ là không khớp ai.",
+  previewCount: "người",
+  removeAction: "Bỏ",
+  cancel: "Huỷ",
+  save: "Lưu khoản",
+  saveSuccess: "Đã lưu khoản.",
+  saveError: "Không thể lưu khoản.",
+  toggleSuccess: "Đã đổi trạng thái khoản.",
 } as const;
 
 /**
@@ -616,7 +828,109 @@ export const PAYROLL_LABEL = {
     "Doanh nghiệp chưa khai hệ số tăng ca cho loại ngày tương ứng, nên giờ quy đổi chưa tính được. Khai ở tab Tăng ca của trang Cài đặt.",
   emptyTitle: "Chưa có nhân viên nào để tổng hợp",
   emptyBody: "Tháng này chưa có nhân viên nào đang làm việc hoặc có bản ghi công.",
+  // D-36/D-39 (plan 05-2-02). "Ngày công quy đổi" là một cột KHÁC với "Ngày
+  // công": ở chế độ `daily_hours` nó là số thập phân, và trộn hai đại lượng
+  // vào một cột sẽ làm kế toán cộng nhầm.
+  workModePrefix: "Cách tính công:",
+  creditedDaysColumn: "Ngày công quy đổi",
+  creditedDaysHint:
+    "Số ngày công dùng để tính tiền, theo cách tính công doanh nghiệp đã chọn. Ở chế độ không có ca, con số này là số thập phân — làm 6/10 tiếng là 0,6 ngày công.",
+  hourDeltaColumn: "Lệch giờ so với ca",
+  hourDeltaHint:
+    "Tổng số giờ thừa (dương) hoặc thiếu (âm) so với ca theo kế hoạch. Chỉ có nghĩa ở chế độ tính lương theo giờ thực tế.",
+  missingWorkModeInput: "chưa khai số giờ chuẩn",
+  missingWorkModeInputHint:
+    "Chế độ “không có ca” tính một ngày công bằng số giờ chuẩn, mà doanh nghiệp chưa khai con số đó. Khai ở tab Chung của trang Cài đặt — hệ thống sẽ không tự đoán 8 giờ.",
+  missingWorkModeBanner:
+    "Chưa khai “Số giờ chuẩn một ngày công”, nên ngày công quy đổi của tháng này chưa tính được. Vào Cài đặt → tab Chung để khai.",
+
+  /* ---- PAY-01 (plan 05-2-04): các cột tiền -------------------------------- */
+  basePayColumn: "Lương gốc",
+  overtimePayColumn: "Tiền tăng ca",
+  hourAdjustmentColumn: "Cộng/trừ theo giờ",
+  allowanceColumn: "Phụ cấp",
+  deductionColumn: "Khấu trừ",
+  netPayColumn: "Thực nhận",
+  // Đây KHÔNG phải một dòng nhỏ ở góc: hiểu nhầm con số này đã trừ thuế và
+  // bảo hiểm là điều dễ xảy ra nhất của cả màn hình, và hậu quả là doanh
+  // nghiệp trả thiếu cho người lao động.
+  taxDisclaimer:
+    "Các con số tiền dưới đây CHƯA GỒM thuế thu nhập cá nhân và bảo hiểm xã hội / y tế / thất nghiệp. Hai khoản đó chưa được tính trong phiên bản này.",
+  taxDisclaimerCsv:
+    "CHƯA GỒM thuế TNCN và BHXH/BHYT/BHTN",
+  // Mỗi lý do thiếu được nói bằng một câu người dùng làm được gì với nó —
+  // "null" hay "thiếu dữ liệu" thì không ai biết phải đi đâu.
+  missingReasonPayRate: "chưa khai mức lương",
+  missingReasonDaysPerMonth: "chưa khai số ngày công chuẩn",
+  missingReasonHoursPerDay: "chưa khai số giờ chuẩn",
+  missingReasonOvertimeRule: "chưa khai hệ số tăng ca",
+  missingReasonFallback: "chưa đủ dữ kiện",
+  detailTitle: "Chi tiết dòng lương",
+  detailBaseLabel: "Lương gốc",
+  detailOvertimeLabel: "Tiền tăng ca",
+  detailHourAdjustmentLabel: "Cộng/trừ theo giờ thực tế",
+  detailAllowanceTitle: "Phụ cấp",
+  detailDeductionTitle: "Khấu trừ",
+  detailNetLabel: "Thực nhận",
+  detailEmptyAdjustments: "Không có khoản nào áp cho người này.",
+  detailPerLateSuffix: "lần",
+  detailMissingTitle: "Chưa tính được, vì:",
+  expandHint: "Bấm một dòng để xem vì sao ra con số đó.",
+
+  /* ---- D-42/D-45 (plan 05-2-05): chốt lương kỳ ---------------------------- */
+  payrollClosed: "Đã chốt lương — con số đã đóng khung",
+  payrollOpen: "Chưa chốt lương — con số còn tính lại theo cấu hình hiện tại",
+  payrollClosedBySuffix: "chốt lúc",
+  closeAction: "Chốt lương kỳ",
+  closeDialogTitle: "Chốt lương kỳ này?",
+  // Ba điều, và cả ba đều cần: cái gì được đóng khung, hệ quả của việc đóng
+  // khung, và đường lùi. Thiếu điều thứ ba thì người dùng sẽ không dám bấm.
+  closeDialogBody:
+    "Hệ thống sẽ lưu lại con số hiện tại của từng người, cùng cách tính công, mức lương và từng khoản đã áp. Sau khi chốt, đổi mức lương hay sửa danh mục khoản KHÔNG làm đổi con số của kỳ này nữa. Huỷ chốt được, nhưng phải nêu lý do và bản chốt sẽ bị xoá cả.",
+  closeConfirm: "Chốt lương kỳ",
+  closeSuccess: "Đã chốt lương kỳ.",
+  closeError: "Không thể chốt lương kỳ này.",
+  // Nút bị vô hiệu KHÔNG được im lặng — người dùng phải biết cần làm gì.
+  closeBlockedPeriodOpen:
+    "Chưa chốt lương được: kỳ công của tháng này chưa chốt, nên số liệu công còn thay đổi được. Chốt kỳ công ở trang Kỳ công trước.",
+  closeBlockedIncomplete:
+    "Chưa chốt lương được: còn {n} dòng chưa đủ dữ kiện. Bấm vào dòng có chữ màu cam để xem thiếu gì.",
+  reopenAction: "Huỷ chốt lương",
+  reopenDialogTitle: "Huỷ chốt lương kỳ này?",
+  reopenDialogBody:
+    "Bản chốt của kỳ này sẽ bị xoá cả, và bảng lương quay về tính theo cấu hình hiện tại. Hệ thống KHÔNG biết tiền đã trả hay chưa, nên hãy chắc chắn trước khi huỷ.",
+  reopenReasonLabel: "Lý do huỷ chốt",
+  reopenReasonPlaceholder: "Ví dụ: khai nhầm mức lương của một người",
+  reopenReasonRequired:
+    "Lý do là dấu vết duy nhất giải thích vì sao bản chốt bị bỏ đi.",
+  reopenConfirm: "Huỷ chốt lương",
+  reopenSuccess: "Đã huỷ chốt lương kỳ.",
+  reopenError: "Không thể huỷ chốt lương kỳ này.",
 } as const;
+
+/**
+ * Lý do một dòng lương chưa ra được con số -> câu người dùng đọc được.
+ *
+ * Khoá `overtime_rule:<key>` mang thêm loại ngày, nên nó được tra bằng tiền
+ * tố chứ không tra thẳng trong bảng này (xem `describeMissingReason`).
+ */
+export const PAYROLL_MISSING_REASON_LABEL: Record<string, string> = {
+  pay_rate: PAYROLL_LABEL.missingReasonPayRate,
+  standard_days_per_month: PAYROLL_LABEL.missingReasonDaysPerMonth,
+  standard_hours_per_day: PAYROLL_LABEL.missingReasonHoursPerDay,
+};
+
+/** Một khoá `missing` -> câu tiếng Việt. Khoá lạ trả câu chung, không trả khoá thô. */
+export function describeMissingReason(key: string): string {
+  if (key.startsWith("overtime_rule:")) {
+    const ruleKey = key.slice("overtime_rule:".length);
+    const label = OVERTIME_RULE_KEY_LABEL[ruleKey as OvertimeRuleKey];
+    return label
+      ? `${PAYROLL_LABEL.missingReasonOvertimeRule} (${label.toLowerCase()})`
+      : PAYROLL_LABEL.missingReasonOvertimeRule;
+  }
+  return PAYROLL_MISSING_REASON_LABEL[key] ?? PAYROLL_LABEL.missingReasonFallback;
+}
 
 /**
  * Kỳ công và thao tác chốt kỳ (PERD-01/PERD-02, plan 05-05).

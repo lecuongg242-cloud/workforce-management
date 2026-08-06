@@ -10,6 +10,7 @@ import {
   shiftBreakInfoById,
   type ShiftBreakInfo,
 } from "@/lib/attendance/day";
+import { resolveDayCredit, sumCreditedDays } from "@/lib/attendance/work-mode";
 import { shiftMonth } from "@/lib/format";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { AttendanceRecord, MonthlySummary } from "@/lib/types/domain";
@@ -144,8 +145,27 @@ export function summarizeMonth({
   );
   const converted = sumConvertedOvertimeHours(classifications);
 
+  // D-36: mot ngay cham cong duoc quy ve NGAY CONG theo che do ma doanh nghiep
+  // da chon. Phep quy do nam o `work-mode.ts` va chi duoc goi o DAY — khong
+  // Route Handler nao tu goi no, vi khi ay hai duong doc se lech nhau (dung
+  // loai trung lap ma module nay ra doi de don).
+  const credits = days.map((day, index) =>
+    resolveDayCredit({
+      day,
+      dayType: classifications[index].dayType,
+      mode: context.rules.workMode,
+      shift: context.shiftRules.get(day.shiftId),
+      standardHoursPerDay: context.rules.standardHoursPerDay,
+    }),
+  );
+  const credited = sumCreditedDays(credits);
+
   return {
     month,
+    // `workedDays` GIU NGUYEN y nghia cu (dem ngay co gio lam) de khong man
+    // hinh nao dang doc no bi doi so. Con so dung de TINH TIEN la
+    // `creditedDays` — hai dai luong khac nhau, va o che do `daily_hours`
+    // chung khac nhau that.
     workedDays: days.filter((day) => day.workedMinutes > 0).length,
     totalMinutes: days.reduce((sum, day) => sum + day.workedMinutes, 0),
     // Chi luot DAU TIEN cua ngay mang status "late" (xem `checkIn`), va
@@ -164,5 +184,10 @@ export function summarizeMonth({
     ),
     convertedOvertimeHours: converted.hours,
     missingMultiplierKeys: converted.missingKeys,
+    workMode: context.rules.workMode,
+    creditedDays: credited.creditedDays,
+    regularMinutes: credited.regularMinutes,
+    hourDeltaMinutes: credited.hourDeltaMinutes,
+    missingWorkModeInputs: credited.missing,
   };
 }

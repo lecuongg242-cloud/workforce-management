@@ -235,6 +235,121 @@ export interface OvertimeRuleGroup {
   versions: OvertimeRule[];
 }
 
+/* -------------------------------------------------------------------------- */
+/* Muc luong (PAY-06, Phase 5.2)                                               */
+/* -------------------------------------------------------------------------- */
+
+/** Ba don vi luong khai duoc cho TUNG NGUOI, khong ep chung ca doanh nghiep (D-37). */
+export type PayRateUnit = "month" | "day" | "hour";
+
+/**
+ * MOT PHIEN BAN muc luong cua mot nhan vien (bang `employee_pay_rates`). Bang
+ * la APPEND-ONLY (D-37a): sua luong nghia la them mot dong moi voi
+ * `effectiveFrom` khac, dong cu giu nguyen de bang luong cua ky da tra khong
+ * tinh lai ra mot con so khac.
+ */
+export interface PayRate {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  unit: PayRateUnit;
+  amount: number;
+  /** "YYYY-MM-DD" — ngay bat dau co hieu luc */
+  effectiveFrom: string;
+  /** ISO date-time */
+  createdAt: string;
+  createdBy: string | null;
+}
+
+/**
+ * Lich su muc luong cua MOT nhan vien kem phien ban DANG HIEU LUC hom nay.
+ * `current` bang `null` nghia la CHUA KHAI — khong bao gio duoc ngam hieu la
+ * 0 (D-26).
+ */
+export interface PayRateHistory {
+  employeeId: string;
+  current: PayRate | null;
+  versions: PayRate[];
+}
+
+/* -------------------------------------------------------------------------- */
+/* Phu cap va khau tru (PAY-04, Phase 5.2)                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Cong (`allowance`) hay tru (`deduction`). */
+export type PayAdjustmentKind = "allowance" | "deduction";
+
+/**
+ * CACH KHAI gia tri, khong phai gia tri da quy doi. `percent_of_daily_wage`
+ * tinh tren LUONG NGAY (khong phai luong thang) — quy ra tien la viec cua
+ * phep tinh luong, khong phai cua kieu nay.
+ */
+export type PayAdjustmentValueType = "fixed_amount" | "percent_of_daily_wage";
+
+/**
+ * `per_period` ap mot lan cho ca ky; `per_late` nhan voi SO LAN di muon he
+ * thong da dem (D-41). `per_late` chi hop le voi `deduction`.
+ */
+export type PayAdjustmentBasis = "per_period" | "per_late";
+
+/** Bon kieu pham vi. `company` la kieu duy nhat khong mang gia tri. */
+export type PayAdjustmentScopeType =
+  | "company"
+  | "department"
+  | "position"
+  | "employee";
+
+/**
+ * MOT dong pham vi. `include` va `exclude` la HAI CHIEU khac nhau, khong phai
+ * hai gia tri cua cung mot danh sach: "toan cong ty tru 3 nguoi" la mot dong
+ * include/company cong ba dong exclude/employee (D-40).
+ */
+export interface PayAdjustmentScope {
+  id: string;
+  companyId: string;
+  adjustmentId: string;
+  mode: "include" | "exclude";
+  scopeType: PayAdjustmentScopeType;
+  /** `null` khi va chi khi `scopeType === "company"`. */
+  scopeValue: string | null;
+}
+
+/**
+ * Mot KHOAN phu cap / khau tru do doanh nghiep tu khai (bang `pay_adjustments`).
+ *
+ * KHONG CO TRUONG THANG (D-40a): moi khoan ap cho moi ky luong. Gioi han da
+ * biet — thuong thang, tam ung, phat mot lan chua nhap duoc; muon cong/tru mot
+ * lan thi tao khoan, chay ky, roi tat khoan do.
+ */
+export interface PayAdjustment {
+  id: string;
+  companyId: string;
+  name: string;
+  kind: PayAdjustmentKind;
+  valueType: PayAdjustmentValueType;
+  value: number;
+  basis: PayAdjustmentBasis;
+  /** Tat mot khoan KHONG xoa no — ban chot luong cua ky da tra van giu no. */
+  isActive: boolean;
+  /** ISO date-time */
+  createdAt: string;
+  scopes: PayAdjustmentScope[];
+}
+
+/**
+ * Cach doanh nghiep dinh nghia MOT NGAY CONG (D-36). Ba gia tri nay khong
+ * phai ba bien the giao dien — chung la ba dinh nghia khac nhau, va doanh
+ * nghiep that o Viet Nam dung ca ba.
+ */
+export type WorkMode = "daily_hours" | "shift" | "shift_hourly";
+
+/**
+ * Dau vao ma doanh nghiep chua khai, lam phep quy doi ngay cong khong chay
+ * duoc (D-38). Chi mot gia tri o phase nay; danh sach nay la noi cac dau vao
+ * bat buoc ve sau duoc them vao.
+ */
+export type WorkModeMissingInput = "standard_hours_per_day";
+
 /**
  * Cau hinh van hanh cua mot doanh nghiep (Phase 4, bang `company_settings`).
  *
@@ -257,6 +372,22 @@ export interface CompanySettings {
    * KHONG GIOI HAN — khong phai 0, va khong phai "chua tai xong".
    */
   overtimeCapHoursPerMonth: number | null;
+  /**
+   * D-36: cach tinh cong cua doanh nghiep. Mac dinh `shift` — doanh nghiep
+   * dang chay giu nguyen hanh vi tu Phase 4.
+   */
+  workMode: WorkMode;
+  /**
+   * D-38: MAU SO quy doi mot ngay cong ra gio. `null` nghia la CHUA KHAI —
+   * khong phai 0, va khong phai 8. Che do `daily_hours` can con so nay moi
+   * chay duoc; noi nao can no ma thay `null` phai noi "chua khai", khong doan.
+   */
+  standardHoursPerDay: number | null;
+  /**
+   * D-38: MAU SO quy doi luong thang ra don gia ngay. `null` = CHUA KHAI —
+   * 22 hay 26 la chuyen cua tung doanh nghiep (D-26).
+   */
+  standardDaysPerMonth: number | null;
   /** ISO date-time */
   updatedAt: string;
   updatedBy: string | null;
@@ -587,6 +718,23 @@ export interface MonthlySummary {
   /** `null` nghia la THIEU HE SO (D-26), khong phai "khong co gio tang ca". */
   convertedOvertimeHours?: number | null;
   missingMultiplierKeys?: OvertimeRuleKey[];
+
+  /* D-36 (plan 05-2-02) — so lieu theo CHE DO TINH CONG cua doanh nghiep. */
+  /** Che do da duoc ap de ra cac con so duoi day. */
+  workMode?: WorkMode;
+  /**
+   * So NGAY CONG dung de tinh tien. **Co the la so thap phan** o che do
+   * `daily_hours` (D-39). Khac `workedDays` — cai do van la phep dem ngay co
+   * gio lam va giu nguyen y nghia cu.
+   * `null` nghia la THIEU MAU SO (D-26), khong phai "khong lam ngay nao".
+   */
+  creditedDays?: number | null;
+  /** So phut duoc tra theo don gia THUONG; `null` khi thieu mau so. */
+  regularMinutes?: number | null;
+  /** Tong so phut thua (duong) / thieu (am) so voi ca — chi khac 0 o `shift_hourly`. */
+  hourDeltaMinutes?: number;
+  /** Dau vao doanh nghiep chua khai, lam phep quy doi khong chay duoc. */
+  missingWorkModeInputs?: WorkModeMissingInput[];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -617,12 +765,75 @@ export interface PayrollPrepRow {
   /** `null` nghia la THIEU HE SO (D-26), khong phai "khong co gio tang ca". */
   convertedOvertimeHours: number | null;
   missingMultiplierKeys: OvertimeRuleKey[];
+  /**
+   * D-36/D-39: so ngay cong theo CHE DO tinh cong cua doanh nghiep — **co the
+   * la so thap phan**. `null` = thieu mau so quy doi (D-38).
+   */
+  creditedDays: number | null;
+  regularMinutes: number | null;
+  hourDeltaMinutes: number;
+  missingWorkModeInputs: WorkModeMissingInput[];
+
+  /* PAY-01 (plan 05-2-04) — PHAN TIEN.
+   *
+   * MOI truong duoi day co the la `null`, va `null` KHONG BAO GIO duoc hien
+   * thanh 0: mot so 0 trong bang luong doc nhu mot su that ("nguoi nay khong
+   * duoc tra gi") va nguoi ky duyet se ky. `missing` noi ro thieu gi.
+   *
+   * Con so o day CHUA GOM thue TNCN va BHXH/BHYT/BHTN (ngoai pham vi V2).
+   */
+  /**
+   * MUC LUONG DA AP cho ky nay (hieu luc tai ngay cuoi ky). `null` = chua khai.
+   * Co mat o hop dong de ban chot (D-42) chep lai duoc, va de man hinh giai
+   * thich duoc con so ma khong phai doc them mot duong nua.
+   */
+  payUnit: PayRateUnit | null;
+  payAmount: number | null;
+  basePay: number | null;
+  overtimePay: number | null;
+  /** Cong/tru theo gio thuc te — chi khac 0 o che do `shift_hourly`. */
+  hourAdjustment: number | null;
+  allowanceItems: PayrollAdjustmentItem[];
+  deductionItems: PayrollAdjustmentItem[];
+  allowanceTotal: number | null;
+  deductionTotal: number | null;
+  /** THUC NHAN = luong goc + tang ca + lech gio + phu cap − khau tru. */
+  netPay: number | null;
+  /** Ly do khien dong nay khong ra duoc con so; rong khi du du kien. */
+  missing: string[];
 }
+
+/** Mot khoan da quy ra tien trong mot dong luong. */
+export interface PayrollAdjustmentItem {
+  adjustmentId: string;
+  name: string;
+  amount: number;
+  /** So lan nhan — `per_late` nhan voi so lan di muon; 1 voi `per_period`. */
+  multiplier: number;
+}
+
+/**
+ * Trang thai CHOT LUONG cua mot ky (D-42) — khac `periodStatus` (chot KY CONG).
+ *
+ * `closed` nghia la con so da duoc dong khung: bang luong doc tu BAN CHOT, va
+ * doi muc luong hom nay khong lam doi con so cua ky nay.
+ */
+export type PayrollStatus = "open" | "closed";
 
 /** Bang chuan bi luong cua mot thang. */
 export interface PayrollPrep {
   /** "YYYY-MM" */
   month: string;
+  /** D-36: che do tinh cong dang ap cho ca bang (lua chon cua doanh nghiep). */
+  workMode: WorkMode;
+  /**
+   * D-42. `closed` -> moi con so duoi day den tu BAN CHOT, khong tinh lai.
+   * `open` -> tinh luc truy van tu cau hinh hien tai.
+   */
+  payrollStatus: PayrollStatus;
+  /** ISO date-time, chi co khi `payrollStatus === "closed"`. */
+  payrollClosedAt: string | null;
+  payrollClosedBy: string | null;
   /**
    * Trang thai ky cong cua thang do; `null` khi ky chua ton tai trong bang.
    * `closed` nghia la so lieu da khoa (PERD-02) — day la dieu ke toan can biet
@@ -647,6 +858,34 @@ export type WorkSiteInput = Omit<WorkSite, "id" | "companyId" | "createdAt">;
 export type HolidayInput = Omit<Holiday, "id" | "companyId">;
 
 export type OvertimeRuleInput = Omit<OvertimeRule, "id" | "companyId">;
+
+/**
+ * Dau vao GHI muc luong — luon la MOT PHIEN BAN MOI (D-37a). Khong khai
+ * `companyId` (D-12b); `createdAt`/`createdBy` do database va phien quyet
+ * dinh, khong nhan tu client (D-19).
+ */
+export type PayRateInput = Omit<
+  PayRate,
+  "id" | "companyId" | "createdAt" | "createdBy"
+>;
+
+/** MOT dong pham vi trong dau vao ghi — chua co `id`, chua gan vao khoan nao. */
+export type PayAdjustmentScopeInput = Pick<
+  PayAdjustmentScope,
+  "mode" | "scopeType" | "scopeValue"
+>;
+
+/**
+ * Dau vao GHI mot khoan, KEM TOAN BO tap pham vi. Pham vi la mot TAP chu khong
+ * phai mot chuoi lich su, nen duong ghi nhan ca tap moi lan chu khong nhan
+ * tung phep them/bot.
+ */
+export type PayAdjustmentInput = Omit<
+  PayAdjustment,
+  "id" | "companyId" | "createdAt" | "scopes"
+> & {
+  scopes: PayAdjustmentScopeInput[];
+};
 
 /**
  * Dau vao GHI cau hinh — PATCH TUNG PHAN: truong khong gui giu nguyen gia

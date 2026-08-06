@@ -28,6 +28,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { EmployeeForm } from "@/components/employees/employee-form";
+import { PayRatePanel } from "@/components/employees/pay-rate-panel";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -642,14 +643,22 @@ export function EmployeeDetailView({
         </TabsContent>
 
         {/* -------------------------------------------------- Luong */}
+        {/* PAY-06 (05-2-01): loi hua "giai doan tiep theo" cua V1 duoc dong
+            lai o day. Chi owner/admin thay tab nay co noi dung (D-44) — vai
+            tro khac nhan 403 o duong doc, nen hien mot khoi noi thang thay vi
+            de mot man hinh loi. */}
         <TabsContent value="salary" className="mt-4">
-          <section className="surface-card">
-            <EmptyState
-              icon={Wallet}
-              title="Thông tin lương sẽ được thiết lập trong giai đoạn tiếp theo."
-              description="Khi tính năng bảng lương ra mắt, bạn sẽ cấu hình mức lương, phụ cấp và các khoản khấu trừ tại đây."
-            />
-          </section>
+          {isAdminRole ? (
+            <PayRatePanel employeeId={employeeId} today={today} />
+          ) : (
+            <section className="surface-card">
+              <EmptyState
+                icon={Wallet}
+                title="Bạn không có quyền xem thông tin lương."
+                description="Chỉ chủ doanh nghiệp và quản trị viên xem được mức lương của nhân viên."
+              />
+            </section>
+          )}
         </TabsContent>
       </Tabs>
 

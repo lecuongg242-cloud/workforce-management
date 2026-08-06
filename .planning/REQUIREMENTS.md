@@ -122,9 +122,9 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 > tăng ca. PAY-02, PAY-03 và PAY-05 **vẫn ở V3**. Chi tiết quyết định ở
 > `.planning/phases/05-2-.../05-2-CONTEXT.md` (D-36…D-42).
 
-- [ ] **PAY-01**: Hệ thống tính ra số tiền lương của từng nhân viên cho một kỳ, từ dữ liệu công của kỳ đó và mức lương đã khai; **không** gồm thuế TNCN và bảo hiểm
-- [ ] **PAY-04**: Doanh nghiệp tự khai danh mục phụ cấp và khấu trừ, mỗi khoản có phạm vi áp dụng (toàn công ty / phòng ban / chức vụ / nhân viên cụ thể) và danh sách loại trừ; phạt đi muộn là một khoản khấu trừ có điều kiện
-- [ ] **PAY-06**: Doanh nghiệp chọn được cách tính công (không có ca / có ca / có ca nhưng cộng-trừ theo giờ) và mức lương của mỗi nhân viên có phiên bản theo thời gian — sửa mức lương hôm nay không làm đổi bảng lương kỳ đã trả
+- [x] **PAY-01**: Hệ thống tính ra số tiền lương của từng nhân viên cho một kỳ, từ dữ liệu công của kỳ đó và mức lương đã khai; **không** gồm thuế TNCN và bảo hiểm
+- [x] **PAY-04**: Doanh nghiệp tự khai danh mục phụ cấp và khấu trừ, mỗi khoản có phạm vi áp dụng (toàn công ty / phòng ban / chức vụ / nhân viên cụ thể) và danh sách loại trừ; phạt đi muộn là một khoản khấu trừ có điều kiện
+- [x] **PAY-06**: Doanh nghiệp chọn được cách tính công (không có ca / có ca / có ca nhưng cộng-trừ theo giờ) và mức lương của mỗi nhân viên có phiên bản theo thời gian — sửa mức lương hôm nay không làm đổi bảng lương kỳ đã trả
 
 ### Super admin (SADM)
 
@@ -220,9 +220,9 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | VIEW-01 | Phase 5.1 | Complete |
 | VIEW-02 | Phase 5.1 | Complete |
 | VIEW-03 | Phase 5.1 | Complete |
-| PAY-01 | Phase 5.2 | Pending |
-| PAY-04 | Phase 5.2 | Pending |
-| PAY-06 | Phase 5.2 | Pending |
+| PAY-01 | Phase 5.2 | Complete |
+| PAY-04 | Phase 5.2 | Complete |
+| PAY-06 | Phase 5.2 | Complete |
 | SADM-01 | Phase 6 | Pending |
 | SADM-02 | Phase 6 | Pending |
 | SADM-03 | Phase 6 | Pending |

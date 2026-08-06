@@ -145,6 +145,17 @@ export const monthlySummarySchema = z.object({
   missingMultiplierKeys: z
     .array(z.enum(["weekday", "weekend", "holiday", "night"]))
     .optional(),
+  /* ---- D-36/D-39 (plan 05-2-02): so lieu theo CHE DO TINH CONG ------------
+   * `creditedDays` KHONG phai `z.number().int()`: o che do `daily_hours` no
+   * la mot so thap phan (lam 6/10 tieng ra 0,6 — D-39). Mot rang buoc `int()`
+   * o day se lam ca phan hoi hong doi voi doanh nghiep dung che do do.
+   * `null` nghia la THIEU MAU SO, khong phai "khong lam ngay nao".
+   */
+  workMode: z.enum(["daily_hours", "shift", "shift_hourly"]).optional(),
+  creditedDays: z.number().nullable().optional(),
+  regularMinutes: z.number().nullable().optional(),
+  hourDeltaMinutes: z.number().optional(),
+  missingWorkModeInputs: z.array(z.enum(["standard_hours_per_day"])).optional(),
 });
 
 /** Mot ngay cong kem phan loai theo quy tac cua doanh nghiep (SET-04). */

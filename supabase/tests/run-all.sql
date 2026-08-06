@@ -23,3 +23,6 @@
 \ir 13_apply_approved_request.sql
 \ir 14_notifications.sql
 \ir 15_period_close.sql
+\ir 16_employee_pay_rates.sql
+\ir 17_pay_adjustments.sql
+\ir 18_payroll_runs.sql

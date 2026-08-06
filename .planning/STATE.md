@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 5.2
-current_phase_name: Tính lương do doanh nghiệp tự cấu hình
-status: planning
-stopped_at: Phase 5.2 da lap ke hoach day du (CONTEXT + 6 plan, 5 wave); chua bat dau 05-2-01
-last_updated: "2026-08-06T09:00:00.000Z"
+current_phase: 6
+current_phase_name: Super admin và hỗ trợ nhiều doanh nghiệp
+status: ready
+stopped_at: Phase 5.2 da thuc thi xong 6/6 plan; cho chu du an ky bien ban 05-2-UAT.md roi sang Phase 6
+last_updated: "2026-08-06T16:45:00.000Z"
 last_activity: 2026-08-06
-last_activity_desc: Lap ke hoach Phase 5.2 — 05-2-CONTEXT.md + 05-2-01..05-2-06-PLAN.md
+last_activity_desc: Thuc thi Phase 5.2 — 6/6 plan (05-2-01..05-2-06), migration 0022-0024, cong no-hardcoded-money, e2e-payroll
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 36
-  completed_plans: 36
+  total_phases: 6
+  completed_phases: 6
+  total_plans: 42
+  completed_plans: 42
 ---
 
 # Project State
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-31)
 
 **Core value:** Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng nơi, đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
-**Current focus:** Phase 5.2 — tính lương do doanh nghiệp tự cấu hình
+**Current focus:** Phase 6 — super admin và hỗ trợ nhiều doanh nghiệp
 
 ## Current Position
 
-Phase: 5.2 — Tính lương do doanh nghiệp tự cấu hình (INSERTED)
-Plan: 05-2-01 (chưa bắt đầu) — 6 plan đã lập, xếp thành 5 wave
-Status: Planned, ready to execute
-Last activity: 2026-08-06 — Lập kế hoạch Phase 5.2 (CONTEXT + 6 plan)
+Phase: 5.2 — Tính lương do doanh nghiệp tự cấu hình (INSERTED) — **6/6 plan đã thực thi**
+Plan: kế tiếp là Phase 6 (chưa lập kế hoạch)
+Status: Phase 5.2 xong về mã và test; **biên bản `05-2-UAT.md` chưa có chữ ký chủ dự án**
+Last activity: 2026-08-06 — Thực thi Phase 5.2 (migration 0022–0024, 3 mô-đun thuần mới, cổng `no-hardcoded-money`, `e2e-payroll`)
 
-Progress: [██████████] 100% của 5/6 phase đã có kế hoạch
+Progress: [██████████] 100% — Phase 1–5.2 đã thực thi xong
 
 ## Performance Metrics
 
@@ -166,6 +166,28 @@ Quyết định của Phase 5 (lập kế hoạch 2026-08-06, chi tiết ở `05
 - D-34: thông báo có bảng riêng, RLS theo **người nhận** chứ không theo doanh nghiệp — nội dung mang lý do từ chối
 - D-35: duyệt nghỉ phép sinh bản ghi công theo **lịch làm việc của ca**, bỏ qua ngày nghỉ và ngày lễ
 
+Quyết định của Phase 5.2 (chốt 2026-08-06 với chủ dự án, chi tiết ở `05-2-CONTEXT.md`):
+
+- D-36: ba chế độ tính công (`daily_hours` / `shift` / `shift_hourly`) — ba **định nghĩa khác nhau** về "một ngày công", không phải ba biến thể giao diện; D-36a: hệ quả bắt buộc — `daily_hours` phải được xử lý tường minh trong mô-đun phân loại, để `scheduledMinutes = 0` sẽ biến **toàn bộ** giờ làm thành tăng ca
+- D-37: mỗi nhân viên khai **đơn vị** (tháng/ngày/giờ) và **số tiền** của riêng mình; D-37a: mức lương **append-only** theo `effective_from`, **có trigger cưỡng chế ở database**
+- D-38: `company_settings` thêm `standard_hours_per_day` + `standard_days_per_month` — **mẫu số** quy đổi, **không có mặc định** (22 hay 26 là chuyện của từng doanh nghiệp)
+- D-39: chế độ `daily_hours` trả theo **giờ thực tế**; ngày công thành một **số thập phân** (6/10 tiếng → 0,6)
+- D-40: phụ cấp/khấu trừ là danh mục có **phạm vi áp dụng** và **danh sách loại trừ** — hai chiều khác nhau, không gộp được; D-40a: mọi khoản áp cho **mọi kỳ**, không có khoản "chỉ kỳ này"
+- D-41: phạt đi muộn là khoản khấu trừ nhân với **số lần** đi muộn — không phân bậc theo số phút
+- D-42: chốt lương lưu **bản chốt tự chứa** — ngoại lệ **có chủ đích thứ hai** với khuôn tính-lúc-truy-vấn (thứ nhất là D-32a); D-42a: làm tròn tới đồng, nửa lên, và **không** làm tròn ở bước trung gian
+- D-43: `leave_unpaid` **không** được tính ngày công ở cả ba chế độ; `leave_paid` thì có — hai trạng thái nghỉ từ đây khác nhau về **tiền**, không chỉ về nhãn
+- D-44: `owner` **và** `admin` đều xem được bảng lương — hệ quả: **mọi `admin` xem được lương của mọi người**
+- D-45: **có** đường huỷ chốt lương (khác D-32b của kỳ công) — xoá cả bản chốt, lý do bắt buộc, để lại `audit_log`
+
+Quyết định phát sinh **khi thực thi** Phase 5.2 (2026-08-06; chi tiết ở từng file SUMMARY):
+
+- 05-2-02: `workedDays` (đếm ngày) và `creditedDays` (ngày công để tính tiền) **song song, không thay thế nhau** — ở `daily_hours` chúng khác nhau thật; `effectiveScheduledMinutes()` là nguồn duy nhất của mẫu số tính phần vượt
+- 05-2-03: `exclude` **luôn thắng** `include`, kể cả khi `include` cụ thể hơn — quy tắc **đoán được** quan trọng hơn quy tắc thông minh khi người khai không có cách kiểm lại ngoài khối xem trước
+- 05-2-04: giải căng thẳng giữa D-42a và "tổng bằng tổng các dòng" — **bước trung gian** (đơn giá, phép nhân) không bao giờ làm tròn; **con số cuối** (từng ô hiển thị) làm tròn đúng một lần, và `netPay` là tổng của chính những ô đó, nên bảng luôn đối chiếu được
+- 05-2-04: mức lương tra tại **ngày cuối kỳ** — hệ quả: tăng lương giữa kỳ thì cả kỳ ăn mức mới
+- 05-2-05: `buildPayrollRows()` được tách khỏi Route Handler và **dùng chung** bởi cả đường đọc lẫn `closePayroll` — con số được chốt không thể khác con số người dùng vừa nhìn thấy
+- 05-2-05: `payroll_lines` chép **cả** các cột số liệu công chỉ để hiển thị — suy lại lúc đọc sẽ làm chúng đổi theo dữ liệu hôm nay trong khi các cột tiền thì không, và một bảng tự mâu thuẫn với chính nó tệ hơn một bảng sai
+
 Quyết định phát sinh **khi thực thi** Phase 5 (2026-08-06; chi tiết ở từng file SUMMARY):
 
 - 05-01: thứ tự ghi của `reviewRequest()` là **lịch sử trước, cập nhật `work_requests` sau** —
@@ -227,6 +249,10 @@ None yet.
 - 05-06: fixture cua test tich hop Phase 5 de lai vai doanh nghiep `cty-05xx-<ngau nhien>` tren database dev khong xoa duoc (cascade xuong `request_reviews`/`overtime_rules` bi trigger append-only chan). Cung cach don voi 04-06: mot lan `npm run db:seed`.
 - 5.1: hai man hinh moi (`/admin/attendance`, `/admin/payroll`) **chua ai bam tay tren trinh duyet** — smoke qua HTTP chi chung minh HTML dau tien khong loi, con luoi thang va bang deu render o client sau khi du lieu ve. Cung tinh chat voi ba man hinh cua Phase 5.
 - 5.1: **tep CSV chua duoc mo thu bang Excel that.** Ba quyet dinh dinh dang (dau cham phay, BOM UTF-8, so thap phan dau phay) duoc kiem bang test tren chuoi, khong bang mot lan mo tep that tren may co Excel tieng Viet — dang thu mot lan truoc khi ban giao cho ke toan that.
+- 05-2-06: `npm run test:db` **vẫn chưa chạy được** (không có `psql`; kiểm lại trong phiên 2026-08-06). Ba file pgTAP mới của Phase 5.2 — `16_employee_pay_rates.sql` (12), `17_pay_adjustments.sql` (10), `18_payroll_runs.sql` (11), tổng **33 assertion** — đã viết và đã vào cổng `check:assertions` (sàn 250 → **283**) nhưng CHƯA CHẠY THẬT lần nào; cần Postgres tạm của CI. Toàn bộ hành vi chúng khẳng định đã được phủ độc lập bằng test tích hợp Vitest trên database thật.
+- 05-2-06: **chủ dự án chưa ký biên bản `05-2-UAT.md`.** Task 3 của plan là một checkpoint chặn với `autonomous: false`; buổi nghiệm thu cùng chủ dự án chưa diễn ra. Mọi quan sát trong biên bản là quan sát thật trên hệ thống chạy thật (HTTP thật + database thật), nhưng **chưa có ai nhìn bằng mắt trên trình duyệt**. Bốn thứ cần bấm tay: khối xem trước người bị áp trong hộp thoại khai khoản; bấm một dòng bảng lương mở khối chi tiết; nút "Chốt lương kỳ" bị vô hiệu kèm câu nói rõ vì sao; hộp thoại huỷ chốt bắt buộc nhập lý do.
+- 05-2-06: fixture của test tích hợp Phase 5.2 để lại vài doanh nghiệp `cty-pay-*`/`cty-wm-*`/`cty-adj-*`/`cty-pc-*`/`cty-run-*`/`cty-e2ep-*` trên database dev không xoá được (cascade xuống `employee_pay_rates` bị trigger append-only 0022 chặn). Cùng cách dọn với 04-06 và 05-06: một lần `npm run db:seed`. Ngoài ra một dòng `employee_pay_rates` thừa nằm lại ở `nv-02a` (2019-09-01, 13.000.000) từ một lần chạy test trước khi fixture được sửa — vô hại, test đã được viết lại để không phụ thuộc vào dòng nào là mới nhất.
+- 05-2-06: **suite đầy đủ có timeout ngẫu nhiên** trên database dev từ xa (`Hook timed out in 10000ms`, trung bình 1–2 file mỗi lần chạy, khác file mỗi lần) — đã đối chiếu trên cây trước Phase 5.2 và xác nhận là nhiễu môi trường, không phải hồi quy. Một lần chạy sạch cho 52/52 file, 579/579 test.
 - 5.1: luoi thang **chua co phan trang** — render moi nhan vien cua doanh nghiep trong mot bang. Dung cho quy mo pilot (~40 nguoi), se can xu ly khi mot doanh nghiep vai tram nguoi.
 
 ### Quick Tasks Completed

@@ -21,7 +21,7 @@ import type { CompanySettings } from "@/lib/types/domain";
  */
 
 const COMPANY_SETTINGS_COLUMNS =
-  "company_id, suspicious_distance_multiplier, shift_window_grace_minutes, night_start_time, night_end_time, overtime_cap_hours_per_month, updated_at, updated_by";
+  "company_id, suspicious_distance_multiplier, shift_window_grace_minutes, night_start_time, night_end_time, overtime_cap_hours_per_month, work_mode, standard_hours_per_day, standard_days_per_month, updated_at, updated_by";
 
 export async function loadCompanySettings(
   companyId: string,

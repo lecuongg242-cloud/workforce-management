@@ -9,9 +9,10 @@ import {
   type WorkDayType,
 } from "@/lib/attendance/classification";
 import type { AttendanceDay } from "@/lib/attendance/day";
+import { effectiveScheduledMinutes } from "@/lib/attendance/work-mode";
 import { loadCompanySettings } from "@/lib/settings/company-settings";
 import { createServerSupabase } from "@/lib/supabase/server";
-import type { OvertimeRuleKey, WeekdayNumber } from "@/lib/types/domain";
+import type { OvertimeRuleKey, WeekdayNumber, WorkMode } from "@/lib/types/domain";
 
 /**
  * Ghep quy tac cua doanh nghiep (ngay le, khung gio dem, he so tang ca) vao
@@ -42,6 +43,13 @@ export interface DayClassification {
   convertedOvertimeHours: number | null;
   /** Cac khoa he so con thieu ma phut tuong ung lai lon hon 0. */
   missingMultiplierKeys: OvertimeRuleKey[];
+  /**
+   * D-36a: `true` khi che do tinh cong dang ap KHONG xac dinh duoc mau so
+   * (che do `daily_hours` ma doanh nghiep chua khai `standard_hours_per_day`).
+   * Khi ay `overtimeMinutes` la 0 vi khong tinh duoc — KHONG phai vi khong co
+   * tang ca. Noi goi phai phan biet duoc hai dieu do.
+   */
+  workModeInputMissing: boolean;
 }
 
 export interface ShiftRuleInfo {
@@ -79,6 +87,11 @@ export async function loadCompanyRules({
   nightStartTime: string;
   nightEndTime: string;
   versionsByKey: Map<OvertimeRuleKey, OvertimeVersion[]>;
+  /** D-36: cach doanh nghiep dinh nghia mot ngay cong. */
+  workMode: WorkMode;
+  /** D-38: `null` = CHUA KHAI. Khong duoc thay bang mot con so doan. */
+  standardHoursPerDay: number | null;
+  standardDaysPerMonth: number | null;
 }> {
   const supabase = await createServerSupabase();
 
@@ -126,6 +139,11 @@ export async function loadCompanyRules({
     nightStartTime: settings.nightStartTime,
     nightEndTime: settings.nightEndTime,
     versionsByKey,
+    // Ba gia tri nay den tu CHINH loi doc `loadCompanySettings()` o tren —
+    // khong mot truy van thu hai nao duoc mo cho chung.
+    workMode: settings.workMode,
+    standardHoursPerDay: settings.standardHoursPerDay,
+    standardDaysPerMonth: settings.standardDaysPerMonth,
   };
 }
 
@@ -158,11 +176,28 @@ export function classifyDay({
     })),
   );
 
-  const overtime = overtimeMinutes({
-    workedMinutes: day.workedMinutes,
-    scheduledMinutes: shift?.scheduledMinutes ?? 0,
-    dayType,
+  // MAU SO cua phep tinh phan vuot den tu che do tinh cong (D-36), khong tu
+  // do dai ca mot cach vo dieu kien. O che do `shift` — che do ma moi doanh
+  // nghiep dang chay — ham nay tra dung `shift?.scheduledMinutes` nhu truoc,
+  // nen khong mot con so lich su nao doi.
+  //
+  // `null` nghia la che do `daily_hours` ma chua khai mau so: khi ay KHONG
+  // tinh tang ca (0), chu KHONG lay mau so 0 roi bien toan bo gio lam thanh
+  // tang ca — do dung la cai bay D-36a.
+  const scheduled = effectiveScheduledMinutes({
+    mode: rules.workMode,
+    shift,
+    standardHoursPerDay: rules.standardHoursPerDay,
   });
+
+  const overtime =
+    scheduled === null
+      ? 0
+      : overtimeMinutes({
+          workedMinutes: day.workedMinutes,
+          scheduledMinutes: scheduled,
+          dayType,
+        });
 
   const overtimeNight = overtimeNightMinutes({
     segments,
@@ -201,6 +236,7 @@ export function classifyDay({
     overtimeNightMinutes: overtimeNight,
     convertedOvertimeHours: converted.hours,
     missingMultiplierKeys: converted.missingKeys,
+    workModeInputMissing: scheduled === null,
   };
 }
 

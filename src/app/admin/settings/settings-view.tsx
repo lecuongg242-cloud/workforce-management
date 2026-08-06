@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { GeneralSettingsForm } from "@/components/settings/general-settings-form";
 import { HolidaysTab } from "@/components/settings/holidays-tab";
 import { OvertimeRulesTab } from "@/components/settings/overtime-rules-tab";
+import { PayAdjustmentsTab } from "@/components/settings/pay-adjustments-tab";
 import { ShiftRulesTab } from "@/components/settings/shift-rules-tab";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,6 +52,11 @@ export function SettingsView({ today }: { today: string }): React.ReactElement {
           <TabsTrigger value="shifts">{SETTINGS_LABEL.tabShifts}</TabsTrigger>
           <TabsTrigger value="holidays">{SETTINGS_LABEL.tabHolidays}</TabsTrigger>
           <TabsTrigger value="overtime">{SETTINGS_LABEL.tabOvertime}</TabsTrigger>
+          {/* Tab thu nam (05-2-03) — them vao CUOI, khong chen giua: thu tu
+              bon tab dau da co tu 04-01 va nguoi dung da quen no. */}
+          <TabsTrigger value="pay-adjustments">
+            {SETTINGS_LABEL.tabPayAdjustments}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -102,6 +108,13 @@ export function SettingsView({ today }: { today: string }): React.ReactElement {
           <Card>
             <CardContent className="pt-6">
               <OvertimeRulesTab today={today} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="pay-adjustments">
+          <Card>
+            <CardContent className="pt-6">
+              <PayAdjustmentsTab />
             </CardContent>
           </Card>
         </TabsContent>

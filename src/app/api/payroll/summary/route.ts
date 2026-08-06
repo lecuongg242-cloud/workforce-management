@@ -8,67 +8,143 @@ import {
   getSessionContext,
   requireRole,
 } from "@/lib/auth/session-context";
-import { loadMonthContext, summarizeMonth } from "@/lib/attendance/month-context";
+import { buildPayrollRows } from "@/lib/payroll/payroll-rows";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { attendanceRecordSchema } from "@/lib/validation/api/attendance";
 import { payrollPrepSchema, payrollQuerySchema } from "@/lib/validation/api/payroll";
-import type {
-  AttendanceRecord,
-  EmployeeStatus,
-  PayrollPrepRow,
-} from "@/lib/types/domain";
+import type { PayrollPrepRow } from "@/lib/types/domain";
 
 /**
- * Bang CHUAN BI luong cua mot thang: mot dong cho moi nhan vien dang lam
- * viec. Khuon 02-04 (D-12c): chi xuat `dynamic` va `GET`.
+ * Bang luong cua mot thang: mot dong cho moi nhan vien. Khuon 02-04 (D-12c):
+ * chi xuat `dynamic` va `GET`. Duong GHI la hai Server Action
+ * `closePayroll`/`reopenPayroll` (`src/lib/data/mutations/payroll.ts`).
  *
- * KHONG CO CON SO TIEN NAO. Xem khoi chu thich cua `PayrollPrepRow`
- * (`domain.ts`): V2 chuan bi du lieu cong, khong tinh luong.
+ * ======================================================================
+ * HAI NGUON, MOT HINH DANG PHAN HOI
+ * ======================================================================
  *
- * MOI CON SO O DAY DEN TU `summarizeMonth()` — cung ham ma
- * `GET /api/attendance/summary` dung cho mot nguoi. Hai man hinh khong the
- * noi hai con so khac nhau ve cung mot thang, va khong cot nao luu san ket
- * qua (cung khuon tinh-luc-truy-van cua Phase 4).
+ *   Ky DA CHOT LUONG  -> doc tu BAN CHOT (`payroll_runs`), khong tinh lai gi.
+ *   Ky CHUA CHOT       -> tinh luc truy van qua `buildPayrollRows()`.
  *
- * NHAN VIEN KHONG CO BAN GHI NAO VAN CO MOT DONG (toan so 0). Bo ho di se
- * lam ke toan tuong danh sach bi thieu nguoi, va do la mot cach im lang de
- * mot nguoi khong duoc tra cong.
+ * Nhanh dau la toan bo ly do ban chot ton tai (D-42): mot khi da tra tien, con
+ * so la MOT SU KIEN DA XAY RA, khong phai mot phep tinh co the ra ket qua khac
+ * vao thang sau. Tinh lai o day se lam bang luong thang 07 doi theo cau hinh
+ * cua thang 09 — va cau hoi "thang 07 da tra bao nhieu" mat cau tra loi.
  *
- * Chi `owner`/`admin` doc: bang nay gop so lieu cong cua toan bo nhan vien
+ * HAI NHANH TRA CUNG MOT HINH DANG, co chu dich: neu chung tra hai hinh dang
+ * khac nhau thi man hinh se moc hai duong render, va mot trong hai se muc dan
+ * vi it duoc dung hon.
+ *
+ * Chi `owner`/`admin` doc: bang nay gop so lieu luong cua toan bo nhan vien
  * trong mot phan hoi.
  */
 export const dynamic = "force-dynamic";
 
-const ATTENDANCE_COLUMNS =
-  "id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at, worked_minutes, late_minutes, early_leave_minutes, status, location, needs_supplement, note";
+const RUN_COLUMNS =
+  "id, period_start, work_mode, standard_hours_per_day, standard_days_per_month, closed_at, closed_by";
+const LINE_COLUMNS =
+  "id, employee_id, employee_code, employee_name, department_name, pay_unit, pay_amount, credited_days, regular_minutes, hour_delta_minutes, converted_overtime_hours, late_count, worked_days, total_minutes, leave_days, overtime_minutes, overtime_night_minutes, base_pay, overtime_pay, hour_adjustment, allowance_total, deduction_total, net_pay";
+const ITEM_COLUMNS = "line_id, adjustment_id, kind, name, amount, multiplier";
 
-interface RawDepartmentJoin {
-  name: string;
-}
-
-interface RawEmployeeRow {
+interface RawRun {
   id: string;
-  code: string;
-  full_name: string;
-  status: EmployeeStatus;
-  departments: RawDepartmentJoin | RawDepartmentJoin[] | null;
+  work_mode: "daily_hours" | "shift" | "shift_hourly";
+  closed_at: string;
+  closed_by: string | null;
 }
 
-function firstOrSelf<T>(value: T | T[] | null): T | null {
-  return Array.isArray(value) ? (value[0] ?? null) : value;
+interface RawLine {
+  id: string;
+  employee_id: string;
+  employee_code: string;
+  employee_name: string;
+  department_name: string | null;
+  pay_unit: "month" | "day" | "hour";
+  pay_amount: string | number;
+  credited_days: string | number;
+  regular_minutes: number;
+  hour_delta_minutes: number;
+  converted_overtime_hours: string | number;
+  late_count: number;
+  worked_days: number;
+  total_minutes: number;
+  leave_days: number;
+  overtime_minutes: number;
+  overtime_night_minutes: number;
+  base_pay: string | number;
+  overtime_pay: string | number;
+  hour_adjustment: string | number;
+  allowance_total: string | number;
+  deduction_total: string | number;
+  net_pay: string | number;
+}
+
+interface RawItem {
+  line_id: string;
+  adjustment_id: string | null;
+  kind: "allowance" | "deduction";
+  name: string;
+  amount: string | number;
+  multiplier: string | number;
+}
+
+function toItem(item: RawItem) {
+  return {
+    // `adjustment_id` co the la `null` (khoan da bi xoa sau khi chot) — dung
+    // ten lam khoa hien thi khi ay. Ban chot van doc duoc, va do la muc dich.
+    adjustmentId: item.adjustment_id ?? item.name,
+    name: item.name,
+    amount: Number(item.amount),
+    multiplier: Number(item.multiplier),
+  };
 }
 
 /**
- * Ai co mat trong bang chuan bi luong cua mot thang.
+ * Dung lai hinh dang `PayrollPrepRow` tu BAN CHOT.
  *
- * Nguoi DA NGHI VIEC van phai co mat NEU ho co ban ghi trong thang do — nghi
- * viec giua thang khong xoa di nhung ngay ho da lam, va bo ho khoi bang la
- * mot cach im lang de mot nguoi khong duoc tra cong. Nguoi da nghi viec tu
- * truoc va khong co ban ghi nao thi khong hien, vi mot dong toan so 0 cua ho
- * chi lam dai bang.
+ * KHONG MOT PHEP TINH NAO chay o day — moi con so den tu chinh ban chot, ke ca
+ * cac cot so lieu cong chi de hien thi. Suy lai bat ky con so nao o day se lam
+ * no doi theo du lieu cua HOM NAY trong khi cac cot tien thi khong, va mot
+ * bang tu mau thuan voi chinh no la thu te hon ca mot bang sai.
  */
-function shouldInclude(status: EmployeeStatus, hasRecords: boolean): boolean {
-  return status !== "terminated" || hasRecords;
+function rowFromSnapshot(line: RawLine, items: RawItem[]): PayrollPrepRow {
+  const lineItems = items.filter((item) => item.line_id === line.id);
+
+  return {
+    employeeId: line.employee_id,
+    employeeCode: line.employee_code,
+    employeeName: line.employee_name,
+    departmentName: line.department_name,
+    workedDays: line.worked_days,
+    totalMinutes: line.total_minutes,
+    lateCount: line.late_count,
+    leaveDays: line.leave_days,
+    overtimeMinutes: line.overtime_minutes,
+    overtimeNightMinutes: line.overtime_night_minutes,
+    convertedOvertimeHours: Number(line.converted_overtime_hours),
+    // Mot ky chi chot duoc khi KHONG dong nao thieu du kien (xem
+    // `closePayroll`), nen hai mang nay luon rong o nhanh nay — do la mot BAT
+    // BIEN duoc cuong che o duong ghi, khong phai mot gia dinh.
+    missingMultiplierKeys: [],
+    creditedDays: Number(line.credited_days),
+    regularMinutes: line.regular_minutes,
+    hourDeltaMinutes: line.hour_delta_minutes,
+    missingWorkModeInputs: [],
+    payUnit: line.pay_unit,
+    payAmount: Number(line.pay_amount),
+    basePay: Number(line.base_pay),
+    overtimePay: Number(line.overtime_pay),
+    hourAdjustment: Number(line.hour_adjustment),
+    allowanceItems: lineItems
+      .filter((item) => item.kind === "allowance")
+      .map(toItem),
+    deductionItems: lineItems
+      .filter((item) => item.kind === "deduction")
+      .map(toItem),
+    allowanceTotal: Number(line.allowance_total),
+    deductionTotal: Number(line.deduction_total),
+    netPay: Number(line.net_pay),
+    missing: [],
+  };
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
@@ -87,91 +163,83 @@ export async function GET(request: Request): Promise<NextResponse> {
       );
     }
     const { month } = parsed.data;
+    const periodStart = `${month}-01`;
 
     const supabase = await createServerSupabase();
-    const context = await loadMonthContext({ companyId, month });
 
-    const [employeeResult, attendanceResult, periodResult] = await Promise.all([
-      // Goi TEN KHOA NGOAI tuong minh: giua `employees` va `departments` co
-      // HAI quan he (`employees.department_id` va `departments.manager_id`)
-      // nen PostgREST khong tu suy dien duoc — bo qua se lam ca truy van hong
-      // va ten phong ban ve `null` hang loat (loi da gap o 05-06).
-      // KHONG loc `status` o truy van: quy tac "ai co mat trong bang" duoc ap
-      // o tang duoi (xem `shouldInclude`) vi no can biet nhan vien do co ban
-      // ghi trong thang hay khong.
+    const [runResult, periodResult] = await Promise.all([
       supabase
-        .from("employees")
-        .select("id, code, full_name, status, departments!employees_department_id_fkey(name)")
+        .from("payroll_runs")
+        .select(RUN_COLUMNS)
         .eq("company_id", companyId)
-        .order("code", { ascending: true }),
-      supabase
-        .from("attendance_records")
-        .select(ATTENDANCE_COLUMNS)
-        .eq("company_id", companyId)
-        .gte("work_date", context.start)
-        .lt("work_date", context.end),
+        .eq("period_start", periodStart)
+        .maybeSingle(),
       supabase
         .from("periods")
         .select("status")
         .eq("company_id", companyId)
-        .eq("start_date", context.start)
+        .eq("start_date", periodStart)
         .maybeSingle(),
     ]);
 
-    if (employeeResult.error || attendanceResult.error) {
+    const periodStatus =
+      (periodResult.data as { status: "open" | "closed" } | null)?.status ?? null;
+    const run = runResult.data as RawRun | null;
+
+    /* ---------------------------------------------------------------- */
+    /* NHANH 1: ky DA CHOT LUONG -> doc tu ban chot, KHONG tinh lai       */
+    /* ---------------------------------------------------------------- */
+    if (run) {
+      const [lineResult, itemResult] = await Promise.all([
+        supabase
+          .from("payroll_lines")
+          .select(LINE_COLUMNS)
+          .eq("company_id", companyId)
+          .eq("run_id", run.id)
+          .order("employee_code", { ascending: true }),
+        supabase
+          .from("payroll_line_items")
+          .select(ITEM_COLUMNS)
+          .eq("company_id", companyId),
+      ]);
+
+      if (lineResult.error) {
+        throw new Error("Không thể tải bảng lương đã chốt.");
+      }
+
+      const lines = (lineResult.data ?? []) as unknown as RawLine[];
+      const items = (itemResult.data ?? []) as unknown as RawItem[];
+      const rows = lines.map((line) => rowFromSnapshot(line, items));
+
       return NextResponse.json(
-        { error: "Không thể tải bảng chuẩn bị lương." },
-        { status: 500 },
+        payrollPrepSchema.parse({
+          month,
+          // Che do da AP LUC CHOT, khong phai che do hom nay — do la mot phan
+          // cua "ban chot tu chua" (D-42).
+          workMode: run.work_mode,
+          periodStatus,
+          payrollStatus: "closed",
+          payrollClosedAt: run.closed_at,
+          payrollClosedBy: run.closed_by,
+          rows,
+        }),
       );
     }
 
-    // Gom ban ghi theo NHAN VIEN truoc khi tong hop: `groupAttendanceByDay()`
-    // gop theo NGAY, nen dua ca tap nhieu nguoi vao se tron cac luot cua ho
-    // vao cung mot ngay va ra mot con so vo nghia.
-    const recordsByEmployee = new Map<string, AttendanceRecord[]>();
-    for (const raw of (attendanceResult.data ?? []) as unknown[]) {
-      const record = attendanceRecordSchema.parse(raw);
-      const list = recordsByEmployee.get(record.employeeId);
-      if (list) list.push(record);
-      else recordsByEmployee.set(record.employeeId, [record]);
-    }
-
-    const rows: PayrollPrepRow[] = (
-      (employeeResult.data ?? []) as unknown as RawEmployeeRow[]
-    )
-      .filter((employee) =>
-        shouldInclude(employee.status, recordsByEmployee.has(employee.id)),
-      )
-      .map((employee) => {
-        const summary = summarizeMonth({
-          records: recordsByEmployee.get(employee.id) ?? [],
-          context,
-          month,
-        });
-        return {
-          employeeId: employee.id,
-          employeeCode: employee.code,
-          employeeName: employee.full_name,
-          departmentName: firstOrSelf(employee.departments)?.name ?? null,
-          workedDays: summary.workedDays,
-          totalMinutes: summary.totalMinutes,
-          lateCount: summary.lateCount,
-          leaveDays: summary.leaveDays,
-          overtimeMinutes: summary.overtimeMinutes ?? 0,
-          overtimeNightMinutes: summary.overtimeNightMinutes ?? 0,
-          convertedOvertimeHours: summary.convertedOvertimeHours ?? null,
-          missingMultiplierKeys: summary.missingMultiplierKeys ?? [],
-        };
-      });
+    /* ---------------------------------------------------------------- */
+    /* NHANH 2: ky CHUA CHOT LUONG -> tinh luc truy van                   */
+    /* ---------------------------------------------------------------- */
+    const live = await buildPayrollRows({ companyId, month });
 
     return NextResponse.json(
       payrollPrepSchema.parse({
         month,
-        // `null` khi ky chua ton tai — khac `open`, va giao dien noi hai dieu
-        // khac nhau cho hai truong hop do.
-        periodStatus:
-          (periodResult.data as { status: "open" | "closed" } | null)?.status ?? null,
-        rows,
+        workMode: live.workMode,
+        periodStatus: live.periodStatus,
+        payrollStatus: "open",
+        payrollClosedAt: null,
+        payrollClosedBy: null,
+        rows: live.rows,
       }),
     );
   } catch (cause) {
@@ -189,7 +257,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
     console.error("Lỗi không xác định ở GET /api/payroll/summary:", cause);
     return NextResponse.json(
-      { error: "Không thể tải bảng chuẩn bị lương." },
+      { error: "Không thể tải bảng lương." },
       { status: 500 },
     );
   }

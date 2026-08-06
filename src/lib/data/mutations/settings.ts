@@ -23,7 +23,7 @@ import type { CompanySettings, CompanySettingsInput } from "@/lib/types/domain";
  */
 
 const COMPANY_SETTINGS_COLUMNS =
-  "company_id, suspicious_distance_multiplier, shift_window_grace_minutes, night_start_time, night_end_time, overtime_cap_hours_per_month, updated_at, updated_by";
+  "company_id, suspicious_distance_multiplier, shift_window_grace_minutes, night_start_time, night_end_time, overtime_cap_hours_per_month, work_mode, standard_hours_per_day, standard_days_per_month, updated_at, updated_by";
 
 export async function updateCompanySettings(
   patch: CompanySettingsInput,
@@ -76,6 +76,22 @@ export async function updateCompanySettings(
       parsedPatch.overtimeCapHoursPerMonth !== undefined
         ? parsedPatch.overtimeCapHoursPerMonth
         : before.overtimeCapHoursPerMonth,
+    // D-36. `work_mode` khong bao gio nhan `null` — no luon co mot gia tri
+    // (mac dinh `shift` o database), nen `!== undefined` o day chi phan biet
+    // "co gui" voi "khong gui".
+    work_mode:
+      parsedPatch.workMode !== undefined ? parsedPatch.workMode : before.workMode,
+    // D-38: cung lap luan voi tran tang ca o tren — `null` la "xoa mau so"
+    // (tro lai chua khai), `undefined` la "khong dong toi truong nay". Mot
+    // `??` o day se lang le bien "xoa mau so" thanh "giu nguyen mau so cu".
+    standard_hours_per_day:
+      parsedPatch.standardHoursPerDay !== undefined
+        ? parsedPatch.standardHoursPerDay
+        : before.standardHoursPerDay,
+    standard_days_per_month:
+      parsedPatch.standardDaysPerMonth !== undefined
+        ? parsedPatch.standardDaysPerMonth
+        : before.standardDaysPerMonth,
   };
 
   // Rang buoc lien truong: chi kiem duoc SAU khi hop nhat, vi patch co the chi

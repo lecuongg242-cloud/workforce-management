@@ -62,6 +62,11 @@ function settingsRow(overrides: Record<string, unknown> = {}): Record<string, un
     night_end_time: "06:00:00",
     // SET-05 (plan 05-03): `null` = chua dat tran tang ca.
     overtime_cap_hours_per_month: null,
+    // D-36/D-38 (plan 05-2-01): `shift` la mac dinh cua database; hai mau so
+    // quy doi `null` = CHUA KHAI, khong phai 0.
+    work_mode: "shift",
+    standard_hours_per_day: null,
+    standard_days_per_month: null,
     updated_at: "2026-08-06T00:00:00.000Z",
     updated_by: null,
     ...overrides,

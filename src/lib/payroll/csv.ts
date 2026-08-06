@@ -1,4 +1,4 @@
-import { PAYROLL_LABEL } from "@/lib/constants";
+import { PAYROLL_LABEL, describeMissingReason } from "@/lib/constants";
 import type { PayrollPrep } from "@/lib/types/domain";
 
 /**
@@ -27,12 +27,30 @@ const HEADERS = [
   "Họ tên",
   "Phòng ban",
   PAYROLL_LABEL.workedDaysColumn,
+  PAYROLL_LABEL.creditedDaysColumn,
   "Giờ làm",
   "Giờ tăng ca",
   "Giờ tăng ca đêm",
   "Giờ quy đổi",
   PAYROLL_LABEL.leaveColumn,
   PAYROLL_LABEL.lateColumn,
+  // PAY-01 (plan 05-2-04) — cac cot tien, them vao CUOI de moi cong thuc ma
+  // ke toan da dung tren tep cu van tro dung cot.
+  PAYROLL_LABEL.basePayColumn,
+  PAYROLL_LABEL.overtimePayColumn,
+  PAYROLL_LABEL.hourAdjustmentColumn,
+  PAYROLL_LABEL.allowanceColumn,
+  PAYROLL_LABEL.deductionColumn,
+  // LOI CANH BAO NAM TRONG CHINH TEN COT, khong o mot dong chu thich rieng.
+  //
+  // Mot dong chu thich o DAU tep pha cau truc bang (dong tieu de khong con la
+  // dong 1, va moi cong thuc tro theo dong se lech); mot dong o CUOI tep thi
+  // bi cat mat ngay lan dau ai do boi vung du lieu sang mot bang khac — ma do
+  // dung la viec ke toan se lam.
+  //
+  // Dat trong ten cot thi loi canh bao DI THEO con so: copy cot nao cung mang
+  // no theo, va khong the doc con so ma khong doc no.
+  `${PAYROLL_LABEL.netPayColumn} (${PAYROLL_LABEL.taxDisclaimerCsv})`,
 ] as const;
 
 /** Phut -> gio thap phan, hai chu so. */
@@ -54,8 +72,27 @@ export function escapeCsvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
+/**
+ * Mot o SO TIEN. `null` xuat ra CHU chu khong xuat 0 — cung ly do voi
+ * "chua khai he so" cua 5.1, va o day nang hon: mot o `0` trong cot "Thuc
+ * nhan" cua tep gui cho ke toan doc nhu MOT SU THAT, va nguoi ky se ky.
+ *
+ * Chu xuat ra noi THIEU GI (khong phai "khong co du lieu"), de nguoi nhan biet
+ * phai hoi ai va hoi cai gi.
+ */
+function moneyCell(value: number | null, missing: readonly string[]): string {
+  if (value !== null) return toDecimal(value);
+  const reason =
+    missing.length > 0
+      ? describeMissingReason(missing[0])
+      : PAYROLL_LABEL.missingReasonFallback;
+  return escapeCsvCell(reason);
+}
+
 /** Noi dung tep CSV (chua gom BOM). */
 export function buildPayrollCsv(prep: PayrollPrep): string {
+  // Tep giu dung MOT dong tieu de roi den du lieu — mot bang sach. Loi canh
+  // bao ve thue va bao hiem nam trong ten cot "Thuc nhan" (xem `HEADERS`).
   const lines = [HEADERS.join(DELIMITER)];
 
   for (const row of prep.rows) {
@@ -65,6 +102,10 @@ export function buildPayrollCsv(prep: PayrollPrep): string {
         escapeCsvCell(row.employeeName),
         escapeCsvCell(row.departmentName ?? ""),
         String(row.workedDays),
+        // Ngay cong quy doi co the la so THAP PHAN (D-39) va co the `null`.
+        row.creditedDays === null
+          ? escapeCsvCell(PAYROLL_LABEL.missingWorkModeInput)
+          : toDecimal(row.creditedDays),
         toDecimal(toHours(row.totalMinutes)),
         toDecimal(toHours(row.overtimeMinutes)),
         toDecimal(toHours(row.overtimeNightMinutes)),
@@ -76,6 +117,12 @@ export function buildPayrollCsv(prep: PayrollPrep): string {
           : toDecimal(row.convertedOvertimeHours),
         String(row.leaveDays),
         String(row.lateCount),
+        moneyCell(row.basePay, row.missing),
+        moneyCell(row.overtimePay, row.missing),
+        moneyCell(row.hourAdjustment, row.missing),
+        moneyCell(row.allowanceTotal, row.missing),
+        moneyCell(row.deductionTotal, row.missing),
+        moneyCell(row.netPay, row.missing),
       ].join(DELIMITER),
     );
   }
