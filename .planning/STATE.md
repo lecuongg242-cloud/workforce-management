@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 6
-current_phase_name: Super admin và hỗ trợ nhiều doanh nghiệp
+current_phase: 5.2
+current_phase_name: Tính lương do doanh nghiệp tự cấu hình
 status: planning
-stopped_at: Phase 5 hoan tat (6/6 plan) + Phase 5.1 chen them (bang cong quan tri + bang chuan bi luong)
+stopped_at: Phase 5.2 da lap ke hoach day du (CONTEXT + 6 plan, 5 wave); chua bat dau 05-2-01
 last_updated: "2026-08-06T09:00:00.000Z"
 last_activity: 2026-08-06
-last_activity_desc: Phase 5.1 (INSERTED) — /admin/attendance hai tab, /admin/payroll bang chuan bi luong + CSV
+last_activity_desc: Lap ke hoach Phase 5.2 — 05-2-CONTEXT.md + 05-2-01..05-2-06-PLAN.md
 progress:
   total_phases: 5
   completed_phases: 5
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-31)
 
 **Core value:** Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng nơi, đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
-**Current focus:** Phase 6 — super admin và hỗ trợ nhiều doanh nghiệp
+**Current focus:** Phase 5.2 — tính lương do doanh nghiệp tự cấu hình
 
 ## Current Position
 
-Phase: 6 — Super admin và hỗ trợ nhiều doanh nghiệp (chưa lập kế hoạch)
-Plan: —
-Status: Phase 5 xong 6/6 plan; Phase 5.1 (chèn) xong; sẵn sàng lập kế hoạch Phase 6
-Last activity: 2026-08-06 — Phase 5.1: bảng công của quản trị và bảng chuẩn bị lương
+Phase: 5.2 — Tính lương do doanh nghiệp tự cấu hình (INSERTED)
+Plan: 05-2-01 (chưa bắt đầu) — 6 plan đã lập, xếp thành 5 wave
+Status: Planned, ready to execute
+Last activity: 2026-08-06 — Lập kế hoạch Phase 5.2 (CONTEXT + 6 plan)
 
 Progress: [██████████] 100% của 5/6 phase đã có kế hoạch
 

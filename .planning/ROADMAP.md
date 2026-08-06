@@ -30,6 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Quy tắc công do doanh nghiệp tự khai** - Trang cài đặt: giờ làm, ân hạn, ngày lễ, hệ số tăng ca; phân loại công theo quy tắc đang hiệu lực (completed 2026-08-06)
 - [x] **Phase 5: Duyệt yêu cầu và chốt kỳ công** - Duyệt/từ chối có lý do, tác động đúng vào dữ liệu kỳ, lịch sử xử lý, thông báo, chốt kỳ có ghi vết (completed 2026-08-06)
 - [x] **Phase 5.1: Bảng công của quản trị và bàn giao cho kế toán** (INSERTED 2026-08-06) - Lưới tháng + danh sách lượt chấm công, bảng chuẩn bị lương xuất CSV (completed 2026-08-06)
+- [ ] **Phase 5.2: Tính lương do doanh nghiệp tự cấu hình** (INSERTED 2026-08-06) - Ba chế độ tính công, mức lương có phiên bản, phụ cấp/khấu trừ có phạm vi, chốt lương kỳ
 - [ ] **Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp** - Danh sách toàn hệ thống, tra cứu sâu một doanh nghiệp, đường ghi riêng có kiểm soát
 
 ## Phase Details
@@ -256,6 +257,54 @@ yêu cầu lấp ngày 2026-08-06.
 
 **UI hint**: yes
 
+### Phase 5.2: Tính lương do doanh nghiệp tự cấu hình (INSERTED)
+
+**Goal**: Hệ thống ra được số tiền lương của từng nhân viên cho một kỳ — theo đúng những gì
+doanh nghiệp khai, không theo một công thức nào nhúng cứng.
+**Depends on**: Phase 4 (giờ tăng ca), Phase 5 (chốt kỳ), Phase 5.1 (`summarizeMonth()`)
+**Requirements**: PAY-01, PAY-04, PAY-06
+**Thu hẹp có chủ đích**: bỏ thuế TNCN (PAY-02), BHXH/BHYT/BHTN (PAY-03) và phiếu lương cho
+nhân viên (PAY-05) — ba thứ đó vẫn ở V3. Chủ dự án quyết định 2026-08-06.
+**Success Criteria** (what must be TRUE):
+
+  1. Doanh nghiệp chọn được một trong ba cách tính công (không có ca / có ca / có ca nhưng
+     cộng-trừ theo giờ), và cùng một tập chấm công ra ba con số công khác nhau đúng như định
+     nghĩa của từng chế độ.
+  2. Mỗi nhân viên khai được đơn vị lương (tháng / ngày / giờ) và số tiền; sửa mức lương hôm
+     nay **không** làm đổi bảng lương của kỳ đã trả.
+  3. Doanh nghiệp khai được phụ cấp và khấu trừ với phạm vi áp dụng và danh sách loại trừ; màn
+     hình hiện rõ danh sách người thực sự bị áp trước khi lưu.
+  4. Bảng lương ra số tiền cho từng người: lương gốc + tăng ca + phụ cấp − khấu trừ − phạt, và
+     tổng bằng đúng tổng các dòng.
+  5. Chốt lương một kỳ lưu lại bản chốt tự chứa (chế độ, mẫu số, mức lương, từng khoản) — mở
+     lại sáu tháng sau vẫn ra đúng con số đã trả.
+
+**Plans:** 0/6 plans executed
+
+Plans:
+**Wave 1**
+
+- [ ] 05-2-01-PLAN.md — Tracer: `employee_pay_rates` append-only + trigger, `work_mode` và hai mẫu số, tab "Thông tin lương" chạy thật (PAY-06)
+
+**Wave 2** *(blocked on 05-2-01)*
+
+- [ ] 05-2-02-PLAN.md — Ba chế độ tính công (D-36/D-36a/D-39/D-43); cùng một tập chấm công ra ba kết quả
+- [ ] 05-2-03-PLAN.md — Danh mục phụ cấp/khấu trừ có phạm vi + loại trừ (D-40/D-40a/D-41), xem trước người bị áp (PAY-04)
+
+**Wave 3** *(blocked on 05-2-02 + 05-2-03)*
+
+- [ ] 05-2-04-PLAN.md — Phép tính tiền: lương gốc + tăng ca + phụ cấp − khấu trừ − phạt (PAY-01)
+
+**Wave 4** *(blocked on 05-2-04)*
+
+- [ ] 05-2-05-PLAN.md — Chốt lương kỳ: bản chốt tự chứa (D-42), huỷ chốt có lý do (D-45)
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 05-2-06-PLAN.md — Cổng cuối phase: chặn con số tiền nhúng cứng (có kiểm răng), e2e một kỳ lương, nghiệm thu
+
+**UI hint**: yes
+
 ### Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp
 
 **Goal**: Đội vận hành TimeFlow nhìn được toàn hệ thống và hỗ trợ được một doanh nghiệp cụ thể mà không phá vỡ ranh giới cô lập đã dựng ở Phase 1.
@@ -274,7 +323,7 @@ yêu cầu lấp ngày 2026-08-06.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 5.2 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -284,6 +333,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
 | 4. Quy tắc công do doanh nghiệp tự khai | 6/6 | Complete    | 2026-08-06 |
 | 5. Duyệt yêu cầu và chốt kỳ công | 6/6 | Complete    | 2026-08-06 |
 | 5.1 Bảng công của quản trị (INSERTED) | — | Complete    | 2026-08-06 |
+| 5.2 Tính lương (INSERTED) | 0/6 | Planned | - |
 | 6. Super admin và hỗ trợ nhiều doanh nghiệp | 0/TBD | Not started | - |
 
 ## Requirement Coverage
@@ -300,9 +350,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 6
 | APRV-01 … APRV-05 | Phase 5 |
 | PERD-01, PERD-02 | Phase 5 |
 | VIEW-01, VIEW-02, VIEW-03 | Phase 5.1 |
+| PAY-01, PAY-04, PAY-06 | Phase 5.2 |
 | SADM-01 … SADM-04 | Phase 6 |
 
-**Coverage:** 41/41 v1 requirements mapped, mỗi requirement thuộc đúng một phase.
+**Coverage:** 44/44 v1 requirements mapped, mỗi requirement thuộc đúng một phase.
 
 ---
 *Roadmap created: 2026-07-31*

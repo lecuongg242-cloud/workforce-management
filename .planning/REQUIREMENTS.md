@@ -114,6 +114,18 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
   - *Bất biến:* mọi con số đến từ `summarizeMonth()` — cùng hàm mà `GET /api/attendance/summary`
     dùng — nên bảng lương và tổng hợp của từng nhân viên không thể nói hai con số khác nhau.
 
+### Tính lương do doanh nghiệp tự cấu hình (PAY — kéo về từ V3)
+
+> **Kéo về ngày 2026-08-06** theo quyết định của chủ dự án, và **thu hẹp có chủ đích**: bỏ
+> thuế TNCN (PAY-02) và BHXH/BHYT/BHTN (PAY-03) khỏi phép tính. Thay vào đó **mọi khoản cộng
+> và trừ đều do doanh nghiệp tự khai** — đúng nguyên tắc D-26 đã dùng cho ngày lễ và hệ số
+> tăng ca. PAY-02, PAY-03 và PAY-05 **vẫn ở V3**. Chi tiết quyết định ở
+> `.planning/phases/05-2-.../05-2-CONTEXT.md` (D-36…D-42).
+
+- [ ] **PAY-01**: Hệ thống tính ra số tiền lương của từng nhân viên cho một kỳ, từ dữ liệu công của kỳ đó và mức lương đã khai; **không** gồm thuế TNCN và bảo hiểm
+- [ ] **PAY-04**: Doanh nghiệp tự khai danh mục phụ cấp và khấu trừ, mỗi khoản có phạm vi áp dụng (toàn công ty / phòng ban / chức vụ / nhân viên cụ thể) và danh sách loại trừ; phạt đi muộn là một khoản khấu trừ có điều kiện
+- [ ] **PAY-06**: Doanh nghiệp chọn được cách tính công (không có ca / có ca / có ca nhưng cộng-trừ theo giờ) và mức lương của mỗi nhân viên có phiên bản theo thời gian — sửa mức lương hôm nay không làm đổi bảng lương kỳ đã trả
+
 ### Super admin (SADM)
 
 - [ ] **SADM-01**: Super admin xem được danh sách toàn bộ doanh nghiệp trên hệ thống và tình trạng cơ bản của từng nơi
@@ -127,7 +139,9 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 
 ### Tính lương (PAY)
 
-- **PAY-01**: Tính lương gross-net theo dữ liệu công đã chốt
+- ~~**PAY-01**~~ — **đã kéo về v1 ngày 2026-08-06** (Phase 5.2), thu hẹp: bỏ gross-net vì bỏ thuế và bảo hiểm
+- ~~**PAY-04**~~ — **đã kéo về v1 ngày 2026-08-06** (Phase 5.2)
+- **PAY-01 (phần còn lại)**: quyết toán gross-net đầy đủ theo luật
 - **PAY-02**: Thuế thu nhập cá nhân lũy tiến
 - **PAY-03**: BHXH / BHYT / BHTN
 - **PAY-04**: Phụ cấp, khấu trừ
@@ -206,6 +220,9 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | VIEW-01 | Phase 5.1 | Complete |
 | VIEW-02 | Phase 5.1 | Complete |
 | VIEW-03 | Phase 5.1 | Complete |
+| PAY-01 | Phase 5.2 | Pending |
+| PAY-04 | Phase 5.2 | Pending |
+| PAY-06 | Phase 5.2 | Pending |
 | SADM-01 | Phase 6 | Pending |
 | SADM-02 | Phase 6 | Pending |
 | SADM-03 | Phase 6 | Pending |
@@ -213,8 +230,8 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 
 **Coverage:**
 
-- v1 requirements: 41 total (38 khi khởi tạo + 3 của nhóm VIEW, thêm 2026-08-06)
-- Mapped to phases: 41
+- v1 requirements: 44 total (38 khi khởi tạo + 3 của nhóm VIEW + 3 của nhóm PAY kéo về, đều 2026-08-06)
+- Mapped to phases: 44
 - Unmapped: 0 ✓
 
 Phân bổ theo phase: Phase 1 — 6 · Phase 2 — 8 · Phase 3 — 8 · Phase 4 — 4 · Phase 5 — 8 · Phase 6 — 4
