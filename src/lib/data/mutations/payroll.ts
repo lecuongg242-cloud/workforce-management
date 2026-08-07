@@ -227,6 +227,49 @@ export async function closePayroll(month: string): Promise<ClosePayrollResult> {
     }
   }
 
+  // CHI TIET THEO NGAY (0030). Cung khuon don dep khi loi: mot ban chot khong
+  // co chi tiet ngay la mot ban chot MO LAI KHONG DUNG — man hinh se bung ra
+  // mot danh sach rong trong khi con so thang van co, va bang tu mau thuan voi
+  // chinh no. Nen that bai o day phai keo ca ban chot di theo.
+  const dayRows = rows.flatMap((row) => {
+    const lineId = lineIdByEmployee.get(row.employeeId);
+    if (!lineId) return [];
+    return (
+      row.days
+        // Ngay DANG DO khong co con so nao de chep. Ve nguyen tac no khong ton
+        // tai o day (dieu kien (1): ky cong da chot truoc), nhung neu con thi
+        // bo qua chu khong ghi `null` vao mot bang khai `not null`.
+        .filter((day) => day.dayTotal !== null)
+        .map((day) => ({
+          company_id: companyId,
+          line_id: lineId,
+          work_date: day.date,
+          day_type: day.dayType,
+          credited_days: day.creditedDays,
+          regular_minutes: day.regularMinutes,
+          overtime_minutes: day.overtimeMinutes,
+          converted_overtime_hours: day.convertedOvertimeHours,
+          hour_delta_minutes: day.hourDeltaMinutes,
+          base_pay: day.basePay,
+          overtime_pay: day.overtimePay,
+          hour_adjustment: day.hourAdjustment,
+          day_total: day.dayTotal,
+        }))
+    );
+  });
+
+  if (dayRows.length > 0) {
+    const { error: dayError } = await supabase
+      .from("payroll_line_days")
+      .insert(dayRows);
+    if (dayError) {
+      await supabase.from("payroll_runs").delete().eq("id", runId);
+      throw new Error(
+        "Không thể ghi chi tiết theo ngày của bảng lương đã chốt.",
+      );
+    }
+  }
+
   const netPayTotal = rows.reduce((sum, row) => sum + (row.netPay ?? 0), 0);
 
   await logMutation({

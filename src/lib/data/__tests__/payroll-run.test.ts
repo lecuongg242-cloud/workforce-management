@@ -322,6 +322,57 @@ describe("Chốt lương kỳ và bản chốt tự chứa (D-42/D-45)", () => {
     expect(row?.missing).toEqual([]);
   });
 
+  it("4b. bản chốt mang CHI TIẾT THEO NGÀY, và tổng các ngày khớp ĐÚNG dòng lương", async () => {
+    const { data: run } = await admin
+      .from("payroll_runs")
+      .select("id")
+      .eq("company_id", COMPANY_ID)
+      .eq("period_start", PERIOD_START)
+      .single();
+
+    const { data: line } = await admin
+      .from("payroll_lines")
+      .select("id, base_pay, overtime_pay, hour_adjustment")
+      .eq("run_id", (run as { id: string }).id)
+      .eq("employee_id", EMPLOYEE_ID)
+      .single();
+    const lineRow = line as {
+      id: string;
+      base_pay: string;
+      overtime_pay: string;
+      hour_adjustment: string;
+    };
+
+    const { data: days } = await admin
+      .from("payroll_line_days")
+      .select("work_date, day_type, day_total, base_pay")
+      .eq("line_id", lineRow.id)
+      .order("work_date", { ascending: true });
+
+    const dayRows = (days ?? []) as Array<{
+      work_date: string;
+      day_type: string;
+      day_total: string;
+      base_pay: string;
+    }>;
+
+    // Bo du lieu co DUNG mot ngay cham cong trong ky.
+    expect(dayRows).toHaveLength(1);
+    expect(dayRows[0].work_date).toBe(WORK_DAY);
+    expect(dayRows[0].day_type).toBe("weekday");
+    expect(Number(dayRows[0].day_total)).toBe(EXPECTED_NET);
+
+    // BAI DOI CHIEU o tang co so du lieu: tong cac ngay bang DUNG ba cot tien
+    // cua dong luong. Day la loi hua "tong luon khop" duoc kiem tren du lieu
+    // that, khong chi trong mot ham thuan.
+    const sumOfDays = dayRows.reduce((sum, row) => sum + Number(row.day_total), 0);
+    expect(sumOfDays).toBe(
+      Number(lineRow.base_pay) +
+        Number(lineRow.overtime_pay) +
+        Number(lineRow.hour_adjustment),
+    );
+  });
+
   it("5. BÀI KIỂM CHÍNH (D-42): đổi mức lương SAU KHI chốt -> con số kỳ đã chốt KHÔNG ĐỔI", async () => {
     // Khai mot muc luong moi GAP DOI, hieu luc tu TRUOC ky — neu duong doc
     // tinh lai tu cau hinh hien tai, con so se nhay len 2.000.000.
@@ -380,10 +431,17 @@ describe("Chốt lương kỳ và bản chốt tự chứa (D-42/D-45)", () => {
       .from("payroll_lines")
       .select("id", { count: "exact", head: true })
       .eq("company_id", COMPANY_ID);
+    const { count: dayCount } = await admin
+      .from("payroll_line_days")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", COMPANY_ID);
 
-    // Xoa CA ban chot — dong luong di theo bang `on delete cascade`.
+    // Xoa CA ban chot — dong luong di theo bang `on delete cascade`, va chi
+    // tiet ngay di theo dong luong. Cascade phai chay het HAI tang: mot dong
+    // ngay con sot lai se treo vao mot dong luong khong con ton tai.
     expect(runCount).toBe(0);
     expect(lineCount).toBe(0);
+    expect(dayCount).toBe(0);
 
     const { data: audit } = await admin
       .from("audit_log")
