@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   MapPin,
   Network,
+  Receipt,
   Settings,
   ShieldAlert,
   User,
@@ -45,10 +46,21 @@ export interface EmployeeNavItem {
   icon: LucideIcon;
 }
 
+/**
+ * Nam muc — thanh dieu huong duoi cua ung dung nhan vien.
+ *
+ * "Phiếu lương" duoc dat o day chu KHONG chon trong trang Ca nhan, du them mot
+ * tab thu nam lam nhan chat hon tren may hep: day la cau hoi nhan vien hoi
+ * hang thang, va de no sau mot menu se ha no xuong ngang "Cai dat thong bao".
+ *
+ * Nhan phai NGAN — `mobile-bottom-nav.tsx` cat mot dong. "Phiếu lương" la hai
+ * tu, dai nhat trong nam, va do la gioi han tren cua o nay.
+ */
 export const EMPLOYEE_NAV_ITEMS: EmployeeNavItem[] = [
   { label: "Trang chủ", href: "/employee", icon: Home },
   { label: "Lịch sử", href: "/employee/history", icon: CalendarClock },
   { label: "Yêu cầu", href: "/employee/requests", icon: ClipboardList },
+  { label: "Phiếu lương", href: "/employee/payslips", icon: Receipt },
   { label: "Cá nhân", href: "/employee/profile", icon: User },
 ];
 
@@ -70,5 +82,6 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   // breadcrumb khong roi ve fallback trong khoanh khac chuyen huong.
   periods: "Kỳ công",
   payroll: "Bảng lương",
+  payslips: "Phiếu lương",
   settings: "Cài đặt",
 };

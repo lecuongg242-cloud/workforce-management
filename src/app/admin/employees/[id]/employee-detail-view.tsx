@@ -716,6 +716,7 @@ export function EmployeeDetailView({
             shifts={shifts}
             allEmployees={allEmployees}
             defaultStartDate={today}
+            onSaved={() => setIsEditing(false)}
           />
         </DialogContent>
       </Dialog>

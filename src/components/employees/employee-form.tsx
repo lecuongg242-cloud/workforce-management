@@ -94,6 +94,7 @@ export function EmployeeForm({
   shifts,
   allEmployees,
   defaultStartDate,
+  onSaved,
 }: {
   mode: "create" | "edit";
   companyId: string;
@@ -102,6 +103,12 @@ export function EmployeeForm({
   shifts: Shift[];
   allEmployees: Employee[];
   defaultStartDate: string;
+  /**
+   * Chi dung o `mode="edit"`. Khi bieu mau nam trong mot hop thoai, luu xong
+   * phai DONG hop thoai — dieu huong sang chinh trang dang dung khong dong
+   * duoc gi, va nguoi dung ngoi nhin mot bieu mau da luu roi.
+   */
+  onSaved?: () => void;
 }): React.ReactElement {
   const router = useRouter();
   const { invalidate } = useDataStore();
@@ -311,7 +318,11 @@ export function EmployeeForm({
         toast.success("Đã lưu thay đổi", {
           description: `Thông tin của ${values.fullName} đã được cập nhật.`,
         });
-        router.push(`/admin/employees/${employee.id}`);
+        // `invalidate()` o tren da keo lai du lieu moi, nen khong can dieu huong
+        // de lam moi man hinh — chi can tra quyen dieu khien ve cho noi mo
+        // bieu mau.
+        if (onSaved) onSaved();
+        else router.push(`/admin/employees/${employee.id}`);
       }
     } catch (cause) {
       toast.error(

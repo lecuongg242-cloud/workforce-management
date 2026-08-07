@@ -901,6 +901,82 @@ export interface PayrollPrep {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Phieu luong cua nhan vien (PAY-05)                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Mot ky da chot luong ma nguoi dang nhap CO phieu — dung cho danh sach.
+ *
+ * Chi ba truong: mot danh sach chi de tra loi "thang nao co phieu, va thang do
+ * toi nhan bao nhieu". Moi thu khac thuoc ve man hinh chi tiet.
+ */
+export interface PayslipSummary {
+  /** "YYYY-MM" */
+  month: string;
+  /** ISO date-time — thoi diem doanh nghiep chot luong ky nay. */
+  closedAt: string;
+  netPay: number;
+}
+
+/**
+ * Phieu luong day du cua MOT ky, doc tu BAN CHOT (`payroll_lines`).
+ *
+ * ======================================================================
+ * VI SAO KHONG DUNG LAI `PayrollPrepRow`
+ * ======================================================================
+ *
+ * Hai hinh dang cho ra gan nhu cung mot tap so, nhung `PayrollPrepRow` mang
+ * theo ba truong chi co nghia o man hinh CHUAN BI cua quan tri:
+ * `missingMultiplierKeys`, `missingWorkModeInputs`, `missing`. O mot ban chot
+ * ca ba luon rong — do la mot bat bien duoc cuong che o `closePayroll`, khong
+ * phai mot su trung hop.
+ *
+ * Day chung xuong app nhan vien la day mot khai niem KHONG THUOC VE do ("dong
+ * nay con thieu du kien de tinh") vao mot man hinh ma no khong bao gio dung.
+ * Mot kieu rieng dat hon vai dong khai bao, va doi lai man hinh khong co cach
+ * nao render mot trang thai khong ton tai.
+ *
+ * MOI CON SO O DAY DEU LA ANH CHUP. Khong truong nao duoc suy lai luc doc —
+ * suy lai se lam no doi theo du lieu cua HOM NAY trong khi cac cot tien thi
+ * khong, va mot phieu tu mau thuan voi chinh no la thu te hon ca mot phieu sai.
+ */
+export interface Payslip {
+  /** "YYYY-MM" */
+  month: string;
+  closedAt: string;
+
+  /* Danh tinh tai THOI DIEM CHOT — nguoi co the doi ten hoac doi phong ban. */
+  employeeCode: string;
+  employeeName: string;
+  departmentName: string | null;
+
+  /* Muc luong da ap cho ky nay. */
+  payUnit: PayRateUnit;
+  payAmount: number;
+
+  /* So lieu cong da dung de ra con so tien. */
+  workedDays: number;
+  totalMinutes: number;
+  leaveDays: number;
+  lateCount: number;
+  overtimeMinutes: number;
+  /** Gio tang ca SAU khi nhan he so — day moi la phan tham gia vao tien. */
+  convertedOvertimeHours: number;
+
+  /* Tien. */
+  basePay: number;
+  overtimePay: number;
+  /** Lech gio o che do `shift_hourly`; am khi lam thieu so voi chuan. */
+  hourAdjustment: number;
+  allowanceItems: PayrollAdjustmentItem[];
+  deductionItems: PayrollAdjustmentItem[];
+  allowanceTotal: number;
+  deductionTotal: number;
+  /** THUC NHAN = luong goc + tang ca + lech gio + phu cap − khau tru. */
+  netPay: number;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Input cho cac thao tac ghi                                                  */
 /* -------------------------------------------------------------------------- */
 

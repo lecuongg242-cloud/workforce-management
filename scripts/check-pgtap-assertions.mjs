@@ -29,7 +29,8 @@
  * (plan 05-05 Task 1): + 11 (15_period_close.sql). Nang len 262 cung ngay
  * (plan 05-2-01 Task 1): + 12 (16_employee_pay_rates.sql). Nang len 272 cung
  * ngay (plan 05-2-03 Task 1): + 10 (17_pay_adjustments.sql). Nang len 283
- * cung ngay (plan 05-2-05 Task 1): + 11 (18_payroll_runs.sql). Moc nay
+ * cung ngay (plan 05-2-05 Task 1): + 11 (18_payroll_runs.sql). Nang len 292
+ * ngay 2026-08-07 (PAY-05, migration 0029): + 9 (19_payslip_rls.sql). Moc nay
  * CHI DUOC NANG LEN, khong bao gio ha xuong — ha moc la cach am tham bien
  * mot bo test dang co lai thanh mot cong van bao xanh (xem <prohibitions>
  * cua 02-02-PLAN.md).
@@ -39,7 +40,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const MIN_ASSERTIONS = 283;
+const MIN_ASSERTIONS = 292;
 
 const TESTS_DIR = path.join("supabase", "tests");
 const RUN_ALL_PATH = path.join(TESTS_DIR, "run-all.sql");

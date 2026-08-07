@@ -24,6 +24,16 @@ import {
  * Lop quyen (AUTH-03): vai tro `employee`/`manager` hoi `employeeId` khac
  * `employeeId` cua chinh phien bi tu choi (403). `owner`/`admin` doc duoc
  * moi nhan vien trong doanh nghiep.
+ *
+ * PHAM VI MAC DINH, KHONG PHAI PHAM VI TUY CHON. `employeeId` la tham so
+ * KHONG BAT BUOC, nen phep kiem "hoi nguoi khac thi 403" o tren mot minh no
+ * KHONG DU: bo trong tham so thi khong con gi de so sanh, va truoc ban va nay
+ * mot nhan vien goi `?month=2026-07` doc duoc cham cong CUA CA DOANH NGHIEP —
+ * RLS `tf_is_member` cho qua vi ho dung la thanh vien.
+ *
+ * Vi vay pham vi duoc tinh THANH MOT GIA TRI (`effectiveEmployeeId`) roi moi
+ * dua vao truy van, thay vi de dieu kien loc phu thuoc vao viec client co gui
+ * tham so hay khong. Khuon nay giong `GET /api/requests`.
  */
 export const dynamic = "force-dynamic";
 
@@ -48,14 +58,28 @@ export async function GET(request: Request): Promise<NextResponse> {
       throw new ForbiddenError();
     }
 
+    // Khong truyen `employeeId`: quan tri thay toan bo doanh nghiep, hai vai
+    // tro con lai mac dinh gioi han ve chinh minh — KHONG phai bo qua loc.
+    //
+    // `sessionEmployeeId` co the la `null` (tai khoan da co membership nhung
+    // chua gan voi mot dong `employees`). Khi ay mot nguoi khong phai quan tri
+    // KHONG co pham vi nao hop le, va cau tra loi dung la RONG — de roi vao
+    // nhanh "khong loc gi" se bien dung cai lo hong vua va.
+    const isSelfScoped = !isAdminRole;
+    const effectiveEmployeeId = queryParams.employeeId ?? sessionEmployeeId;
+
+    if (isSelfScoped && !effectiveEmployeeId) {
+      return NextResponse.json(attendanceListResponseSchema.parse([]));
+    }
+
     const supabase = await createServerSupabase();
     let query = supabase
       .from("attendance_records")
       .select(ATTENDANCE_COLUMNS)
       .eq("company_id", companyId);
 
-    if (queryParams.employeeId) {
-      query = query.eq("employee_id", queryParams.employeeId);
+    if (isSelfScoped || queryParams.employeeId) {
+      query = query.eq("employee_id", effectiveEmployeeId as string);
     }
     if (queryParams.month) {
       const start = `${queryParams.month}-01`;
