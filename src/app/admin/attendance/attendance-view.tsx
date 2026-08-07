@@ -130,9 +130,11 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
       shiftBreakInfoById(
         (data?.shifts ?? []).map((shift) => ({
           id: shift.id,
+          kind: shift.kind,
           breakMinutes: shift.breakMinutes,
           startTime: shift.startTime,
           endTime: shift.endTime,
+          durationMinutes: shift.durationMinutes,
         })),
       ),
     [data],

@@ -31,7 +31,20 @@ export function Field({
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className={cn("grid gap-1.5", className)}>
+    /*
+      `content-start` (align-content: start) GIU NHAN VA O NHAP THANG HANG voi
+      cac truong ben canh, va do la ly do duy nhat no co mat.
+
+      Mac dinh `align-content` cua mot grid la `stretch`, va no gian cac hang co
+      kich thuoc `auto` — ba hang cua khoi nay deu vay. Trong luoi hai cot cua
+      `FormSection`, moi o bi keo cao bang o cao nhat CUNG HANG; neu o ben canh
+      co dong ghi chu (`hint`) hoac dong loi ma o nay khong co, phan chieu cao
+      thua se duoc chia deu vao ba hang ben trong — nhan tut xuong vai pixel, o
+      nhap tut theo, va hai truong cung mot hang trong nhu bi lech nhau.
+
+      `content-start` don phan thua ay xuong duoi cung thay vi rai vao giua.
+    */
+    <div className={cn("grid content-start gap-1.5", className)}>
       <Label htmlFor={id} className="text-[13px] font-medium text-ink-secondary">
         {label}
         {required ? (

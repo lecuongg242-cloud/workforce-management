@@ -104,15 +104,33 @@ export interface Department {
   status: DepartmentStatus;
 }
 
+/**
+ * Hai cach mot ca duoc khai (migration 0027):
+ * - `fixed`: co gio vao va gio ra cu the — hanh vi tu dau du an.
+ * - `hours`: CA LINH HOAT, chi khai do dai `durationMinutes`. Nhan vien vao ra
+ *   luc nao cung duoc; khong tinh di muon, ve som hay "ngoai khung gio ca".
+ */
+export type ShiftKind = "fixed" | "hours";
+
 export interface Shift {
   id: string;
   companyId: string;
   name: string;
   code: string;
-  /** "HH:mm" */
-  startTime: string;
-  /** "HH:mm" — co the nho hon startTime neu la ca qua dem */
-  endTime: string;
+  kind: ShiftKind;
+  /** "HH:mm" — `null` o ca linh hoat (`kind === "hours"`) */
+  startTime: string | null;
+  /** "HH:mm" — co the nho hon startTime neu la ca qua dem; `null` o ca linh hoat */
+  endTime: string | null;
+  /**
+   * Do dai mot ngay lam viec cua CA LINH HOAT, phut — va la so phut LAM VIEC
+   * THAT (da tru gio nghi, nen `breakMinutes` cua ca nay luon 0). `null` o ca
+   * `fixed`, noi do dai duoc suy tu `startTime`/`endTime`.
+   *
+   * Dung `shiftScheduledMinutes()` (`src/lib/shifts/schedule.ts`) thay vi doc
+   * truong nay truc tiep — no la noi duy nhat biet ca hai loai ca.
+   */
+  durationMinutes: number | null;
   /**
    * Khung gio nghi giua ca, "HH:mm". `null` khi ca khong co gio nghi — hoac
    * khi ca duoc tao TRUOC migration 0025 va chi con con so `breakMinutes`.
@@ -141,15 +159,24 @@ export interface Employee {
   code: string;
   fullName: string;
   email: string;
-  phone: string;
+  /**
+   * SAU TRUONG DUOI DAY KHONG BAT BUOC (migration 0028) — `null` nghia la CHUA
+   * KHAI, va khong bao gio duoc thay bang mot gia tri dai dien khi hien thi:
+   * mot ngay sinh bia ra khong phan biet duoc voi mot ngay sinh that.
+   *
+   * `departmentId` va `position` con tham gia phep giai PHAM VI cua phu cap /
+   * khau tru: chua khai thi KHONG khop pham vi tuong ung, xem
+   * `src/lib/payroll/scope.ts`.
+   */
+  phone: string | null;
   /** "YYYY-MM-DD" */
-  dateOfBirth: string;
-  gender: Gender;
+  dateOfBirth: string | null;
+  gender: Gender | null;
   avatarUrl: string | null;
 
-  departmentId: string;
-  position: string;
-  contractType: ContractType;
+  departmentId: string | null;
+  position: string | null;
+  contractType: ContractType | null;
   /** "YYYY-MM-DD" */
   startDate: string;
   managerId: string | null;

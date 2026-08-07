@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CONTRACT_TYPE_LABEL } from "@/lib/constants";
+import { CONTRACT_TYPE_LABEL, NOT_DECLARED } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import type { Employee } from "@/lib/types/domain";
 
@@ -105,12 +105,18 @@ export function EmployeeTable({
               </TableCell>
               <TableCell className="num">{employee.code}</TableCell>
               <TableCell>
-                {departmentNames[employee.departmentId] ?? "—"}
+                {employee.departmentId
+                  ? (departmentNames[employee.departmentId] ?? NOT_DECLARED)
+                  : NOT_DECLARED}
               </TableCell>
               <TableCell className="max-w-[180px] truncate">
-                {employee.position}
+                {employee.position ?? NOT_DECLARED}
               </TableCell>
-              <TableCell>{CONTRACT_TYPE_LABEL[employee.contractType]}</TableCell>
+              <TableCell>
+                {employee.contractType
+                  ? CONTRACT_TYPE_LABEL[employee.contractType]
+                  : NOT_DECLARED}
+              </TableCell>
               <TableCell className="num">{formatDate(employee.startDate)}</TableCell>
               <TableCell>
                 <StatusBadge kind="employee" value={employee.status} size="sm" />

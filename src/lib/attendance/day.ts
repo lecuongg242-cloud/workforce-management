@@ -1,4 +1,8 @@
 import { minutesBetween } from "@/lib/format";
+import {
+  shiftGrossMinutes,
+  type ShiftScheduleInfo,
+} from "@/lib/shifts/schedule";
 import type { AttendanceRecord, AttendanceStatus } from "@/lib/types/domain";
 
 /**
@@ -237,23 +241,21 @@ export function getAttendanceDay(
 
 /**
  * Bang tra `shiftId -> ShiftBreakInfo` tu danh sach ca — dung o moi call site.
- * Do dai tron ca di qua `minutesBetween()` nen ca QUA DEM (endTime < startTime)
- * duoc tinh dung, khong ra so am.
+ *
+ * Do dai tron ca do `shiftGrossMinutes()` tinh, khong tu goi `minutesBetween()`
+ * o day nua: tu migration 0027 co HAI loai ca, va ca linh hoat khong co
+ * `startTime`/`endTime` de tru. Ca QUA DEM (endTime < startTime) van duoc tinh
+ * dung, khong ra so am — phep do nam trong chinh ham do.
  */
 export function shiftBreakInfoById(
-  shifts: Array<{
-    id: string;
-    breakMinutes: number;
-    startTime: string;
-    endTime: string;
-  }>,
+  shifts: Array<ShiftScheduleInfo & { id: string; breakMinutes: number }>,
 ): Record<string, ShiftBreakInfo> {
   return Object.fromEntries(
     shifts.map((shift) => [
       shift.id,
       {
         breakMinutes: shift.breakMinutes,
-        shiftMinutes: minutesBetween(shift.startTime, shift.endTime),
+        shiftMinutes: shiftGrossMinutes(shift),
       },
     ]),
   );

@@ -10,9 +10,13 @@ import {
 import {
   classifyDay,
   loadCompanyRules,
-  type ShiftRuleInfo,
 } from "@/lib/attendance/classification-context";
-import { groupAttendanceByDay, shiftBreakInfoById } from "@/lib/attendance/day";
+import { groupAttendanceByDay } from "@/lib/attendance/day";
+import {
+  SHIFT_CONTEXT_COLUMNS,
+  buildShiftContext,
+  type RawShiftContextRow,
+} from "@/lib/attendance/shift-context";
 import { requestedOvertimeHours } from "@/lib/attendance/overtime-cap";
 import { loadCompanySettings } from "@/lib/settings/company-settings";
 import { shiftMonth } from "@/lib/format";
@@ -84,7 +88,7 @@ export async function GET(request: Request): Promise<NextResponse> {
           .lt("work_date", end),
         supabase
           .from("shifts")
-          .select("id, break_minutes, start_time, end_time, working_days")
+          .select(SHIFT_CONTEXT_COLUMNS)
           .eq("company_id", companyId),
         supabase
           .from("work_requests")
@@ -107,37 +111,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     const records = ((attendanceResult.data ?? []) as unknown[]).map((row) =>
       attendanceRecordSchema.parse(row),
     );
-    const rawShifts = (shiftsResult.data ?? []) as Array<{
-      id: string;
-      break_minutes: number;
-      start_time: string;
-      end_time: string;
-      working_days: number[];
-    }>;
-
-    const breaks = shiftBreakInfoById(
-      rawShifts.map((row) => ({
-        id: row.id,
-        breakMinutes: row.break_minutes,
-        startTime: row.start_time.slice(0, 5),
-        endTime: row.end_time.slice(0, 5),
-      })),
-    );
-
-    const shiftRules = new Map<string, ShiftRuleInfo>(
-      rawShifts.map((row) => {
-        const info = breaks[row.id];
-        return [
-          row.id,
-          {
-            workingDays: row.working_days as ShiftRuleInfo["workingDays"],
-            scheduledMinutes: Math.max(
-              (info?.shiftMinutes ?? 0) - (info?.breakMinutes ?? 0),
-              0,
-            ),
-          },
-        ];
-      }),
+    const { breaks, shiftRules } = buildShiftContext(
+      (shiftsResult.data ?? []) as RawShiftContextRow[],
     );
 
     const days = groupAttendanceByDay(records, breaks);

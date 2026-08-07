@@ -86,8 +86,10 @@ function firstOrSelf<T>(value: T | T[] | null): T | null {
 
 interface RawShiftJoin {
   name: string;
-  start_time: string;
-  end_time: string;
+  kind: string;
+  /** `null` o ca linh hoat (migration 0027) */
+  start_time: string | null;
+  end_time: string | null;
 }
 
 interface RawOutsideShiftRow {
@@ -141,7 +143,7 @@ async function collectOutsideShiftItems({
   let query = supabase
     .from("attendance_records")
     .select(
-      "id, employee_id, check_in_at, employees(full_name, can_check_in_remotely), shifts(name, start_time, end_time)",
+      "id, employee_id, check_in_at, employees(full_name, can_check_in_remotely), shifts(name, kind, start_time, end_time)",
     )
     .eq("company_id", companyId)
     .not("check_in_at", "is", null);
@@ -160,6 +162,13 @@ async function collectOutsideShiftItems({
     // `toVnTime` nem RangeError neu nhan mot gia tri khong phai dau thoi
     // gian, nen phai chan TRUOC khi goi chu khong bat loi sau.
     if (!shift || typeof row.check_in_at !== "string") return false;
+    // CA LINH HOAT (migration 0027) khong co khung gio ca de nam ngoai. Nguoi
+    // khai ca nay da noi ro nhan vien vao ra luc nao cung duoc, nen dua ho vao
+    // danh sach "Can xem lai" vi gio giac la bao lai chinh dieu doanh nghiep
+    // vua cho phep — va se lam nguoi duyet ngung tin ca danh sach.
+    if (shift.kind === "hours" || !shift.start_time || !shift.end_time) {
+      return false;
+    }
     const punchTime = toVnTime(row.check_in_at);
     if (!punchTime) return false;
     return isOutsideShiftWindow({
@@ -220,7 +229,9 @@ async function collectOutsideShiftItems({
         work_site_name: null,
         multiplier: null,
         punch_time: toVnTime(row.check_in_at),
-        shift_window: `${shift.name} ${toHourMinute(shift.start_time)}–${toHourMinute(shift.end_time)}`,
+        // Nhanh nay chi con ca `fixed`: bo loc o tren da loai het ca linh hoat
+        // (chung khong co khung gio de nam ngoai), nen hai gio nay luon co.
+        shift_window: `${shift.name} ${toHourMinute(shift.start_time ?? "")}–${toHourMinute(shift.end_time ?? "")}`,
       });
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);

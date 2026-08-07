@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import { formatNumber } from "@/lib/format";
+import { hoursToMinutes } from "@/lib/shifts/schedule";
 import {
   createShift,
   duplicateShift,
@@ -23,7 +24,7 @@ import {
   type ShiftWithStats,
 } from "@/lib/data/shifts";
 import { useDataStore } from "@/lib/data/store";
-import type { Shift } from "@/lib/types/domain";
+import type { Shift, ShiftInput } from "@/lib/types/domain";
 import type { ShiftFormValues } from "@/lib/validation/schemas";
 
 export function ShiftsView(): React.ReactElement {
@@ -46,15 +47,42 @@ export function ShiftsView(): React.ReactElement {
     overnight: boolean,
   ): Promise<void> => {
     try {
-      const payload = {
-        ...values,
-        code: values.code.toUpperCase(),
-        // O `<input type="time">` de trong tra ve chuoi rong; database va
-        // domain dung `null` cho "ca khong co gio nghi".
-        breakStartTime: values.breakStartTime || null,
-        breakEndTime: values.breakEndTime || null,
-        overnight,
-      };
+      // Hai hinh dang tach han nhau (migration 0027): ca linh hoat KHONG gui
+      // gio vao/gio ra hay khung gio nghi len duong ghi. Gui kem chung se bi
+      // `shifts_shape_check` cua database tu choi — va lam vay cung se luu mot
+      // gio moc cho mot ca ma dinh nghia cua no la khong co gio moc.
+      const payload: ShiftInput =
+        values.kind === "hours"
+          ? {
+              kind: "hours",
+              name: values.name,
+              code: values.code.toUpperCase(),
+              startTime: null,
+              endTime: null,
+              durationMinutes: hoursToMinutes(values.durationHours),
+              breakStartTime: null,
+              breakEndTime: null,
+              lateToleranceMinutes: 0,
+              workingDays: values.workingDays,
+              status: values.status,
+              overnight: false,
+            }
+          : {
+              kind: "fixed",
+              name: values.name,
+              code: values.code.toUpperCase(),
+              startTime: values.startTime,
+              endTime: values.endTime,
+              durationMinutes: null,
+              // O `<input type="time">` de trong tra ve chuoi rong; database va
+              // domain dung `null` cho "ca khong co gio nghi".
+              breakStartTime: values.breakStartTime || null,
+              breakEndTime: values.breakEndTime || null,
+              lateToleranceMinutes: values.lateToleranceMinutes,
+              workingDays: values.workingDays,
+              status: values.status,
+              overnight,
+            };
       if (editing) {
         await updateShift(editing.id, payload);
         toast.success(`Đã cập nhật ${values.name}.`);

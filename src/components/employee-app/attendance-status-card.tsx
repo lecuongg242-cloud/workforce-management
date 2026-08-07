@@ -187,16 +187,21 @@ export function AttendanceStatusCard({
   }
 
   /* ------------------------------------------------ Chua vao ca */
-  const expectedStart = shift?.startTime ?? "08:00";
-  const lateBy = now
-    ? Math.max(
-        minutesBetween(expectedStart, clock) > 720
-          ? 0
-          : minutesBetween(expectedStart, clock) -
-              (shift?.lateToleranceMinutes ?? 0),
-        0,
-      )
-    : 0;
+  // Ca linh hoat (migration 0027) khong co gio vao du kien, va do la ca diem
+  // cua no: nhan vien vao luc nao cung duoc. Hien mot gio "du kien" o day —
+  // du la 08:00 mac dinh — se lam ho tuong minh dang di muon trong khi phep
+  // tinh cong o server khong ghi mot phut muon nao.
+  const expectedStart = shift && shift.kind === "fixed" ? shift.startTime : null;
+  const lateBy =
+    now && expectedStart
+      ? Math.max(
+          minutesBetween(expectedStart, clock) > 720
+            ? 0
+            : minutesBetween(expectedStart, clock) -
+                (shift?.lateToleranceMinutes ?? 0),
+          0,
+        )
+      : 0;
 
   return (
     <section className="surface-card p-5 text-center">
@@ -214,9 +219,14 @@ export function AttendanceStatusCard({
         <span className="text-ink-muted">:{seconds}</span>
       </p>
       <p className="num mt-1 text-[13px] text-ink-muted">
-        Giờ vào ca dự kiến {minutesToTime(
-          Number(expectedStart.slice(0, 2)) * 60 + Number(expectedStart.slice(3)),
-        )}
+        {expectedStart
+          ? `Giờ vào ca dự kiến ${minutesToTime(
+              Number(expectedStart.slice(0, 2)) * 60 +
+                Number(expectedStart.slice(3)),
+            )}`
+          : shift
+            ? `Ca linh hoạt — làm đủ ${formatDuration(shift.durationMinutes ?? 0)} là một ngày công`
+            : "Bạn chưa được gán ca làm việc."}
       </p>
 
       {lateBy > 0 ? (

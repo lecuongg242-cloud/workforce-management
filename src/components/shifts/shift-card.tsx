@@ -20,7 +20,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { WEEKDAY_LABEL } from "@/lib/constants";
-import { formatDuration, formatNumber, minutesBetween } from "@/lib/format";
+import { formatDuration, formatNumber } from "@/lib/format";
+import {
+  formatShiftSchedule,
+  isHoursBasedShift,
+  shiftScheduledMinutes,
+} from "@/lib/shifts/schedule";
 import type { ShiftWithStats } from "@/lib/data/shifts";
 
 /** The hien thi mot ca lam viec */
@@ -35,10 +40,8 @@ export function ShiftCard({
   onDuplicate: (shift: ShiftWithStats) => void;
   onArchive: (shift: ShiftWithStats) => void;
 }): React.ReactElement {
-  const workingMinutes = Math.max(
-    minutesBetween(shift.startTime, shift.endTime) - shift.breakMinutes,
-    0,
-  );
+  const isHours = isHoursBasedShift(shift);
+  const workingMinutes = shiftScheduledMinutes(shift);
 
   return (
     <article className="surface-card flex flex-col p-4 sm:p-5">
@@ -51,7 +54,7 @@ export function ShiftCard({
             </span>
           </div>
           <p className="num display-md mt-2 text-ink">
-            {shift.startTime} – {shift.endTime}
+            {formatShiftSchedule(shift)}
           </p>
         </div>
 
@@ -102,20 +105,24 @@ export function ShiftCard({
           <dt className="sr-only">Thời gian làm việc thực tế</dt>
           <dd className="num">{formatDuration(workingMinutes)} làm việc</dd>
         </div>
-        <div className="flex items-center gap-2 text-ink-secondary">
-          <Coffee aria-hidden="true" className="size-4 shrink-0 text-ink-muted" />
-          <dt className="sr-only">Giờ nghỉ</dt>
-          {/* Khung gio noi duoc dieu ma con so phut khong noi duoc: nghi LUC
-              MAY GIO. Ca chua khai khung gio (truoc 0025) lui ve so phut —
-              khong bia ra mot khung gio. */}
-          <dd className="num">
-            {shift.breakStartTime && shift.breakEndTime
-              ? `Nghỉ ${shift.breakStartTime}–${shift.breakEndTime}`
-              : shift.breakMinutes > 0
-                ? `Nghỉ ${shift.breakMinutes} phút (chưa có khung giờ)`
-                : "Không có giờ nghỉ"}
-          </dd>
-        </div>
+        {/* Ca linh hoat khong co khung gio ca, nen khong dinh vi duoc mot
+            khoang nghi trong do — so gio da khai la gio LAM VIEC THAT. */}
+        {isHours ? null : (
+          <div className="flex items-center gap-2 text-ink-secondary">
+            <Coffee aria-hidden="true" className="size-4 shrink-0 text-ink-muted" />
+            <dt className="sr-only">Giờ nghỉ</dt>
+            {/* Khung gio noi duoc dieu ma con so phut khong noi duoc: nghi LUC
+                MAY GIO. Ca chua khai khung gio (truoc 0025) lui ve so phut —
+                khong bia ra mot khung gio. */}
+            <dd className="num">
+              {shift.breakStartTime && shift.breakEndTime
+                ? `Nghỉ ${shift.breakStartTime}–${shift.breakEndTime}`
+                : shift.breakMinutes > 0
+                  ? `Nghỉ ${shift.breakMinutes} phút (chưa có khung giờ)`
+                  : "Không có giờ nghỉ"}
+            </dd>
+          </div>
+        )}
         <div className="flex items-center gap-2 text-ink-secondary">
           <Users aria-hidden="true" className="size-4 shrink-0 text-ink-muted" />
           <dt className="sr-only">Số nhân viên đang áp dụng</dt>
@@ -127,10 +134,16 @@ export function ShiftCard({
 
       <div className="mt-4 border-t border-hairline pt-3">
         <p className="text-xs text-ink-muted">
-          Cho phép đi muộn{" "}
-          <span className="num font-medium text-ink">
-            {shift.lateToleranceMinutes} phút
-          </span>
+          {isHours ? (
+            "Không tính đi muộn và về sớm — ca này không có giờ vào, giờ ra."
+          ) : (
+            <>
+              Cho phép đi muộn{" "}
+              <span className="num font-medium text-ink">
+                {shift.lateToleranceMinutes} phút
+              </span>
+            </>
+          )}
         </p>
         <div className="mt-2 flex flex-wrap gap-1">
           {([1, 2, 3, 4, 5, 6, 7] as const).map((day) => {

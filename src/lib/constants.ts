@@ -26,6 +26,17 @@ export const DEFAULT_TIMEZONE = "Asia/Ho_Chi_Minh";
 export const DEFAULT_LOCALE = "vi-VN";
 export const DEFAULT_CURRENCY = "VND";
 
+/**
+ * Hien thi cho mot truong CHUA KHAI (migration 0028: so dien thoai, ngay sinh,
+ * gioi tinh, phong ban, chuc vu, loai hop dong).
+ *
+ * Mot ky tu duy nhat, dung o moi man hinh, va tuyet doi khong phai mot gia tri
+ * dai dien ("1990-01-01", "Nam", "Nhân viên"). Mot gia tri dai dien khong phan
+ * biet duoc voi du lieu that: no hien ra, loc va sap xep y het, nen doanh
+ * nghiep se doc no nhu thu ho da khai.
+ */
+export const NOT_DECLARED = "—";
+
 /* -------------------------------------------------------------------------- */
 /* Nhan hien thi                                                               */
 /* -------------------------------------------------------------------------- */

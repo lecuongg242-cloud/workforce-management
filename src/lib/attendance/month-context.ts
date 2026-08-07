@@ -5,11 +5,12 @@ import {
   type CompanyRules,
   type ShiftRuleInfo,
 } from "@/lib/attendance/classification-context";
+import { groupAttendanceByDay, type ShiftBreakInfo } from "@/lib/attendance/day";
 import {
-  groupAttendanceByDay,
-  shiftBreakInfoById,
-  type ShiftBreakInfo,
-} from "@/lib/attendance/day";
+  SHIFT_CONTEXT_COLUMNS,
+  buildShiftContext,
+  type RawShiftContextRow,
+} from "@/lib/attendance/shift-context";
 import { resolveDayCredit, sumCreditedDays } from "@/lib/attendance/work-mode";
 import { shiftMonth } from "@/lib/format";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -30,8 +31,6 @@ import type { AttendanceRecord, MonthlySummary } from "@/lib/types/domain";
  * Module SERVER-ONLY: no goi `createServerSupabase()` (doc `next/headers`),
  * cung ly do voi `src/lib/settings/company-settings.ts`.
  */
-
-const SHIFT_COLUMNS = "id, break_minutes, start_time, end_time, working_days";
 
 export interface MonthContext {
   /** "YYYY-MM-DD" — ngay dau thang */
@@ -64,46 +63,15 @@ export async function loadMonthContext({
   const supabase = await createServerSupabase();
   const { data: shiftRows, error } = await supabase
     .from("shifts")
-    .select(SHIFT_COLUMNS)
+    .select(SHIFT_CONTEXT_COLUMNS)
     .eq("company_id", companyId);
 
   if (error) {
     throw new Error("Không thể tải ca làm việc của doanh nghiệp.");
   }
 
-  const rawShifts = (shiftRows ?? []) as Array<{
-    id: string;
-    break_minutes: number;
-    start_time: string;
-    end_time: string;
-    working_days: number[];
-  }>;
-
-  const breaks = shiftBreakInfoById(
-    rawShifts.map((row) => ({
-      id: row.id,
-      breakMinutes: row.break_minutes,
-      // `time` cua Postgres ve dang "HH:mm:ss" — cat con "HH:mm" cho khop voi
-      // `minutesBetween()`.
-      startTime: row.start_time.slice(0, 5),
-      endTime: row.end_time.slice(0, 5),
-    })),
-  );
-
-  const shiftRules = new Map<string, ShiftRuleInfo>(
-    rawShifts.map((row) => {
-      const info = breaks[row.id];
-      return [
-        row.id,
-        {
-          workingDays: row.working_days as ShiftRuleInfo["workingDays"],
-          scheduledMinutes: Math.max(
-            (info?.shiftMinutes ?? 0) - (info?.breakMinutes ?? 0),
-            0,
-          ),
-        },
-      ];
-    }),
+  const { breaks, shiftRules } = buildShiftContext(
+    (shiftRows ?? []) as RawShiftContextRow[],
   );
 
   // SET-04: quy tac DANG HIEU LUC TAI NGAY PHAT SINH, khong phai quy tac hom
