@@ -7,6 +7,8 @@ import {
   UnauthenticatedError,
   getSessionContext,
 } from "@/lib/auth/session-context";
+import { toIsoDate } from "@/lib/format";
+import { buildPayrollRows } from "@/lib/payroll/payroll-rows";
 import { assertCanViewOwnPayslip } from "@/lib/payroll/payslip-access";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { payslipListResponseSchema } from "@/lib/validation/api/payslips";
@@ -25,16 +27,27 @@ import { payslipListResponseSchema } from "@/lib/validation/api/payslips";
  * Mot duong doc du lieu luong khong duoc phep co hinh dang do.
  *
  * ======================================================================
- * (2) CHI DOC BAN CHOT — KHONG CO NHANH TINH LUC TRUY VAN
+ * (2) DANH SACH GOM CA KY DANG MO — VA DIEU KIEN DI KEM
  * ======================================================================
  *
- * `GET /api/payroll/summary` co hai nhanh: ky da chot doc ban chot, ky chua
- * chot tinh live. O day CHI co nhanh mot.
+ * Truoc day route nay CHI doc ban chot, voi ly do: con so cua mot ky chua chot
+ * con doi moi khi quan tri sua cau hinh hoac duyet mot yeu cau, nen phat no
+ * cho nhan vien la phat ra mot con so CHUA AI DUYET, roi thang sau no khac di
+ * ma khong ai giai thich duoc.
  *
- * Con so cua mot ky chua chot con doi moi khi quan tri sua cau hinh hoac duyet
- * mot yeu cau. Phat no cho nhan vien la phat ra mot con so CHUA AI DUYET, roi
- * thang sau no khac di ma khong ai giai thich duoc. Ky chua chot khong co
- * phieu — va man hinh noi dung nhu vay.
+ * Quyet dinh do DA DUOC DAO, CO Y THUC. Ly do: nguoi lam cong hoi "hom nay toi
+ * duoc bao nhieu", va bat ho doi den cuoi ky moi biet la bat ho tin ma khong
+ * kiem duoc. Rui ro cu khong bien mat — no duoc XU LY bang ba dieu kien:
+ *
+ *   - Moi muc mang `status`, va ky dang mo LUON la `provisional`. Man hinh
+ *     doc co do chu khong suy tu `closedAt === null`.
+ *   - Nhan "Tam tinh" tren man hinh la BAT BUOC, khong phai trang tri: do la
+ *     dieu kien de quyet dinh nay dung, chu khong phai mot lua chon thiet ke.
+ *   - So cua ky dang mo den tu CHINH `buildPayrollRows()` ma man hinh quan tri
+ *     va `closePayroll()` dung. Khong co duong tinh thu hai, nen con so nhan
+ *     vien thay hom nay la con so SE DUOC CHOT neu khong gi thay doi.
+ *
+ * Ky DA CHOT van doc tu ban chot va khong bao gio tinh lai.
  *
  * ======================================================================
  * (3) VI SAO KHONG THEM MOT NHANH VAO `/api/payroll/summary`
@@ -86,9 +99,10 @@ export async function GET(): Promise<NextResponse> {
       );
     }
 
-    const items = ((data ?? []) as unknown as RawRow[])
+    const closed = ((data ?? []) as unknown as RawRow[])
       .filter((row) => row.payroll_runs !== null)
       .map((row) => ({
+        status: "closed" as const,
         // `period_start` la ngay dau thang (rang buoc `check` cua 0024) — cat
         // lay "YYYY-MM" thay vi dung `Date`, de khong mot phep doi mui gio nao
         // chen vao giua (cung ly do voi `formatDate` trong `src/lib/format.ts`).
@@ -96,6 +110,33 @@ export async function GET(): Promise<NextResponse> {
         closedAt: row.payroll_runs!.closed_at,
         netPay: Number(row.net_pay),
       }));
+
+    // KY DANG MO — thang hien tai, neu no chua co ban chot. Dong ho lay o MAY
+    // CHU (`toIsoDate(new Date())`), cung nguon voi moi cho khac; mot dau thoi
+    // gian tu client la mo duong cho nguoi dung tu chon minh dang o thang nao.
+    const currentMonth = toIsoDate(new Date()).slice(0, 7);
+    const items = closed.some((item) => item.month === currentMonth)
+      ? closed
+      : await (async () => {
+          const { rows } = await buildPayrollRows({
+            companyId,
+            month: currentMonth,
+            employeeId,
+          });
+          const row = rows[0];
+          // Khong co dong nao trong ky (moi vao lam, hoac chua cham cong lan
+          // nao) -> khong co muc tam tinh. Danh sach rong la du lieu hop le.
+          if (!row) return closed;
+          return [
+            {
+              status: "provisional" as const,
+              month: currentMonth,
+              closedAt: null,
+              netPay: row.netPay,
+            },
+            ...closed,
+          ];
+        })();
 
     return NextResponse.json(payslipListResponseSchema.parse(items));
   } catch (cause) {

@@ -945,17 +945,27 @@ export interface PayrollPrep {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Mot ky da chot luong ma nguoi dang nhap CO phieu — dung cho danh sach.
+ * Mot ky trong danh sach phieu cua nguoi dang nhap.
  *
- * Chi ba truong: mot danh sach chi de tra loi "thang nao co phieu, va thang do
+ * Chi bon truong: mot danh sach chi de tra loi "thang nao co gi, va thang do
  * toi nhan bao nhieu". Moi thu khac thuoc ve man hinh chi tiet.
  */
 export interface PayslipSummary {
+  /**
+   * `provisional` = ky DANG MO, con so con thay doi cho toi khi doanh nghiep
+   * chot luong. Man hinh PHAI hien nhan "tam tinh" cho trang thai nay — do la
+   * dieu kien di kem cua viec phat con so chua chot, khong phai trang tri.
+   *
+   * KHONG suy tu `closedAt === null`: mot suy dien nhu vay hong im lang khi
+   * hinh dang doi.
+   */
+  status: "closed" | "provisional";
   /** "YYYY-MM" */
   month: string;
-  /** ISO date-time — thoi diem doanh nghiep chot luong ky nay. */
-  closedAt: string;
-  netPay: number;
+  /** ISO date-time; `null` o ky tam tinh — chua ai chot thi chua co thoi diem. */
+  closedAt: string | null;
+  /** `null` khi chua khai muc luong — KHONG duoc hien thanh 0. */
+  netPay: number | null;
 }
 
 /**
@@ -1015,6 +1025,67 @@ export interface Payslip {
   /** THUC NHAN = luong goc + tang ca + lech gio + phu cap − khau tru. */
   netPay: number;
 }
+
+/** Phieu DA CHOT, kem chi tiet theo ngay doc tu `payroll_line_days`. */
+export interface ClosedPayslip extends Payslip {
+  status: "closed";
+  days: PayrollDayLine[];
+}
+
+/**
+ * Phieu TAM TINH cua ky CHUA CHOT.
+ *
+ * MOI TRUONG TIEN LA NULLABLE, va do la khac biet co that voi `Payslip` chu
+ * khong phai mot su can than thua: mot ky chua chot co the chua khai muc luong
+ * cho ai do, trong khi mot ky DA CHOT thi khong the (`closePayroll` tu choi
+ * chot khi con dong thieu du kien).
+ *
+ * Vi vay hai hinh dang KHONG duoc gop lam mot bang cach noi long `Payslip`:
+ * lam vay se xoa mat mot bat bien that cua ban chot de phuc vu mot truong hop
+ * khac.
+ */
+export interface ProvisionalPayslip {
+  status: "provisional";
+  /** "YYYY-MM" */
+  month: string;
+  /** Luon `null` — ky nay chua duoc chot. */
+  closedAt: null;
+
+  employeeCode: string;
+  employeeName: string;
+  departmentName: string | null;
+
+  payUnit: PayRateUnit | null;
+  payAmount: number | null;
+
+  workedDays: number;
+  totalMinutes: number;
+  leaveDays: number;
+  lateCount: number;
+  overtimeMinutes: number;
+  convertedOvertimeHours: number | null;
+
+  basePay: number | null;
+  overtimePay: number | null;
+  hourAdjustment: number | null;
+  allowanceItems: PayrollAdjustmentItem[];
+  deductionItems: PayrollAdjustmentItem[];
+  allowanceTotal: number | null;
+  deductionTotal: number | null;
+  netPay: number | null;
+  /** Ly do khien phieu chua ra duoc con so; rong khi du du kien. */
+  missing: string[];
+
+  days: PayrollDayLine[];
+}
+
+/**
+ * Phan hoi cua `GET /api/payslips/[month]` — mot trong hai hinh dang.
+ *
+ * Union PHAN BIET bang `status`: man hinh khong the quen xu ly mot trong hai,
+ * va khong the doc mot truong chi ton tai o hinh dang kia.
+ */
+export type PayslipDetail = ClosedPayslip | ProvisionalPayslip;
 
 /* -------------------------------------------------------------------------- */
 /* Input cho cac thao tac ghi                                                  */

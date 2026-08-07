@@ -730,6 +730,43 @@ export const PAY_RATE_UNIT_OPTIONS = (["month", "day", "hour"] as const).map(
   (value) => ({ value, label: PAY_RATE_UNIT_LABEL[value] }),
 );
 
+/* -------------------------------------------------------------------------- */
+/* Luong theo NGAY — dung o ca man hinh nhan vien va man hinh quan tri         */
+/* -------------------------------------------------------------------------- */
+
+export const DAY_TYPE_LABEL: Record<
+  "weekday" | "weekend" | "holiday",
+  string
+> = {
+  weekday: "Ngày thường",
+  weekend: "Cuối tuần",
+  holiday: "Ngày lễ",
+};
+
+export const PAYSLIP_DAILY_LABEL = {
+  sectionTitle: "Chi tiết theo ngày",
+  sectionHint:
+    "Tiền phát sinh của từng ngày. Phụ cấp và khấu trừ theo kỳ nằm ở phần trên.",
+  provisionalBadge: "Tạm tính",
+  /**
+   * BAT BUOC hien o moi ky chua chot. Day la dieu kien di kem cua viec phat
+   * con so chua ai duyet cho nhan vien — xem khoi comment muc (2) o
+   * `src/app/api/payslips/route.ts`.
+   */
+  provisionalBanner:
+    "Số tạm tính. Con số có thể thay đổi cho tới khi doanh nghiệp chốt lương.",
+  currentPeriodTitle: "Tháng này",
+  inProgress: "Đang diễn ra",
+  notClosedYet: "Chưa chốt lương",
+  leavePaid: "Nghỉ có phép",
+  leaveUnpaid: "Nghỉ không phép",
+  totalRow: "Tổng các ngày",
+  emptyTitle: "Chưa có ngày nào",
+  emptyBody: "Ngày sẽ xuất hiện sau lần chấm công đầu tiên của kỳ.",
+  overtimePrefix: "TC",
+  hourSuffix: "giờ",
+} as const;
+
 /**
  * Tab "Thông tin lương" ở hồ sơ nhân viên.
  *

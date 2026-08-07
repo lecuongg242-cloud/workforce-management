@@ -7,12 +7,15 @@ import {
   UnauthenticatedError,
   getSessionContext,
 } from "@/lib/auth/session-context";
+import { buildPayrollRows } from "@/lib/payroll/payroll-rows";
 import { assertCanViewOwnPayslip } from "@/lib/payroll/payslip-access";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
+  closedPayslipSchema,
   payslipMonthParamSchema,
-  payslipSchema,
+  provisionalPayslipSchema,
 } from "@/lib/validation/api/payslips";
+import type { PayrollDayLine } from "@/lib/types/domain";
 
 /**
  * Chi tiet phieu luong cua MOT ky, cua CHINH nguoi dang nhap (PAY-05).
@@ -65,6 +68,47 @@ interface RawItem {
   multiplier: string | number;
 }
 
+const DAY_COLUMNS =
+  "work_date, day_type, credited_days, regular_minutes, overtime_minutes, " +
+  "converted_overtime_hours, hour_delta_minutes, base_pay, overtime_pay, " +
+  "hour_adjustment, day_total";
+
+interface RawDayRow {
+  work_date: string;
+  day_type: "weekday" | "weekend" | "holiday";
+  credited_days: string | number;
+  regular_minutes: number;
+  overtime_minutes: number;
+  converted_overtime_hours: string | number;
+  hour_delta_minutes: number;
+  base_pay: string | number;
+  overtime_pay: string | number;
+  hour_adjustment: string | number;
+  day_total: string | number;
+}
+
+function toDayFromSnapshot(row: RawDayRow): PayrollDayLine {
+  return {
+    date: row.work_date,
+    dayType: row.day_type,
+    // Ban chot CHI ghi ngay da co con so (`closePayroll` bo qua ngay dang do),
+    // nen moi dong doc len tu day deu la mot ngay da khep lai.
+    state: "counted",
+    creditedDays: Number(row.credited_days),
+    regularMinutes: row.regular_minutes,
+    overtimeMinutes: row.overtime_minutes,
+    convertedOvertimeHours: Number(row.converted_overtime_hours),
+    hourDeltaMinutes: row.hour_delta_minutes,
+    basePay: Number(row.base_pay),
+    overtimePay: Number(row.overtime_pay),
+    hourAdjustment: Number(row.hour_adjustment),
+    dayTotal: Number(row.day_total),
+    // Mot ky chi chot duoc khi khong dong nao thieu du kien — mang nay luon
+    // rong o ban chot, va do la mot bat bien chu khong phai su trung hop.
+    missing: [],
+  };
+}
+
 function toItem(item: RawItem) {
   return {
     // `adjustment_id` co the `null` (khoan da bi xoa sau khi chot) — dung ten
@@ -114,7 +158,49 @@ export async function GET(
         { status: 500 },
       );
     }
-    if (!run) return NextResponse.json(null);
+
+    /* ---------------------------------------------------------------- */
+    /* NHANH TAM TINH: ky CHUA CHOT -> tinh luc truy van                  */
+    /* ---------------------------------------------------------------- */
+    if (!run) {
+      // Di qua CHINH ham ma man hinh quan tri va `closePayroll()` dung — nen
+      // con so o day la con so SE DUOC CHOT neu khong gi thay doi.
+      const { rows } = await buildPayrollRows({ companyId, month, employeeId });
+      const row = rows[0];
+      // Nguoi nay khong co dong nao trong ky (vao lam sau ky do, hoac chua
+      // cham cong lan nao) — cung mot cau tra loi voi "ky khong ton tai", de
+      // khong do duoc lich su cua doanh nghiep bang cach thu tung thang.
+      if (!row) return NextResponse.json(null);
+
+      return NextResponse.json(
+        provisionalPayslipSchema.parse({
+          status: "provisional",
+          month,
+          closedAt: null,
+          employeeCode: row.employeeCode,
+          employeeName: row.employeeName,
+          departmentName: row.departmentName,
+          payUnit: row.payUnit,
+          payAmount: row.payAmount,
+          workedDays: row.workedDays,
+          totalMinutes: row.totalMinutes,
+          leaveDays: row.leaveDays,
+          lateCount: row.lateCount,
+          overtimeMinutes: row.overtimeMinutes,
+          convertedOvertimeHours: row.convertedOvertimeHours,
+          basePay: row.basePay,
+          overtimePay: row.overtimePay,
+          hourAdjustment: row.hourAdjustment,
+          allowanceItems: row.allowanceItems,
+          deductionItems: row.deductionItems,
+          allowanceTotal: row.allowanceTotal,
+          deductionTotal: row.deductionTotal,
+          netPay: row.netPay,
+          missing: row.missing,
+          days: row.days,
+        }),
+      );
+    }
 
     const runRow = run as { id: string; closed_at: string };
 
@@ -158,10 +244,29 @@ export async function GET(
 
     const items = (itemData ?? []) as unknown as RawItem[];
 
+    // CHI TIET THEO NGAY cua ban chot (0030) — loc theo `line_id`, cung ly do
+    // voi truy van khoan o tren.
+    const { data: dayData, error: dayError } = await supabase
+      .from("payroll_line_days")
+      .select(DAY_COLUMNS)
+      .eq("company_id", companyId)
+      .eq("line_id", lineRow.id)
+      .order("work_date", { ascending: true });
+
+    if (dayError) {
+      console.error("Không thể tải chi tiết theo ngày:", dayError.message);
+      return NextResponse.json(
+        { error: "Không thể tải phiếu lương." },
+        { status: 500 },
+      );
+    }
+
     return NextResponse.json(
-      payslipSchema.parse({
+      closedPayslipSchema.parse({
+        status: "closed",
         month,
         closedAt: runRow.closed_at,
+        days: ((dayData ?? []) as unknown as RawDayRow[]).map(toDayFromSnapshot),
         employeeCode: lineRow.employee_code,
         employeeName: lineRow.employee_name,
         departmentName: lineRow.department_name,
