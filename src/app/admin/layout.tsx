@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { AdminShell } from "@/components/layout/admin-shell";
@@ -7,9 +6,9 @@ import {
   getSessionContextOrNull,
 } from "@/lib/auth/session-context";
 
-export const metadata: Metadata = {
-  title: "Quản trị",
-};
+// KHONG khai bao `metadata.title` o day: mot title dang chuoi o tang layout se
+// XOA `template` ma `src/app/layout.tsx` dat cho ca cay con, khien moi trang
+// trong `/admin/*` thoat khoi quy tac "tab luon la APP_NAME".
 
 /**
  * `middleware.ts` da bat khach chua dang nhap truoc khi toi day (AUTH-02).

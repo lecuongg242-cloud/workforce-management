@@ -252,7 +252,7 @@ describe("GET /api/attendance/review (plan 03-06)", () => {
     expect(body).toHaveLength(0);
   });
 
-  it("6. sap xep XAC DINH: khoang cach giam dan, roi thoi diem giam dan, roi dinh danh tang dan", async () => {
+  it("6. sap xep XAC DINH: thoi diem giam dan (moi nhat len dau), roi khoang cach giam dan, roi dinh danh tang dan", async () => {
     vi.mocked(getSessionContext).mockResolvedValue(SESSION_CTY01_OWNER);
     const { client } = twoTableClient(
       {
@@ -277,7 +277,9 @@ describe("GET /api/attendance/review (plan 03-06)", () => {
     const response = await GET(fakeGetRequest());
     const body = (await response.json()) as { photoId: string }[];
 
-    expect(body.map((item) => item.photoId)).toEqual(["photo-a", "photo-c", "photo-b"]);
+    // photo-c moi nhat (02:00) len dau; photo-a/photo-b cung 01:00 nen moi
+    // phan giai bang khoang cach (900 > 600).
+    expect(body.map((item) => item.photoId)).toEqual(["photo-c", "photo-a", "photo-b"]);
   });
 
   it("7. dieu kien company_id LUON lay tu session, ca hai buoc truy van", async () => {

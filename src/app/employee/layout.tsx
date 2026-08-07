@@ -1,12 +1,10 @@
-import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { EmployeeShell } from "@/components/layout/employee-shell";
 import { getSessionContextOrNull } from "@/lib/auth/session-context";
 
-export const metadata: Metadata = {
-  title: "Nhân viên",
-};
+// Cung ly do voi `src/app/admin/layout.tsx`: khong dat title o tang layout,
+// neu khong ca `/employee/*` se thoat khoi `template` cua layout goc.
 
 /**
  * Cung mot ly do voi `src/app/admin/layout.tsx`: middleware da chan khach

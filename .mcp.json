@@ -2,10 +2,8 @@
   "mcpServers": {
     "chrome-devtools": {
       "type": "stdio",
-      "command": "node",
-      "args": [
-        "C:/Users/admin/AppData/Roaming/npm/node_modules/chrome-devtools-mcp/build/src/bin/chrome-devtools-mcp.js"
-      ],
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"],
       "env": {}
     }
   }

@@ -387,17 +387,22 @@ export async function GET(request: Request): Promise<NextResponse> {
         (item) => !seenRecordIds.has(item.attendanceRecordId),
       ),
     ]
-      // Thu tu XAC DINH: khoang cach GIAM DAN (dong khong co khoang cach xep
-      // sau) roi thoi diem GIAM DAN roi dinh danh anh TANG DAN -- de hai lan
-      // goi lien tiep cho CUNG mot thu tu, du cac truy van phia tren khong tu
-      // bao dam thu tu on dinh.
+      // Thu tu XAC DINH: thoi diem GIAM DAN (moi nhat len dau) roi khoang cach
+      // GIAM DAN (dong khong co khoang cach xep sau) roi dinh danh anh TANG
+      // DAN -- de hai lan goi lien tiep cho CUNG mot thu tu, du cac truy van
+      // phia tren khong tu bao dam thu tu on dinh.
+      //
+      // THOI DIEM di truoc khoang cach: nguoi duyet mo trang nay de xu ly
+      // nhung gi VUA xay ra: mot luot cham sai hom nay quan trong hon mot luot
+      // xa hon nhung da nam do hai tuan. Xep theo khoang cach truoc thi moi
+      // ban ghi cu co GPS lech nang se chiem dinh danh sach mai mai.
       .sort((a, b) => {
-        const distanceA = a.distanceMeters ?? -1;
-        const distanceB = b.distanceMeters ?? -1;
-        if (distanceB !== distanceA) return distanceB - distanceA;
         if (b.capturedAt !== a.capturedAt) {
           return b.capturedAt.localeCompare(a.capturedAt);
         }
+        const distanceA = a.distanceMeters ?? -1;
+        const distanceB = b.distanceMeters ?? -1;
+        if (distanceB !== distanceA) return distanceB - distanceA;
         return a.photoId.localeCompare(b.photoId);
       });
 
