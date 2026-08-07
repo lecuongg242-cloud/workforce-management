@@ -1,16 +1,17 @@
 import {
-  toDailyRate,
-  toHourlyRate,
-  type RateMissingInput,
-} from "@/lib/payroll/rate";
+  computeDailyLines,
+  sumDailyPay,
+  type DailyPayLine,
+  type DailyPaySource,
+  type PayrollMissingInput,
+} from "@/lib/payroll/compute-daily";
+import { toDailyRate, toHourlyRate } from "@/lib/payroll/rate";
 import { isTargeted, type ScopeEmployee } from "@/lib/payroll/scope";
 import type {
   EmployeeOvertimeRate,
-  OvertimeRuleKey,
   PayAdjustment,
   PayRate,
   WorkMode,
-  WorkModeMissingInput,
 } from "@/lib/types/domain";
 
 /**
@@ -59,23 +60,32 @@ import type {
  *   tron — do dung la thu D-42a mo ta, va lam tron o do gay lech HANG NGHIN
  *   dong tren mot bang luong, khong phai mot dong.
  *
- *   CON SO CUOI = tung o hien ra man hinh (luong goc, tien tang ca, tung dong
- *   khoan, hai tong khoan). Moi o duoc lam tron DUNG MOT LAN tu gia tri chinh
- *   xac cua no. `netPay` la tong cua chinh nhung o do — nen bang luong LUON
- *   doi chieu duoc, khong bao gio lech mot dong.
+ *   CON SO CUOI = tung o hien ra man hinh. Moi o duoc lam tron DUNG MOT LAN tu
+ *   gia tri chinh xac cua no, va moi tong la tong cua chinh nhung o do — nen
+ *   bang luong LUON doi chieu duoc, khong bao gio lech mot dong.
  *
- * Sai so con lai giua `netPay` va gia tri chinh xac tuyet doi la duoi mot dong
- * cho moi thanh phan. Do la sai so nho nhat ma dinh dang tien dong cho phep,
- * va no KHONG QUAN SAT DUOC — trong khi mot bang khong doi chieu duoc thi quan
- * sat duoc ngay.
+ * RANH GIOI DO NAY DA DI XUONG MOT TANG. Tu khi bang luong bung ra duoc theo
+ * NGAY, "o hien ra man hinh" gom ca tien cua tung ngay — nen luong goc, tien
+ * tang ca va phan lech gio duoc lam tron o MUC NGAY (`compute-daily.ts`), roi
+ * so cua ky la TONG cac so ngay do.
+ *
+ * He qua da duoc chap nhan CO Y THUC: con so cua ky lech vai chuc dong so voi
+ * cach nhan mot lan tu so tong. Doi lai, mot nguoi cong 22 dong ngay tren man
+ * hinh se ra DUNG con so thang cua ho. Doi ngat lai la mot bang tu mau thuan
+ * voi chinh no — thu te hon nhieu, va quan sat duoc ngay.
+ *
+ * Day cung la nguyen tac ma `allowanceTotal` von da dung: no la tong cua cac
+ * dong khoan DA LAM TRON, khong phai lam tron cua tong chinh xac.
  */
 
-/** Moi ly do khien mot dong luong khong ra duoc con so. */
-export type PayrollMissingInput =
-  | "pay_rate"
-  | RateMissingInput
-  | WorkModeMissingInput
-  | `overtime_rule:${OvertimeRuleKey}`;
+/**
+ * Moi ly do khien mot dong luong khong ra duoc con so.
+ *
+ * Dinh nghia nam o `compute-daily.ts` (file nay import GIA TRI tu do, nen dat
+ * kieu o day se tao mot vong import). Xuat lai tu day de moi noi dang import
+ * `PayrollMissingInput` tu `compute.ts` khong phai doi.
+ */
+export type { PayrollMissingInput };
 
 /** Mot dong khoan da quy ra tien. */
 export interface PayrollAdjustmentLine {
@@ -88,23 +98,21 @@ export interface PayrollAdjustmentLine {
 }
 
 export interface PayrollComputeInput {
-  /** So lieu cong cua nguoi do trong ky — nguon duy nhat, khong tinh lai. */
-  summary: {
-    creditedDays: number | null;
-    regularMinutes: number | null;
-    hourDeltaMinutes: number;
-    /** `null` = THIEU HE SO (D-26), khong phai "khong co tang ca". */
-    convertedOvertimeHours: number | null;
-    /**
-     * Tong so PHUT tang ca THO cua ky — chua nhan he so nao. Chi duoc dung khi
-     * nguoi nay co muc tang ca rieng (0026): luc do he so theo loai ngay cua
-     * doanh nghiep khong con tham gia, nen `convertedOvertimeHours` cung khong.
-     */
-    overtimeMinutes: number;
-    missingMultiplierKeys: OvertimeRuleKey[];
-    missingWorkModeInputs: WorkModeMissingInput[];
-    lateCount: number;
-  };
+  /**
+   * So lieu cua ky KHONG suy duoc tu tung ngay. Hien chi con MOT truong: so
+   * lan di muon, dung lam he so cho khoan `per_late`.
+   *
+   * Moi thu khac da chuyen xuong `days` — day la thay doi lam cho tong cua ky
+   * LUON bang tong cac dong ngay.
+   */
+  summary: { lateCount: number };
+  /**
+   * SO LIEU CONG THEO NGAY — nguon duy nhat cua ba con so tien. Ham nay tu quy
+   * chung ra tien qua `computeDailyLines()`, thay vi nhan tham so da quy san:
+   * phep quy doi don gia (`toDailyRate`/`toHourlyRate`) chi duoc chay o MOT
+   * cho, va do la o day.
+   */
+  days: readonly DailyPaySource[];
   /** `null` = CHUA KHAI MUC LUONG. */
   payRate: Pick<PayRate, "unit" | "amount"> | null;
   /**
@@ -131,6 +139,11 @@ export interface PayrollLine {
   allowanceTotal: number | null;
   deductionTotal: number | null;
   netPay: number | null;
+  /**
+   * Cac dong NGAY da quy ra tien. Ba con so tien o tren la tong cua chung, nen
+   * man hinh doi chieu duoc ma khong phai tinh lai gi.
+   */
+  days: DailyPayLine[];
   missing: PayrollMissingInput[];
 }
 
@@ -141,6 +154,7 @@ function roundToDong(value: number): number {
 
 export function computePayrollLine({
   summary,
+  days,
   payRate,
   overtimeRate,
   workMode,
@@ -151,18 +165,6 @@ export function computePayrollLine({
 }: PayrollComputeInput): PayrollLine {
   const missing = new Set<PayrollMissingInput>();
 
-  // Thieu he so tang ca (D-26) va thieu mau so quy doi ngay cong (D-38) den
-  // tu tang tren; chung duoc mang xuong nguyen ven, khong bi nuot.
-  for (const key of summary.missingMultiplierKeys) {
-    // Nguoi co muc tang ca RIENG khong an theo he so cua doanh nghiep, nen mot
-    // he so doanh nghiep chua khai khong duoc chan bang luong cua ho.
-    if (overtimeRate !== null) continue;
-    missing.add(`overtime_rule:${key}`);
-  }
-  for (const key of summary.missingWorkModeInputs) {
-    missing.add(key);
-  }
-
   const empty: PayrollLine = {
     basePay: null,
     overtimePay: null,
@@ -172,6 +174,7 @@ export function computePayrollLine({
     allowanceTotal: null,
     deductionTotal: null,
     netPay: null,
+    days: [],
     missing: [],
   };
 
@@ -190,16 +193,19 @@ export function computePayrollLine({
     standardDaysPerMonth,
     standardHoursPerDay,
   };
-  const daily = toDailyRate(rateInput);
-  const hourly = toHourlyRate(rateInput);
-  if (daily.missing !== null) missing.add(daily.missing);
-  if (hourly.missing !== null) missing.add(hourly.missing);
+  // MOT CHO DUY NHAT quy muc luong ra don gia — hai don gia nay duoc dung cho
+  // ca cac dong ngay (qua `computeDailyLines`) lan cac khoan tinh theo % luong
+  // ngay. Quy doi o hai noi la mo duong cho hai con so khac nhau.
+  const dailyRateResult = toDailyRate(rateInput);
+  const hourlyRateResult = toHourlyRate(rateInput);
+  if (dailyRateResult.missing !== null) missing.add(dailyRateResult.missing);
+  if (hourlyRateResult.missing !== null) missing.add(hourlyRateResult.missing);
 
-  const dailyRate = daily.value;
-  const hourlyRate = hourly.value;
+  const dailyRate = dailyRateResult.value;
+  const hourlyRate = hourlyRateResult.value;
 
   /* ------------------------------------------------------------------ */
-  /* Luong goc — theo GIO THUC TE hay theo NGAY CONG                      */
+  /* Ba con so tien — CONG tu cac dong NGAY, khong nhan tu so tong        */
   /* ------------------------------------------------------------------ */
   /**
    * HAI DUONG DAN TOI "tra theo gio thuc te", va ca hai deu la mot y dinh
@@ -211,76 +217,22 @@ export function computePayrollLine({
    *      giờ" — nếu hệ thống vẫn trả theo ngày có mặt thì con số đơn giá giờ
    *      người dùng gõ vào không còn là thứ quyết định tiền của họ.
    *
-   * Vi sao dieu (2) phai co: mot doanh nghiep co ca cu the cho khoi van phong
-   * VA tra theo gio cho khoi san xuat la chuyen binh thuong, nhung `workMode`
-   * la MOT gia tri cho ca doanh nghiep. Truoc thay doi nay, nguoi an luong gio
-   * o che do `shift` duoc tra `so ngay co mat x (don gia gio x so gio chuan)`
-   * — tuc la lam 4 tieng hay 12 tieng trong mot ngay deu ra cung mot so tien,
-   * va do dai ca that cua ho khong tham gia vao phep tinh.
+   * Dieu kien nay khong doi trong mot ky, nen no duoc tinh MOT LAN o day roi
+   * truyen xuong moi ngay — khong ngay nao tu suy lai no.
    */
   const paysByActualHours = workMode === "daily_hours" || payRate.unit === "hour";
 
-  let basePay: number | null = null;
-  if (paysByActualHours) {
-    basePay =
-      hourlyRate !== null && summary.regularMinutes !== null
-        ? hourlyRate * (summary.regularMinutes / 60)
-        : null;
-  } else {
-    basePay =
-      dailyRate !== null && summary.creditedDays !== null
-        ? dailyRate * summary.creditedDays
-        : null;
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Cong/tru theo gio thuc te — CHI o `shift_hourly`                     */
-  /* ------------------------------------------------------------------ */
-  // `hourDeltaMinutes` AM khi thieu gio, nen phep nhan tu ra mot so am; khong
-  // co nhanh rieng nao cho "thieu gio" va do la co y — mot nhanh rieng se la
-  // mot cho de dau cong bi viet nham thanh dau tru.
-  let hourAdjustment: number | null = 0;
-  // `paysByActualHours` bi loai TUYET DOI o day: luong goc cua ho da bam dung
-  // gio thuc te roi, cong them phan lech gio so voi ca nua la tinh HAI LAN
-  // cung mot so gio — mot lan o `basePay`, mot lan o day.
-  if (workMode === "shift_hourly" && !paysByActualHours) {
-    hourAdjustment =
-      hourlyRate !== null ? hourlyRate * (summary.hourDeltaMinutes / 60) : null;
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Tien tang ca                                                         */
-  /* ------------------------------------------------------------------ */
-  /**
-   * HAI DUONG, va duong nao duoc dung la do CHINH NGUOI DO co muc rieng hay
-   * khong (migration 0026):
-   *
-   *   KHONG co muc rieng — duong cu, quy tac (1): NHAN `convertedOvertimeHours`
-   *   cua Phase 4 voi don gia gio. He so theo loai ngay (thuong/nghi/le) va phu
-   *   cap dem da duoc ap o tang tren, khong tinh lai o day.
-   *
-   *   CO muc rieng — muc do THAY CHO toan bo he so theo loai ngay, nen
-   *   `convertedOvertimeHours` (da nhan he so doanh nghiep) khong con dung
-   *   duoc: phai quay ve SO PHUT TANG CA THO. Do la ly do `overtimeMinutes` co
-   *   mat trong dau vao cua ham nay.
-   *
-   * `fixed_hourly` la so tien, nen no KHONG nhan voi don gia gio — va vi vay
-   * mot nguoi khai muc tien co dinh van tinh duoc tien tang ca ngay ca khi
-   * doanh nghiep chua khai he so nao.
-   */
-  const overtimeHours = summary.overtimeMinutes / 60;
-  let overtimePay: number | null;
-  if (overtimeRate === null) {
-    overtimePay =
-      hourlyRate !== null && summary.convertedOvertimeHours !== null
-        ? hourlyRate * summary.convertedOvertimeHours
-        : null;
-  } else if (overtimeRate.valueType === "fixed_hourly") {
-    overtimePay = overtimeHours * overtimeRate.value;
-  } else {
-    overtimePay =
-      hourlyRate !== null ? hourlyRate * overtimeHours * overtimeRate.value : null;
-  }
+  // Ba phep nhan cu (don gia ngay x ngay cong, don gia gio x gio quy doi, don
+  // gia gio x lech gio) da chuyen xuong `compute-daily.ts` va chay MOT LAN CHO
+  // MOI NGAY. Tu day tro di o khoi nay chi con phep cong so nguyen.
+  const dailyLines = computeDailyLines({
+    days,
+    rates: { dailyRate, hourlyRate, overtimeRate, workMode, paysByActualHours },
+  });
+  const daily = sumDailyPay(dailyLines);
+  // Thieu he so tang ca (D-26) va thieu mau so quy doi ngay cong (D-38) den tu
+  // tung ngay; chung duoc mang len nguyen ven, khong bi nuot.
+  for (const key of daily.missing) missing.add(key);
 
   /* ------------------------------------------------------------------ */
   /* Phu cap va khau tru                                                  */
@@ -348,39 +300,37 @@ export function computePayrollLine({
   /* ------------------------------------------------------------------ */
   /* Thuc nhan — quy tac (2) va (3)                                       */
   /* ------------------------------------------------------------------ */
-  // Ba con so cuoi, moi con so lam tron DUNG MOT LAN tu gia tri chinh xac cua
-  // no. Tu day tro di khong con phep nhan nao — chi con phep cong so nguyen.
-  const basePayFinal = basePay === null ? null : roundToDong(basePay);
-  const overtimePayFinal = overtimePay === null ? null : roundToDong(overtimePay);
-  const hourAdjustmentFinal =
-    hourAdjustment === null ? null : roundToDong(hourAdjustment);
+  // Ba con so cuoi da duoc lam tron o MUC NGAY roi cong lai; o day khong lam
+  // tron them lan nao. Tu day tro di khong con phep nhan nao — chi con phep
+  // cong so nguyen.
 
   // BAT KY phan nao `null` thi `netPay` cung `null`. Khong cong phan da biet
   // lai roi trinh bay nhu mot con so day du (quy tac (2)).
   const netPay =
-    basePayFinal === null ||
-    overtimePayFinal === null ||
-    hourAdjustmentFinal === null ||
+    daily.basePay === null ||
+    daily.overtimePay === null ||
+    daily.hourAdjustment === null ||
     allowanceTotal === null ||
     deductionTotal === null
       ? null
       : // Tong cua CHINH nhung o hien ra man hinh — bang luong luon doi chieu
-        // duoc (quy tac (3)).
-        basePayFinal +
-        overtimePayFinal +
-        hourAdjustmentFinal +
+        // duoc (quy tac (3)), va tu plan nay dieu do dung xuong den TUNG NGAY.
+        daily.basePay +
+        daily.overtimePay +
+        daily.hourAdjustment +
         allowanceTotal -
         deductionTotal;
 
   return {
-    basePay: basePayFinal,
-    overtimePay: overtimePayFinal,
-    hourAdjustment: hourAdjustmentFinal,
+    basePay: daily.basePay,
+    overtimePay: daily.overtimePay,
+    hourAdjustment: daily.hourAdjustment,
     allowanceItems,
     deductionItems,
     allowanceTotal,
     deductionTotal,
     netPay,
+    days: dailyLines,
     missing: Array.from(missing),
   };
 }

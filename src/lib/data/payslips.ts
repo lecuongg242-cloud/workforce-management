@@ -1,9 +1,9 @@
 import { fetchJson } from "@/lib/data/fetch-json";
 import {
   payslipListResponseSchema,
-  payslipSchema,
+  payslipResponseSchema,
 } from "@/lib/validation/api/payslips";
-import type { Payslip, PayslipSummary } from "@/lib/types/domain";
+import type { PayslipDetail, PayslipSummary } from "@/lib/types/domain";
 
 /**
  * Phieu luong cua CHINH nguoi dang nhap (PAY-05).
@@ -14,19 +14,26 @@ import type { Payslip, PayslipSummary } from "@/lib/types/domain";
  * tham so vao day.
  */
 
-/** Cac ky da chot luong ma nguoi dang nhap co phieu, moi nhat truoc. */
+/**
+ * Cac ky ma nguoi dang nhap co phieu, moi nhat truoc — gom ca ky DANG MO
+ * (`status: "provisional"`) neu thang hien tai chua duoc chot.
+ */
 export async function listMyPayslips(): Promise<PayslipSummary[]> {
   return fetchJson("/api/payslips", payslipListResponseSchema);
 }
 
 /**
- * Chi tiet phieu cua mot ky. `null` khi ky do khong co phieu — ky chua chot
- * luong, hoac nguoi nay chua lam viec o ky do. Hai truong hop CO Y khong phan
- * biet duoc voi nhau (xem chu thich cua Route Handler).
+ * Chi tiet phieu cua mot ky — da chot hoac tam tinh, phan biet bang `status`.
+ *
+ * `null` khi ky do khong co gi de xem: nguoi nay chua lam viec o ky do, hoac
+ * ky khong ton tai. Hai truong hop CO Y khong phan biet duoc voi nhau (xem
+ * chu thich cua Route Handler).
  */
-export async function getMyPayslip(month: string): Promise<Payslip | null> {
+export async function getMyPayslip(
+  month: string,
+): Promise<PayslipDetail | null> {
   return fetchJson(
     `/api/payslips/${encodeURIComponent(month)}`,
-    payslipSchema.nullable(),
+    payslipResponseSchema.nullable(),
   );
 }

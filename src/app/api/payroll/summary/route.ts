@@ -11,7 +11,7 @@ import {
 import { buildPayrollRows } from "@/lib/payroll/payroll-rows";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { payrollPrepSchema, payrollQuerySchema } from "@/lib/validation/api/payroll";
-import type { PayrollPrepRow } from "@/lib/types/domain";
+import type { PayrollDayLine, PayrollPrepRow } from "@/lib/types/domain";
 
 /**
  * Bang luong cua mot thang: mot dong cho moi nhan vien. Khuon 02-04 (D-12c):
@@ -44,6 +44,8 @@ const RUN_COLUMNS =
 const LINE_COLUMNS =
   "id, employee_id, employee_code, employee_name, department_name, pay_unit, pay_amount, credited_days, regular_minutes, hour_delta_minutes, converted_overtime_hours, late_count, worked_days, total_minutes, leave_days, overtime_minutes, overtime_night_minutes, base_pay, overtime_pay, hour_adjustment, allowance_total, deduction_total, net_pay";
 const ITEM_COLUMNS = "line_id, adjustment_id, kind, name, amount, multiplier";
+const DAY_COLUMNS =
+  "line_id, work_date, day_type, credited_days, regular_minutes, overtime_minutes, converted_overtime_hours, hour_delta_minutes, base_pay, overtime_pay, hour_adjustment, day_total";
 
 interface RawRun {
   id: string;
@@ -87,6 +89,43 @@ interface RawItem {
   multiplier: string | number;
 }
 
+interface RawDayRow {
+  line_id: string;
+  work_date: string;
+  day_type: "weekday" | "weekend" | "holiday";
+  credited_days: string | number;
+  regular_minutes: number;
+  overtime_minutes: number;
+  converted_overtime_hours: string | number;
+  hour_delta_minutes: number;
+  base_pay: string | number;
+  overtime_pay: string | number;
+  hour_adjustment: string | number;
+  day_total: string | number;
+}
+
+function toDayLine(row: RawDayRow): PayrollDayLine {
+  return {
+    date: row.work_date,
+    dayType: row.day_type,
+    // Ban chot CHI ghi ngay da co con so — `closePayroll()` bo qua ngay dang
+    // do. Nen moi dong doc len tu day deu la mot ngay da khep lai.
+    state: "counted",
+    creditedDays: Number(row.credited_days),
+    regularMinutes: row.regular_minutes,
+    overtimeMinutes: row.overtime_minutes,
+    convertedOvertimeHours: Number(row.converted_overtime_hours),
+    hourDeltaMinutes: row.hour_delta_minutes,
+    basePay: Number(row.base_pay),
+    overtimePay: Number(row.overtime_pay),
+    hourAdjustment: Number(row.hour_adjustment),
+    dayTotal: Number(row.day_total),
+    // Mot ky chi chot duoc khi khong dong nao thieu du kien — mang nay luon
+    // rong o ban chot, va do la mot bat bien chu khong phai su trung hop.
+    missing: [],
+  };
+}
+
 function toItem(item: RawItem) {
   return {
     // `adjustment_id` co the la `null` (khoan da bi xoa sau khi chot) — dung
@@ -106,10 +145,15 @@ function toItem(item: RawItem) {
  * no doi theo du lieu cua HOM NAY trong khi cac cot tien thi khong, va mot
  * bang tu mau thuan voi chinh no la thu te hon ca mot bang sai.
  */
-function rowFromSnapshot(line: RawLine, items: RawItem[]): PayrollPrepRow {
+function rowFromSnapshot(
+  line: RawLine,
+  items: RawItem[],
+  daysByLineId: Map<string, PayrollDayLine[]>,
+): PayrollPrepRow {
   const lineItems = items.filter((item) => item.line_id === line.id);
 
   return {
+    days: daysByLineId.get(line.id) ?? [],
     employeeId: line.employee_id,
     employeeCode: line.employee_code,
     employeeName: line.employee_name,
@@ -209,7 +253,34 @@ export async function GET(request: Request): Promise<NextResponse> {
 
       const lines = (lineResult.data ?? []) as unknown as RawLine[];
       const items = (itemResult.data ?? []) as unknown as RawItem[];
-      const rows = lines.map((line) => rowFromSnapshot(line, items));
+
+      // CHI TIET THEO NGAY (0030) — MOT truy van cho ca ban chot, loc theo
+      // `line_id`. Khong keo ca doanh nghiep ve roi loc trong JS, va khong hoi
+      // tung dong mot: ban chot lon dan theo tung ky.
+      const { data: dayData, error: dayError } = await supabase
+        .from("payroll_line_days")
+        .select(DAY_COLUMNS)
+        .eq("company_id", companyId)
+        .in(
+          "line_id",
+          lines.map((line) => line.id),
+        )
+        .order("work_date", { ascending: true });
+
+      if (dayError) {
+        throw new Error("Không thể tải chi tiết theo ngày của bảng lương.");
+      }
+
+      const daysByLineId = new Map<string, PayrollDayLine[]>();
+      for (const raw of (dayData ?? []) as unknown as RawDayRow[]) {
+        const list = daysByLineId.get(raw.line_id) ?? [];
+        list.push(toDayLine(raw));
+        daysByLineId.set(raw.line_id, list);
+      }
+
+      const rows = lines.map((line) =>
+        rowFromSnapshot(line, items, daysByLineId),
+      );
 
       return NextResponse.json(
         payrollPrepSchema.parse({

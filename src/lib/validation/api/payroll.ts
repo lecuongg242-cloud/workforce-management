@@ -21,6 +21,29 @@ export const payrollAdjustmentItemSchema = z.object({
   multiplier: z.number(),
 });
 
+/**
+ * TIEN CUA MOT NGAY. Dung chung o CA HAI nhanh cua `GET /api/payroll/summary`
+ * (ky da chot doc tu `payroll_line_days`, ky chua chot lay tu ket qua tinh) va
+ * o `GET /api/payslips/[month]` — mot hop dong duy nhat cho mot khai niem duy
+ * nhat, de man hinh khong phai biet minh dang xem ky nao.
+ */
+export const payrollDayLineSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  dayType: z.enum(["weekday", "weekend", "holiday"]),
+  state: z.enum(["counted", "in_progress", "leave_paid", "leave_unpaid"]),
+  // KHONG `int()`: ngay cong la so thap phan o che do `daily_hours` (D-39).
+  creditedDays: z.number().nullable(),
+  regularMinutes: z.number().int().nullable(),
+  overtimeMinutes: z.number().int(),
+  convertedOvertimeHours: z.number().nullable(),
+  hourDeltaMinutes: z.number().int(),
+  basePay: z.number().nullable(),
+  overtimePay: z.number().nullable(),
+  hourAdjustment: z.number().nullable(),
+  dayTotal: z.number().nullable(),
+  missing: z.array(z.string()),
+});
+
 export const payrollPrepRowSchema = z.object({
   employeeId: z.string(),
   employeeCode: z.string(),
@@ -65,6 +88,11 @@ export const payrollPrepRowSchema = z.object({
   // mot enum o day se phai duoc sua moi lan them mot loai thieu — trong khi
   // giao dien chi dung no de tra cuu mot nhan.
   missing: z.array(z.string()),
+  /**
+   * CHI TIET THEO NGAY. Ba con so tien o tren la TONG cua mang nay, nen man
+   * hinh doi chieu duoc ma khong phai tinh lai gi.
+   */
+  days: z.array(payrollDayLineSchema),
 });
 
 export const payrollPrepSchema = z.object({

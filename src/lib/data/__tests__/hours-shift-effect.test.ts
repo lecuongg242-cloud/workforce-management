@@ -110,6 +110,31 @@ describe("Ca linh hoạt (0027): không tính đi muộn, không tính về sớ
   let actorEmail = "";
   let flexShiftId = "";
   let flexRecordId = "";
+  /** So phut di muon ma ca doi chung thuc su dung duoc — xem `beforeAll`. */
+  let expectedLateMinutes = 0;
+
+  /**
+   * So phut tinh tu nua dem theo gio VN, doc tu DONG HO MAY CHU.
+   *
+   * Phai la dong ho may chu chu khong phai dong ho may chay test: production
+   * lay `tf_server_now()`, va hai dong ho lech nhau vai phut se lam moc ca
+   * lech theo.
+   *
+   * DUNG LUC 00:00 khong co moc nao trong qua khu de di muon so voi, nen ham
+   * cho sang phut ke tiep. Toi da mot phut, va chi mot lan trong ngay.
+   */
+  async function vnMinutesFromMidnight(): Promise<number> {
+    for (;;) {
+      const { data: nowIso, error } = await admin.rpc("tf_server_now");
+      if (error || !nowIso) {
+        throw new Error(`tf_server_now thất bại: ${error?.message}`);
+      }
+      const { hour, minute } = vnHourMinute(new Date(nowIso as string));
+      const total = hour * 60 + minute;
+      if (total > 0) return total;
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
+    }
+  }
 
   function ownerSession(employeeId: string | null = null) {
     return {
@@ -149,26 +174,41 @@ describe("Ca linh hoạt (0027): không tính đi muộn, không tính về sớ
       workingDays: [1, 2, 3, 4, 5, 6, 7],
     });
 
-    const { data: nowIsoRaw, error: nowError } = await admin.rpc("tf_server_now");
-    if (nowError || !nowIsoRaw) {
-      throw new Error(`tf_server_now thất bại: ${nowError?.message}`);
-    }
-    const { hour, minute } = vnHourMinute(new Date(nowIsoRaw as string));
-    const nowTotalMinutes = hour * 60 + minute;
+    const nowTotalMinutes = await vnMinutesFromMidnight();
 
-    // Ca doi chung bat dau LATE_BY_MINUTES phut TRUOC hien tai: nguoi gan ca
-    // nay cham cong bay gio la muon that, bat ke test chay vao gio nao.
+    /**
+     * MOC CA PHAI NAM TRONG QUA KHU CUA CHINH NGAY HOM NAY.
+     *
+     * `shifts.start_time` chi luu GIO TRONG NGAY. Production ghep no voi NGAY
+     * CONG cua chinh luot cham (`tf_work_date`, quy uoc D-08 o migration
+     * 0003) — tuc HOM NAY. Nen mot gio "40 phut truoc" ma tru qua nua dem se
+     * bi `minutesToHms()` cuon thanh 23:xx CUA CHINH HOM NAY: gan 24 tieng
+     * trong TUONG LAI. Khi ay `tf_worked_minutes` tra 0 va nguoi cham cong
+     * luc 00:19 duoc ghi la dung gio — bai test do vi mot ly do khong lien
+     * quan gi den dieu no muon kiem.
+     *
+     * Kep o 00:00 lam moc som nhat co the: khoang di muon dung duoc luon la
+     * `nowTotalMinutes`, khong bao gio vuot qua no.
+     */
+    const startMinutes = Math.max(nowTotalMinutes - LATE_BY_MINUTES, 0);
+    const availableLateMinutes = nowTotalMinutes - startMinutes;
+    // An han chi giu duoc khi con du khoang de tru no ra. Sat nua dem thi
+    // khong con — bo an han o do de ve doi chung van dung duoc, thay vi mat
+    // han bai kiem trong 45 phut dau moi ngay.
+    const tolerance = availableLateMinutes > TOLERANCE ? TOLERANCE : 0;
+    expectedLateMinutes = availableLateMinutes - tolerance;
+
     const { error: shiftError } = await admin.from("shifts").insert({
       id: FIXED_SHIFT_ID,
       company_id: COMPANY_ID,
       name: "Test ca có giờ (0027)",
       code: "T0027FIX",
       kind: "fixed",
-      start_time: minutesToHms(nowTotalMinutes - LATE_BY_MINUTES),
-      end_time: minutesToHms(nowTotalMinutes - LATE_BY_MINUTES + 8 * 60),
+      start_time: minutesToHms(startMinutes),
+      end_time: minutesToHms(startMinutes + 8 * 60),
       duration_minutes: null,
       break_minutes: 0,
-      late_tolerance_minutes: TOLERANCE,
+      late_tolerance_minutes: tolerance,
       working_days: [1, 2, 3, 4, 5, 6, 7],
       status: "active",
     });
@@ -278,12 +318,15 @@ describe("Ca linh hoạt (0027): không tính đi muộn, không tính về sớ
     const record = await checkIn(EMP_FIXED, makeEvidence());
 
     expect(record.status).toBe("late");
-    // ~35 phut (40 den muon - 5 an han); cho +-1 phut vi tf_worked_minutes lam
-    // tron epoch va cac lan cham cach nhau vai giay.
-    expect(record.lateMinutes).toBeGreaterThanOrEqual(
-      LATE_BY_MINUTES - TOLERANCE - 1,
-    );
-    expect(record.lateMinutes).toBeLessThanOrEqual(LATE_BY_MINUTES - TOLERANCE + 1);
+    // Con so ky vong duoc SUY TU moc ca that (xem `beforeAll`) chu khong viet
+    // cung 35: sat nua dem, khoang di muon dung duoc bi kep lai va mot con so
+    // viet cung se sai.
+    //
+    // Bien do: −1 phut vi `tf_worked_minutes` lam tron epoch; +2 phut vi cac
+    // bai 1-3 chay truoc bai nay va thoi gian troi qua lam nguoi cham cong
+    // muon THEM vai chuc giay so voi luc dung ca.
+    expect(record.lateMinutes).toBeGreaterThanOrEqual(expectedLateMinutes - 1);
+    expect(record.lateMinutes).toBeLessThanOrEqual(expectedLateMinutes + 2);
   });
 
   it("5. khai lại ĐÚNG số giờ đó -> DÙNG LẠI ca cũ, không sinh dòng shifts thứ hai", async () => {

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as GET_LIST } from "@/app/api/payslips/route";
 import { GET as GET_DETAIL } from "@/app/api/payslips/[month]/route";
 import { getSessionContext } from "@/lib/auth/session-context";
+import { buildPayrollRows } from "@/lib/payroll/payroll-rows";
 import { createServerSupabase } from "@/lib/supabase/server";
 
 /**
@@ -23,10 +24,19 @@ import { createServerSupabase } from "@/lib/supabase/server";
  *
  *   (3) `can_view_payslip = false` -> 403, gac o SERVER chu khong chi an nav.
  *
- *   (4) Ky chua chot -> `null`/rong, KHONG ro con so tinh luc truy van.
+ *   (4) Ky chua chot -> con so TAM TINH, mang `status: "provisional"`. Truoc
+ *       day nhanh nay tra `null` (D-46); quyet dinh do da duoc DAO co y thuc —
+ *       xem khoi comment muc (2) o `src/app/api/payslips/route.ts`. Cai KHONG
+ *       doi: mot nguoi khong co dong nao trong ky van tra `null`, de lich su
+ *       chot luong cua doanh nghiep khong do duoc bang cach thu tung thang.
  */
 
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabase: vi.fn() }));
+
+// `buildPayrollRows` la duong tinh TAM TINH. Gia lap o day de bo test nay giu
+// nguyen trong tam cua no — PHAM VI va QUYEN — thay vi keo ca chuoi tinh luong
+// vao; phep tinh do da co bo test rieng.
+vi.mock("@/lib/payroll/payroll-rows", () => ({ buildPayrollRows: vi.fn() }));
 
 vi.mock("@/lib/auth/session-context", async (importOriginal) => {
   const actual =
@@ -95,7 +105,49 @@ afterEach(() => {
 beforeEach(() => {
   vi.mocked(createServerSupabase).mockReset();
   vi.mocked(getSessionContext).mockReset();
+  // Mac dinh: ky dang mo khong co dong nao cho nguoi nay. Bai nao can mot dong
+  // tam tinh thi tu khai lai.
+  vi.mocked(buildPayrollRows).mockResolvedValue({
+    workMode: "shift",
+    periodStatus: "open",
+    rows: [],
+  } as unknown as Awaited<ReturnType<typeof buildPayrollRows>>);
 });
+
+/** Mot dong tam tinh toi thieu — chi du de hop dong `provisional` di qua. */
+function provisionalRow(overrides: Record<string, unknown> = {}) {
+  return {
+    employeeId: EMPLOYEE_ID,
+    employeeCode: "NV001",
+    employeeName: "Nguyễn Minh Anh",
+    departmentName: null,
+    payUnit: "month" as const,
+    payAmount: 13_000_000,
+    workedDays: 0,
+    totalMinutes: 0,
+    leaveDays: 0,
+    lateCount: 0,
+    overtimeMinutes: 0,
+    overtimeNightMinutes: 0,
+    convertedOvertimeHours: 0,
+    missingMultiplierKeys: [],
+    creditedDays: 0,
+    regularMinutes: 0,
+    hourDeltaMinutes: 0,
+    missingWorkModeInputs: [],
+    basePay: 0,
+    overtimePay: 0,
+    hourAdjustment: 0,
+    allowanceItems: [],
+    deductionItems: [],
+    allowanceTotal: 0,
+    deductionTotal: 0,
+    netPay: 0,
+    missing: [],
+    days: [],
+    ...overrides,
+  };
+}
 
 /* -------------------------------------------------------------------------- */
 /* (1)+(2) Pham vi theo phien — khang dinh trung tam                           */
@@ -210,8 +262,34 @@ describe("Cong can_view_payslip duoc gac o server (PAY-05)", () => {
 /* (4) Chi doc ban chot — ky chua chot khong ro con so nao                      */
 /* -------------------------------------------------------------------------- */
 
-describe("Chi doc ban chot, khong tinh luc truy van (D-46)", () => {
-  it("tra null khi ky chua duoc chot luong", async () => {
+describe("Ky chua chot -> con so TAM TINH, co nhan ro rang", () => {
+  it("ky chua chot ma nguoi nay CO cong -> status provisional, khong phai null", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(session());
+    vi.mocked(buildPayrollRows).mockResolvedValue({
+      workMode: "shift",
+      periodStatus: "open",
+      rows: [provisionalRow({ netPay: 500_000, basePay: 500_000 })],
+    } as unknown as Awaited<ReturnType<typeof buildPayrollRows>>);
+    const { client } = fakeClient({
+      employees: { can_view_payslip: true },
+      payroll_runs: null,
+    });
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    const response = await GET_DETAIL(
+      new Request("http://localhost/api/payslips/2026-07"),
+      { params: Promise.resolve({ month: "2026-07" }) },
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    // `status` la co RO RANG, khong phai mot suy dien tu `closedAt`.
+    expect(body.status).toBe("provisional");
+    expect(body.closedAt).toBeNull();
+    expect(body.netPay).toBe(500_000);
+  });
+
+  it("ky chua chot ma nguoi nay KHONG co dong nao -> van tra null", async () => {
     vi.mocked(getSessionContext).mockResolvedValue(session());
     const { client } = fakeClient({
       employees: { can_view_payslip: true },
@@ -243,9 +321,9 @@ describe("Chi doc ban chot, khong tinh luc truy van (D-46)", () => {
     );
 
     expect(response.status).toBe(200);
-    // CUNG mot cau tra loi voi "ky chua chot" — hai truong hop khong duoc
-    // phan biet duoc voi nhau, neu khong thi lich su chot luong cua doanh
-    // nghiep do duoc bang cach thu tung thang.
+    // CUNG mot cau tra loi voi "ky chua chot va khong co dong nao" — hai
+    // truong hop khong duoc phan biet duoc voi nhau, neu khong thi lich su
+    // chot luong cua doanh nghiep do duoc bang cach thu tung thang.
     expect(await response.json()).toBeNull();
   });
 
