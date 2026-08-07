@@ -1,15 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { CalendarRange, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
+  Lock,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import { AttendanceMonthGrid, type GridRow } from "@/components/attendance/attendance-month-grid";
 import { AttendancePhotoDialog } from "@/components/attendance/attendance-photo-dialog";
 import { AttendanceRecordTable } from "@/components/attendance/attendance-record-table";
+import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { DataTableSkeleton } from "@/components/common/data-table-skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { SearchInput } from "@/components/common/search-input";
+import { StatusBadge } from "@/components/common/status-badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,12 +33,20 @@ import { useDataQuery } from "@/hooks/use-data-query";
 import { useDebounce } from "@/hooks/use-debounce";
 import { groupAttendanceByDay, shiftBreakInfoById } from "@/lib/attendance/day";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
-import { ADMIN_ATTENDANCE_LABEL } from "@/lib/constants";
+import { ADMIN_ATTENDANCE_LABEL, PERIOD_LABEL } from "@/lib/constants";
 import { listAttendance } from "@/lib/data/attendance";
 import { listDepartments } from "@/lib/data/departments";
 import { listAllEmployees } from "@/lib/data/employees";
+import { closePeriod, listPeriods } from "@/lib/data/periods";
 import { listShifts } from "@/lib/data/shifts";
-import { formatMonthLabel, formatNumber, normalizeText, shiftMonth } from "@/lib/format";
+import { useDataStore } from "@/lib/data/store";
+import {
+  formatDateTime,
+  formatMonthLabel,
+  formatNumber,
+  normalizeText,
+  shiftMonth,
+} from "@/lib/format";
 import type { AttendanceRecord, Employee } from "@/lib/types/domain";
 
 /**
@@ -56,6 +73,47 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
   const [search, setSearch] = React.useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [openRecordId, setOpenRecordId] = React.useState<string | null>(null);
+
+  const { invalidate } = useDataStore();
+
+  /* ------------------------------------------------------------------ */
+  /* Ky cong cua CHINH thang dang xem (gop tu trang /admin/periods cu)   */
+  /*                                                                     */
+  /* Chot ky la thao tac dong khung so lieu cua mot thang, nen no thuoc  */
+  /* ve chinh man hinh dang hien so lieu thang do — mot trang rieng bat  */
+  /* nguoi dung roi bang cong, chon lai thang mot lan nua roi bam chot   */
+  /* mot con so ho khong con nhin thay.                                  */
+  /* ------------------------------------------------------------------ */
+  const { data: periods, reload: reloadPeriods } = useDataQuery(
+    () => listPeriods(),
+    [session.companyId],
+  );
+  const period = (periods ?? []).find((item) => item.month === month) ?? null;
+  const isPeriodClosed = period?.status === "closed";
+
+  const [confirmClose, setConfirmClose] = React.useState(false);
+  const [isClosing, setIsClosing] = React.useState(false);
+
+  const handleClosePeriod = async (): Promise<void> => {
+    setIsClosing(true);
+    try {
+      await closePeriod(month);
+      invalidate();
+      reloadPeriods();
+      toast.success(PERIOD_LABEL.closeSuccess, {
+        description: `Kỳ ${formatMonthLabel(month)} đã khoá.`,
+      });
+      setConfirmClose(false);
+    } catch (cause) {
+      // Thong diep tu ham SQL da noi ro ly do (chua ket thuc / da chot) —
+      // hien nguyen van.
+      toast.error(
+        cause instanceof Error ? cause.message : PERIOD_LABEL.closeError,
+      );
+    } finally {
+      setIsClosing(false);
+    }
+  };
 
   const { data, isLoading, error, reload } = useDataQuery(async () => {
     const [records, employees, shifts, departments] = await Promise.all([
@@ -188,9 +246,55 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
             >
               <ChevronRight aria-hidden="true" />
             </Button>
+
+            {/* CHOT KY ngay tai day: thao tac khoa so lieu dung canh chinh so
+                lieu no khoa. Ky chua ket thuc thi khong co nut — cau giai
+                thich nam o dong trang thai ben duoi, khong phai mot nut xam. */}
+            {period && !isPeriodClosed && period.hasEnded ? (
+              <Button className="ml-1" onClick={() => setConfirmClose(true)}>
+                <Lock aria-hidden="true" />
+                {PERIOD_LABEL.closeAction}
+              </Button>
+            ) : null}
           </div>
         }
       />
+
+      {/* Trang thai ky cua thang dang xem — doc TRUOC khi tin con so ben duoi:
+          ky dang mo nghia la so lieu con doi duoc. */}
+      {period ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusBadge
+            kind="custom"
+            size="sm"
+            label={
+              isPeriodClosed ? PERIOD_LABEL.statusClosed : PERIOD_LABEL.statusOpen
+            }
+            tone={isPeriodClosed ? "neutral" : "success"}
+            icon={isPeriodClosed ? Lock : CircleDot}
+          />
+          {isPeriodClosed && period.closedAt ? (
+            <span className="num text-[13px] text-ink-muted">
+              Chốt lúc {formatDateTime(period.closedAt)}
+            </span>
+          ) : null}
+          {!isPeriodClosed && !period.hasEnded ? (
+            <span className="text-[13px] text-ink-muted">
+              {PERIOD_LABEL.notEndedHint}
+            </span>
+          ) : null}
+          {/* Yeu cau con treo cua chinh thang nay: chot ky khi chung chua duoc
+              xu ly la khoa so lieu truoc khi no kip dung. */}
+          {!isPeriodClosed && period.pendingRequestCount > 0 ? (
+            <span className="text-[13px] text-warning">
+              <span className="num font-medium">
+                {formatNumber(period.pendingRequestCount)}
+              </span>{" "}
+              {PERIOD_LABEL.pendingCountLabel} chưa xử lý
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="surface-card overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-hairline p-3 lg:flex-row lg:items-center">
@@ -270,6 +374,25 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
       </div>
 
       {/* Dung lai Dialog bang chung cua 03-05 — khong dung mot ban thu hai. */}
+      {/* Chot ky la MOT CHIEU (D-32b) — hop thoai noi ro dieu do, va noi ca
+          so yeu cau con treo cua thang neu con. */}
+      <ConfirmDialog
+        open={confirmClose}
+        onOpenChange={setConfirmClose}
+        title={`${PERIOD_LABEL.closeConfirmTitle} ${formatMonthLabel(month)}?`}
+        description={
+          period && period.pendingRequestCount > 0
+            ? `${PERIOD_LABEL.closeConfirmBody} Hiện còn ${formatNumber(
+                period.pendingRequestCount,
+              )} ${PERIOD_LABEL.pendingWarning}`
+            : PERIOD_LABEL.closeConfirmBody
+        }
+        confirmLabel={PERIOD_LABEL.closeConfirmLabel}
+        tone="destructive"
+        isPending={isClosing}
+        onConfirm={handleClosePeriod}
+      />
+
       <AttendancePhotoDialog
         attendanceRecordId={openRecordId}
         onOpenChange={(open) => {

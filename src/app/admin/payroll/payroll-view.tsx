@@ -238,6 +238,25 @@ function MoneyCell({
 }
 
 /**
+ * Cau mo ta CO SO TINH luong goc cua mot dong.
+ *
+ * Nguoi khai LUONG GIO duoc tra theo gio thuc te; nguoi khai luong thang/ngay
+ * duoc tra theo ngay cong. Do la ly do hai dong co cung so ngay cong van ra
+ * hai so tien khac nhau, va cau nay la cho duy nhat man hinh noi ra dieu do.
+ */
+function describeBasis(row: PayrollPrepRow): string {
+  if (row.payUnit === "hour") {
+    const hours = row.regularMinutes === null ? null : toHours(row.regularMinutes);
+    return hours === null
+      ? "—"
+      : `${formatNumber(hours)} ${PAYROLL_LABEL.detailBasisHourSuffix}`;
+  }
+  return row.creditedDays === null
+    ? "—"
+    : `${formatNumber(row.creditedDays)} ${PAYROLL_LABEL.detailBasisDaySuffix}`;
+}
+
+/**
  * Khoi chi tiet cua mot dong luong: tung khoan phu cap va khau tru kem ten va
  * so tien.
  *
@@ -252,11 +271,35 @@ function PayrollRowDetail({ row }: { row: PayrollPrepRow }): React.ReactElement 
           {PAYROLL_LABEL.detailTitle}
         </h3>
         <dl className="mt-2 grid gap-1.5 text-[13px]">
+          {/* CO SO TINH cua luong goc — dong nay tra loi "vi sao hai nguoi
+              cung so ngay cong lai khac tien": nguoi khai luong gio duoc tra
+              theo GIO THUC TE, nguoi khai luong thang/ngay theo NGAY CONG. */}
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-ink-secondary">
+              {PAYROLL_LABEL.detailBasisLabel}
+            </dt>
+            <dd className="num text-right text-ink">{describeBasis(row)}</dd>
+          </div>
           <DetailRow label={PAYROLL_LABEL.detailBaseLabel} value={row.basePay} />
           <DetailRow
             label={PAYROLL_LABEL.detailOvertimeLabel}
             value={row.overtimePay}
           />
+          {/* Nguoi co MUC TANG CA RIENG (0026): noi ro con so tang ca den tu
+              dau, vi cot "Giờ quy đổi" cua ho van la con so theo he so CHUNG
+              cua doanh nghiep — khong phai thu da tra tien cho ho. */}
+          {row.overtimeRateValueType ? (
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-ink-secondary">
+                {PAYROLL_LABEL.detailOvertimeRateLabel}
+              </dt>
+              <dd className="num text-right text-ink">
+                {row.overtimeRateValueType === "fixed_hourly"
+                  ? `${formatNumber(toHours(row.overtimeMinutes))} giờ × ${formatVnd(row.overtimeRateValue ?? 0)}`
+                  : `${formatNumber(toHours(row.overtimeMinutes))} giờ × ${formatNumber(row.overtimeRateValue ?? 0)} × đơn giá giờ`}
+              </dd>
+            </div>
+          ) : null}
           {row.hourAdjustment !== null && row.hourAdjustment !== 0 ? (
             <DetailRow
               label={PAYROLL_LABEL.detailHourAdjustmentLabel}
@@ -684,8 +727,8 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
           <span>
             {closeBlockedReason}{" "}
             {data.periodStatus !== "closed" ? (
-              <Link href="/admin/periods" className="font-medium underline">
-                Mở trang Kỳ công
+              <Link href="/admin/attendance" className="font-medium underline">
+                Mở trang Chấm công để chốt kỳ
               </Link>
             ) : null}
           </span>
@@ -863,17 +906,27 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     Cot chu mac dinh sap TANG (A-Z), cot so mac dinh sap GIAM:
                     hoi ve mot cot so gan nhu luon la hoi "ai nhieu nhat". */}
                 <TableRow>
-                  <SortableHead sortKey="employee" sort={sort} onSort={setSort}>
+                  <SortableHead
+                    sortKey="employee"
+                    sort={sort}
+                    onSort={setSort}
+                    align="center"
+                  >
                     {PAYROLL_LABEL.employeeColumn}
                   </SortableHead>
-                  <SortableHead sortKey="department" sort={sort} onSort={setSort}>
+                  <SortableHead
+                    sortKey="department"
+                    sort={sort}
+                    onSort={setSort}
+                    align="center"
+                  >
                     {PAYROLL_LABEL.departmentColumn}
                   </SortableHead>
                   <SortableHead
                     sortKey="workedDays"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                   >
                     {PAYROLL_LABEL.workedDaysColumn}
@@ -885,7 +938,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="creditedDays"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                     title={PAYROLL_LABEL.creditedDaysHint}
                   >
@@ -896,7 +949,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                       sortKey="hourDelta"
                       sort={sort}
                       onSort={setSort}
-                      align="right"
+                      align="center"
                       defaultDirection="desc"
                       title={PAYROLL_LABEL.hourDeltaHint}
                     >
@@ -907,7 +960,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="totalHours"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                   >
                     {PAYROLL_LABEL.totalHoursColumn}
@@ -916,7 +969,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="overtime"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                   >
                     {PAYROLL_LABEL.overtimeColumn}
@@ -925,7 +978,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="converted"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                   >
                     {PAYROLL_LABEL.convertedColumn}
@@ -934,7 +987,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="leave"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                   >
                     {PAYROLL_LABEL.leaveColumn}
@@ -943,7 +996,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="late"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                   >
                     {PAYROLL_LABEL.lateColumn}
@@ -954,7 +1007,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="basePay"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                     className="border-l border-hairline"
                   >
@@ -964,7 +1017,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="overtimePay"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                   >
                     {PAYROLL_LABEL.overtimePayColumn}
@@ -973,7 +1026,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="allowance"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                   >
                     {PAYROLL_LABEL.allowanceColumn}
@@ -982,7 +1035,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="deduction"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                   >
                     {PAYROLL_LABEL.deductionColumn}
@@ -993,7 +1046,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     sortKey="netPay"
                     sort={sort}
                     onSort={setSort}
-                    align="right"
+                    align="center"
                     defaultDirection="desc"
                     className="bg-brand-wash text-ink"
                   >

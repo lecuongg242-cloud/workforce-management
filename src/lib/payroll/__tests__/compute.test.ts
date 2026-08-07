@@ -60,6 +60,7 @@ function adjustment(overrides: Partial<PayAdjustment> = {}): PayAdjustment {
 function line(overrides: {
   summary?: Partial<PayrollComputeInput["summary"]>;
   payRate?: PayrollComputeInput["payRate"];
+  overtimeRate?: PayrollComputeInput["overtimeRate"];
   workMode?: PayrollComputeInput["workMode"];
   standardDaysPerMonth?: number | null;
   standardHoursPerDay?: number | null;
@@ -71,6 +72,7 @@ function line(overrides: {
       regularMinutes: 26 * 8 * 60,
       hourDeltaMinutes: 0,
       convertedOvertimeHours: 0,
+      overtimeMinutes: 0,
       missingMultiplierKeys: [],
       missingWorkModeInputs: [],
       lateCount: 0,
@@ -80,6 +82,7 @@ function line(overrides: {
       overrides.payRate === undefined
         ? { unit: "month", amount: MONTHLY_SALARY }
         : overrides.payRate,
+    overtimeRate: overrides.overtimeRate ?? null,
     workMode: overrides.workMode ?? "shift",
     standardDaysPerMonth:
       overrides.standardDaysPerMonth === undefined
@@ -447,5 +450,151 @@ describe("Làm tròn — không ở bước trung gian, và bảng luôn đối 
       expect(value).not.toBeNull();
       expect(Number.isInteger(value as number)).toBe(true);
     }
+  });
+  /**
+   * KHAI LUONG GIO => TRA THEO GIO THUC TE, o MOI che do tinh cong.
+   *
+   * Ba bai duoi day la hoi quy cho mot loi TRA SAI TIEN co that: mot doanh
+   * nghiep co ca cu the (`shift`) cho khoi van phong va tra theo gio cho khoi
+   * san xuat thi truoc day nguoi an luong gio duoc tra
+   * `so ngay co mat x (don gia gio x so gio chuan)` — lam 4 tieng hay 12
+   * tieng trong mot ngay deu ra cung mot so tien.
+   *
+   * Bo so: luong gio 55.000; ca dai 7,25 gio; 27 ngay lam; 195,75 gio thuong.
+   */
+  const HOURLY_WAGE = 55_000;
+  const REGULAR_MINUTES = Math.round(195.75 * 60); // 11.745 phut
+
+  it("24. `shift` + khai LƯƠNG GIỜ -> trả theo giờ thực tế, KHÔNG theo ngày công", () => {
+    // 55.000 x 195,75 = 10.766.250 (khong phai 27 x (55.000 x 8) = 11.880.000)
+    const result = line({
+      workMode: "shift",
+      payRate: { unit: "hour", amount: HOURLY_WAGE },
+      summary: { creditedDays: 27, regularMinutes: REGULAR_MINUTES },
+    });
+
+    expect(result.basePay).toBe(10_766_250);
+    expect(result.basePay).not.toBe(27 * (HOURLY_WAGE * HOURS_PER_DAY));
+  });
+
+  it("25. `shift` + khai LƯƠNG GIỜ -> đổi ngày công mà giữ nguyên giờ thì lương gốc KHÔNG đổi", () => {
+    const a = line({
+      workMode: "shift",
+      payRate: { unit: "hour", amount: HOURLY_WAGE },
+      summary: { creditedDays: 27, regularMinutes: REGULAR_MINUTES },
+    });
+    const b = line({
+      workMode: "shift",
+      payRate: { unit: "hour", amount: HOURLY_WAGE },
+      summary: { creditedDays: 20, regularMinutes: REGULAR_MINUTES },
+    });
+
+    expect(a.basePay).toBe(b.basePay);
+  });
+
+  it("26. `shift_hourly` + khai LƯƠNG GIỜ -> KHÔNG cộng lệch giờ lần thứ hai", () => {
+    // Luong goc da bam gio thuc te; cong them hourDelta nua la tinh hai lan
+    // cung mot so gio.
+    const result = line({
+      workMode: "shift_hourly",
+      payRate: { unit: "hour", amount: HOURLY_WAGE },
+      summary: {
+        creditedDays: 27,
+        regularMinutes: REGULAR_MINUTES,
+        hourDeltaMinutes: -240,
+      },
+    });
+
+    expect(result.hourAdjustment).toBe(0);
+    expect(result.basePay).toBe(10_766_250);
+  });
+
+  it("27. khai LƯƠNG THÁNG -> vẫn tính theo ngày công như cũ (không đổi hành vi cũ)", () => {
+    const result = line({
+      workMode: "shift",
+      summary: { creditedDays: 22, regularMinutes: 1 },
+    });
+
+    expect(result.basePay).toBe(DAILY_RATE * 22);
+  });
+
+  it("28. khai LƯƠNG NGÀY -> vẫn tính theo ngày công (đơn vị ngày không phải đơn vị giờ)", () => {
+    // 450.000 x 27 = 12.150.000
+    const result = line({
+      workMode: "shift",
+      payRate: { unit: "day", amount: 450_000 },
+      summary: { creditedDays: 27, regularMinutes: REGULAR_MINUTES },
+    });
+
+    expect(result.basePay).toBe(12_150_000);
+  });
+  /**
+   * MUC TANG CA RIENG CUA MOT NGUOI (migration 0026).
+   *
+   * Muc rieng THAY CHO toan bo he so theo loai ngay cua doanh nghiep, nen phep
+   * tinh phai quay ve SO PHUT TANG CA THO — dung `convertedOvertimeHours` (da
+   * nhan he so doanh nghiep) o day la nhan he so hai lan.
+   *
+   * Bo so: 6 gio tang ca tho (360 phut); don gia gio cua bo so chung = 62.500.
+   */
+  const OT_MINUTES = 360;
+
+  it("29. khong khai muc rieng -> van nhan `convertedOvertimeHours` voi don gia gio (duong cu)", () => {
+    // 62.500 x 9 = 562.500
+    const result = line({
+      summary: { convertedOvertimeHours: 9, overtimeMinutes: OT_MINUTES },
+    });
+
+    expect(result.overtimePay).toBe(562_500);
+  });
+
+  it("30. muc rieng SO TIEN 60.000/gio -> 6 gio tang ca = 360.000, khong dinh gi toi don gia gio", () => {
+    const result = line({
+      overtimeRate: { valueType: "fixed_hourly", value: 60_000 },
+      // He so doanh nghiep cho ra 9 gio quy doi — con so nay phai bi BO QUA.
+      summary: { convertedOvertimeHours: 9, overtimeMinutes: OT_MINUTES },
+    });
+
+    expect(result.overtimePay).toBe(360_000);
+  });
+
+  it("31. muc rieng SO TIEN van tinh duoc khi doanh nghiep CHUA khai he so nao", () => {
+    // Nguoi co thoa thuan rieng khong bi chan boi mot he so ma ho khong dung.
+    const result = line({
+      overtimeRate: { valueType: "fixed_hourly", value: 60_000 },
+      summary: {
+        convertedOvertimeHours: null,
+        overtimeMinutes: OT_MINUTES,
+        missingMultiplierKeys: ["weekday"],
+      },
+    });
+
+    expect(result.overtimePay).toBe(360_000);
+    expect(result.missing).not.toContain("overtime_rule:weekday");
+    expect(result.netPay).not.toBeNull();
+  });
+
+  it("32. muc rieng HE SO 2,0 -> 62.500 x 6 gio x 2 = 750.000 (tinh tu phut THO)", () => {
+    const result = line({
+      overtimeRate: { valueType: "multiplier", value: 2 },
+      // 9 gio quy doi cua doanh nghiep phai bi bo qua; neu bi dung nham thi
+      // ket qua se la 62.500 x 9 x 2 = 1.125.000.
+      summary: { convertedOvertimeHours: 9, overtimeMinutes: OT_MINUTES },
+    });
+
+    expect(result.overtimePay).toBe(750_000);
+  });
+
+  it("33. muc rieng khong dung toi luong goc — chi doi tien tang ca", () => {
+    const withRate = line({
+      overtimeRate: { valueType: "fixed_hourly", value: 60_000 },
+      summary: { creditedDays: 22, convertedOvertimeHours: 9, overtimeMinutes: OT_MINUTES },
+    });
+    const withoutRate = line({
+      summary: { creditedDays: 22, convertedOvertimeHours: 9, overtimeMinutes: OT_MINUTES },
+    });
+
+    expect(withRate.basePay).toBe(withoutRate.basePay);
+    expect(withRate.overtimePay).not.toBe(withoutRate.overtimePay);
   });
 });

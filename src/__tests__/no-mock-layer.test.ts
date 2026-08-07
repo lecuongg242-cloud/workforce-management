@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -36,6 +36,11 @@ function listTrackedSrcFiles(): string[] {
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
+    // `git ls-files` doc CHI MUC, nen mot file da xoa khoi thu muc lam viec
+    // ma chua commit van con trong danh sach. Bo qua chung: file khong con
+    // ton tai thi khong co noi dung nao de vi pham, va de cong nay nem
+    // ENOENT thi mot lan xoa file binh thuong cung lam do toan bo cong.
+    .filter((line) => existsSync(path.join(PROJECT_ROOT, line)))
     .filter((line) => line !== SELF_PATH);
 }
 

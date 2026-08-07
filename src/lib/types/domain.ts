@@ -284,6 +284,17 @@ export interface PayRateHistory {
   versions: PayRate[];
 }
 
+/**
+ * Lich su muc TANG CA RIENG cua MOT nhan vien (0026). `current` bang `null`
+ * nghia la nguoi do KHONG khai muc rieng — ho an theo he so cua doanh nghiep,
+ * KHONG phai "tang ca bang 0".
+ */
+export interface EmployeeOvertimeRateHistory {
+  employeeId: string;
+  current: EmployeeOvertimeRate | null;
+  versions: EmployeeOvertimeRate[];
+}
+
 /* -------------------------------------------------------------------------- */
 /* Phu cap va khau tru (PAY-04, Phase 5.2)                                     */
 /* -------------------------------------------------------------------------- */
@@ -801,6 +812,13 @@ export interface PayrollPrepRow {
    */
   payUnit: PayRateUnit | null;
   payAmount: number | null;
+  /**
+   * MUC TANG CA RIENG da ap cho dong nay (0026). `null` = nguoi nay an theo
+   * he so cua doanh nghiep. Tuy chon vi ban CHOT luong (payroll_run_lines)
+   * chua co cot luu hai gia tri nay — ky da chot tra ve `undefined`.
+   */
+  overtimeRateValueType?: OvertimeRateValueType | null;
+  overtimeRateValue?: number | null;
   basePay: number | null;
   overtimePay: number | null;
   /** Cong/tru theo gio thuc te — chi khac 0 o che do `shift_hourly`. */
@@ -868,6 +886,37 @@ export type DepartmentInput = Omit<Department, "id" | "companyId">;
  * dan xuat tu khung gio nghi, do `shiftInputSchema` tinh. Cho phep noi goi
  * truyen no vao la mo duong cho hai gia tri lech nhau.
  */
+/**
+ * Hai cach khai tien tang ca cua MOT NGUOI (migration 0026).
+ *
+ * `multiplier`   — he so nhan voi don gia gio cua chinh nguoi do (1,5 = 150%).
+ * `fixed_hourly` — SO TIEN mot gio tang ca. Doi luong co ban khong lam doi con
+ *                  so nay cho toi khi khai mot phien ban moi.
+ */
+export type OvertimeRateValueType = "multiplier" | "fixed_hourly";
+
+/**
+ * MOT PHIEN BAN muc tang ca rieng cua mot nhan vien. Bang APPEND-ONLY nhu
+ * `employee_pay_rates` (D-37a) va vi cung mot ly do: sua de mot dong cu lam
+ * tien da tra cua ky da qua tinh lai ra con so khac.
+ *
+ * Muc nay ap cho MOI gio tang ca cua nguoi do va THAY CHO he so theo loai
+ * ngay cua doanh nghiep. Khong khai thi ho an theo he so doanh nghiep.
+ */
+export interface EmployeeOvertimeRate {
+  id: string;
+  companyId: string;
+  employeeId: string;
+  valueType: OvertimeRateValueType;
+  /** He so (vi du 1.5) hoac so tien mot gio (vi du 60000) — theo `valueType`. */
+  value: number;
+  /** "YYYY-MM-DD" — ngay bat dau co hieu luc */
+  effectiveFrom: string;
+  /** ISO date-time */
+  createdAt: string;
+  createdBy: string | null;
+}
+
 export type ShiftInput = Omit<Shift, "id" | "companyId" | "breakMinutes">;
 
 export type WorkSiteInput = Omit<WorkSite, "id" | "companyId" | "createdAt">;
@@ -883,6 +932,12 @@ export type OvertimeRuleInput = Omit<OvertimeRule, "id" | "companyId">;
  */
 export type PayRateInput = Omit<
   PayRate,
+  "id" | "companyId" | "createdAt" | "createdBy"
+>;
+
+/** Dau vao GHI muc tang ca rieng — cung quy uoc voi `PayRateInput`. */
+export type EmployeeOvertimeRateInput = Omit<
+  EmployeeOvertimeRate,
   "id" | "companyId" | "createdAt" | "createdBy"
 >;
 

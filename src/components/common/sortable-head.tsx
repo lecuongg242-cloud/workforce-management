@@ -55,7 +55,11 @@ export function SortableHead<K extends string>({
   sortKey: K;
   sort: SortState<K> | null;
   onSort: (next: SortState<K>) => void;
-  align?: "left" | "right";
+  /**
+   * Can le cua TIEU DE. `right` van dat mui ten ve ben trai chu, de mui ten
+   * khong bao gio che mat ria phai — noi cac chu so cua o du lieu can vao.
+   */
+  align?: "left" | "right" | "center";
   /**
    * Chieu cua LAN BAM DAU. Cot so tien / so luong mac dinh giam dan, vi cau
    * hoi dau tien cua nguoi xem luon la "ai nhieu nhat".
@@ -81,7 +85,11 @@ export function SortableHead<K extends string>({
             : "descending"
           : "none"
       }
-      className={cn(align === "right" && "text-right", className)}
+      className={cn(
+        align === "right" && "text-right",
+        align === "center" && "text-center",
+        className,
+      )}
     >
       <button
         type="button"
@@ -90,6 +98,7 @@ export function SortableHead<K extends string>({
         className={cn(
           "group inline-flex w-full items-center gap-1 rounded-control text-left uppercase focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
           align === "right" && "flex-row-reverse text-right",
+          align === "center" && "justify-center text-center",
           active ? "text-ink" : "hover:text-ink-secondary",
         )}
       >

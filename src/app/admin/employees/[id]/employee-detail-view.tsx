@@ -28,6 +28,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { EmployeeForm } from "@/components/employees/employee-form";
+import { OvertimeRatePanel } from "@/components/employees/overtime-rate-panel";
 import { PayRatePanel } from "@/components/employees/pay-rate-panel";
 import { Button } from "@/components/ui/button";
 import {
@@ -649,7 +650,13 @@ export function EmployeeDetailView({
             de mot man hinh loi. */}
         <TabsContent value="salary" className="mt-4">
           {isAdminRole ? (
-            <PayRatePanel employeeId={employeeId} today={today} />
+            <div className="grid gap-4">
+              <PayRatePanel employeeId={employeeId} today={today} />
+              {/* Tien tang ca rieng nam ngay duoi muc luong: hai con so nay
+                  luon duoc doc cung nhau khi ai do kiem tra bang luong cua
+                  mot nguoi. */}
+              <OvertimeRatePanel employeeId={employeeId} today={today} />
+            </div>
           ) : (
             <section className="surface-card">
               <EmptyState

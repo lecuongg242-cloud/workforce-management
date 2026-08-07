@@ -653,6 +653,11 @@ export const SETTINGS_GENERAL_LABEL = {
   workModeLabel: "Cách tính công",
   workModeHelp:
     "Đổi cách tính công giữa chừng làm số liệu hai kỳ không so sánh được với nhau — cách tính đang dùng sẽ được ghi vào bản chốt lương của từng kỳ.",
+  // Quy tắc này phải hiện Ở ĐÂY, vì đây là nơi người dùng tưởng mình đang
+  // quyết định cách trả lương cho MỌI người. Không nói ra thì một doanh
+  // nghiệp trả công nhật theo giờ sẽ không hiểu vì sao con số của họ khác.
+  workModeHourlyNote:
+    "Riêng người khai LƯƠNG GIỜ luôn được trả theo giờ làm thực tế, không phụ thuộc lựa chọn này — khai lương giờ tức là muốn trả theo giờ. Lựa chọn ở đây quyết định cách tính của người khai lương tháng hoặc lương ngày, và mốc tính tăng ca của tất cả.",
   standardHoursPerDayLabel: "Số giờ chuẩn một ngày công",
   standardHoursPerDayHelp:
     "Mẫu số để quy đổi một ngày công ra giờ. Để trống nghĩa là chưa khai — hệ thống sẽ nói rõ là chưa khai chứ không tự đoán 8 giờ.",
@@ -721,6 +726,61 @@ export const PAY_RATE_UNIT_OPTIONS = (["month", "day", "hour"] as const).map(
  * và không có nút xoá, và người dùng phải hiểu đó là CÓ CHỦ ĐÍCH chứ không
  * phải một tính năng còn thiếu (D-37a).
  */
+/** Hai cách khai tiền tăng ca riêng của một người (migration 0026). */
+export const OVERTIME_RATE_VALUE_TYPE_LABEL: Record<
+  "multiplier" | "fixed_hourly",
+  string
+> = {
+  multiplier: "Hệ số nhân đơn giá giờ",
+  fixed_hourly: "Số tiền mỗi giờ tăng ca",
+};
+
+export const OVERTIME_RATE_VALUE_TYPE_OPTIONS = (
+  ["fixed_hourly", "multiplier"] as const
+).map((value) => ({ value, label: OVERTIME_RATE_VALUE_TYPE_LABEL[value] }));
+
+export const EMPLOYEE_OVERTIME_RATE_LABEL = {
+  sectionTitle: "Tiền tăng ca riêng",
+  currentTitle: "Đang hiệu lực hôm nay",
+  // KHÔNG khai nghĩa là ăn theo hệ số của doanh nghiệp — khác hẳn "tăng ca
+  // bằng 0". Câu chữ phải nói đúng cái đang xảy ra.
+  notDeclared: "Không có mức riêng",
+  notDeclaredHint:
+    "Người này ăn theo hệ số tăng ca chung của doanh nghiệp (tab Tăng ca ở trang Cài đặt). Chỉ khai ở đây khi có thoả thuận riêng.",
+  futureOnlyHint:
+    "Mức riêng đã khai chỉ bắt đầu hiệu lực trong tương lai, nên hôm nay người này vẫn ăn theo hệ số của doanh nghiệp.",
+  historyTitle: "Lịch sử mức tăng ca riêng",
+  historyEmpty: "Chưa có phiên bản nào.",
+  columnEffectiveFrom: "Hiệu lực từ",
+  columnValueType: "Cách khai",
+  columnValue: "Giá trị",
+  columnCreatedBy: "Người khai",
+  unknownAuthor: "—",
+  declareAction: "Khai mức riêng",
+  appendOnlyNote:
+    "Không có nút sửa và không có nút xoá: mỗi lần đổi là một phiên bản mới, nhờ vậy tiền tăng ca của kỳ đã trả không đổi theo.",
+  dialogTitle: "Khai mức tăng ca riêng",
+  dialogDescription:
+    "Mức này áp dụng từ ngày hiệu lực trở đi và thay cho hệ số chung của doanh nghiệp.",
+  fieldValueType: "Cách khai",
+  fieldValueFixed: "Số tiền mỗi giờ tăng ca (₫)",
+  fieldValueMultiplier: "Hệ số (1,5 = 150% đơn giá giờ)",
+  fieldEffectiveFrom: "Hiệu lực từ ngày",
+  // Hệ quả PHẢI nói trước khi bấm lưu: mức riêng ăn trọn cả bốn loại ngày.
+  scopeWarning:
+    "Mức này áp cho MỌI giờ tăng ca của người này — cả ngày thường, ngày nghỉ, ngày lễ và ca đêm — thay cho toàn bộ hệ số theo loại ngày của doanh nghiệp.",
+  legalNote:
+    "Điều 98 Bộ luật Lao động quy định tăng ca tối thiểu 150% ngày thường, 200% ngày nghỉ, 300% ngày lễ. Hệ thống không chặn con số thấp hơn, nhưng đây là điều thanh tra sẽ hỏi.",
+  retroWarning:
+    "Ngày hiệu lực nằm trong quá khứ. Mức này sẽ áp cho cả những ngày đã qua kể từ ngày đó — hãy chắc chắn đó là điều bạn muốn.",
+  cancel: "Huỷ",
+  save: "Khai mức riêng",
+  saveSuccess: "Đã khai mức tăng ca riêng.",
+  saveError: "Không thể khai mức tăng ca riêng.",
+  suffixPerHour: "/ giờ tăng ca",
+  suffixMultiplier: "× đơn giá giờ",
+} as const;
+
 export const PAY_RATE_LABEL = {
   sectionTitle: "Mức lương",
   currentTitle: "Đang hiệu lực hôm nay",
@@ -966,7 +1026,17 @@ export const PAYROLL_LABEL = {
   missingReasonOvertimeRule: "chưa khai hệ số tăng ca",
   missingReasonFallback: "chưa đủ dữ kiện",
   detailTitle: "Chi tiết dòng lương",
+  // Hai người cùng số ngày công vẫn có lương gốc khác nhau, vì người khai
+  // lương giờ được trả theo GIỜ THỰC TẾ còn người khai lương tháng/ngày được
+  // trả theo NGÀY CÔNG. Không nói ra cơ sở tính thì dòng "Lương gốc" trông
+  // như một con số rơi từ trên trời xuống.
+  detailBasisLabel: "Cơ sở tính",
+  detailBasisHourSuffix: "giờ làm thực tế",
+  detailBasisDaySuffix: "ngày công quy đổi",
   detailBaseLabel: "Lương gốc",
+  // Người có mức tăng ca riêng: nói rõ tiền tăng ca ra từ đâu, vì cột "Giờ
+  // quy đổi" của họ vẫn là con số theo hệ số CHUNG của doanh nghiệp.
+  detailOvertimeRateLabel: "Tăng ca tính theo mức riêng",
   detailOvertimeLabel: "Tiền tăng ca",
   detailHourAdjustmentLabel: "Cộng/trừ theo giờ thực tế",
   detailAllowanceTitle: "Phụ cấp",
@@ -992,7 +1062,7 @@ export const PAYROLL_LABEL = {
   closeError: "Không thể chốt lương kỳ này.",
   // Nút bị vô hiệu KHÔNG được im lặng — người dùng phải biết cần làm gì.
   closeBlockedPeriodOpen:
-    "Chưa chốt lương được: kỳ công của tháng này chưa chốt, nên số liệu công còn thay đổi được. Chốt kỳ công ở trang Kỳ công trước.",
+    "Chưa chốt lương được: kỳ công của tháng này chưa chốt, nên số liệu công còn thay đổi được. Chốt kỳ công ở trang Chấm công trước.",
   closeBlockedIncomplete:
     "Chưa chốt lương được: còn {n} dòng chưa đủ dữ kiện. Bấm vào dòng có chữ màu cam để xem thiếu gì.",
   reopenAction: "Huỷ chốt lương",
