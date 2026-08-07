@@ -846,6 +846,11 @@ export interface PayrollPrepRow {
    */
   overtimeRateValueType?: OvertimeRateValueType | null;
   overtimeRateValue?: number | null;
+  /**
+   * CHI TIET THEO NGAY. Ba con so tien duoi day la TONG cua mang nay, nen man
+   * hinh doi chieu duoc ma khong phai tinh lai gi.
+   */
+  days: PayrollDayLine[];
   basePay: number | null;
   overtimePay: number | null;
   /** Cong/tru theo gio thuc te — chi khac 0 o che do `shift_hourly`. */
@@ -857,6 +862,41 @@ export interface PayrollPrepRow {
   /** THUC NHAN = luong goc + tang ca + lech gio + phu cap − khau tru. */
   netPay: number | null;
   /** Ly do khien dong nay khong ra duoc con so; rong khi du du kien. */
+  missing: string[];
+}
+
+/**
+ * TIEN CUA MOT NGAY trong mot dong luong.
+ *
+ * Kieu duoc khai O DAY chu khong import tu `@/lib/payroll/compute-daily`: file
+ * nay khong import gi ca (moi kieu nghiep vu tu chua), va `compute-daily.ts`
+ * thi import NGUOC lai tu day — dat kieu o ben kia se tao mot vong.
+ *
+ * `DailyPayLine` cua `compute-daily.ts` gan duoc vao kieu nay: no siet `missing`
+ * chat hon (`PayrollMissingInput[]` thay vi `string[]`), cung khuon voi truong
+ * `missing` cua `PayrollPrepRow` ngay tren.
+ */
+export interface PayrollDayLine {
+  /** "YYYY-MM-DD" */
+  date: string;
+  dayType: "weekday" | "weekend" | "holiday";
+  /**
+   * `in_progress` = da cham vao chua cham ra. KHAC HAN voi thieu du kien: ngay
+   * nay chua co con so, chu khong phai khong tinh duoc con so — no khong keo
+   * ca ky thanh `null`.
+   */
+  state: "counted" | "in_progress" | "leave_paid" | "leave_unpaid";
+  /** Co the la so thap phan o che do `daily_hours` (D-39). */
+  creditedDays: number | null;
+  regularMinutes: number | null;
+  overtimeMinutes: number;
+  convertedOvertimeHours: number | null;
+  hourDeltaMinutes: number;
+  basePay: number | null;
+  overtimePay: number | null;
+  hourAdjustment: number | null;
+  /** Tong ba con so tien DA LAM TRON o tren. */
+  dayTotal: number | null;
   missing: string[];
 }
 

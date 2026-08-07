@@ -1,10 +1,14 @@
 import type { WorkDayType } from "@/lib/attendance/classification";
 import type { DayClassification } from "@/lib/attendance/classification-context";
-import type { DayCredit } from "@/lib/attendance/work-mode";
-import type { PayrollMissingInput } from "@/lib/payroll/compute";
+import type {
+  DayCredit,
+  WorkModeMissingInput,
+} from "@/lib/attendance/work-mode";
+import type { RateMissingInput } from "@/lib/payroll/rate";
 import type {
   AttendanceStatus,
   EmployeeOvertimeRate,
+  OvertimeRuleKey,
   WorkMode,
 } from "@/lib/types/domain";
 
@@ -57,6 +61,22 @@ import type {
  * kien", va ke toan se di tim mot loi khong ton tai.
  */
 
+/**
+ * Moi ly do khien mot dong luong khong ra duoc con so.
+ *
+ * DINH NGHIA NAM O DAY chu khong o `compute.ts`, du `compute.ts` moi la noi
+ * xuat no ra cho ca du an: `compute.ts` import gia tri tu file nay, nen dat
+ * kieu o ben kia se tao mot vong import giua hai module. Vong do se chi la
+ * kieu (bi xoa luc bien dich) nen no CHAY duoc — va do chinh la ly do khong
+ * nen de no ton tai: mot vong chay duoc hom nay se hong vao ngay ai do can
+ * mot GIA TRI thay vi mot kieu.
+ */
+export type PayrollMissingInput =
+  | "pay_rate"
+  | RateMissingInput
+  | WorkModeMissingInput
+  | `overtime_rule:${OvertimeRuleKey}`;
+
 /** Mot ngay o trang thai nao trong bang luong. */
 export type DailyPayState =
   | "counted"
@@ -64,17 +84,29 @@ export type DailyPayState =
   | "leave_paid"
   | "leave_unpaid";
 
-export interface DailyPayInput {
+/**
+ * SO LIEU CONG cua mot ngay — phan KHONG dinh gi toi tien.
+ *
+ * `MonthlyDayDetail` cua `month-context.ts` thoa man kieu nay ve mat cau truc,
+ * nen no di thang vao day khong can chuyen doi. Kieu duoc khai o file NAY chu
+ * khong import tu do, vi `month-context.ts` la module server-only (no goi
+ * `createServerSupabase()`) va file nay phai thuan.
+ */
+export interface DailyPaySource {
   /** "YYYY-MM-DD" */
   date: string;
-  /** Tu `resolveDayCredit()` — KHONG tinh lai o day. */
-  credit: DayCredit;
-  /** Tu `classifyDay()` — KHONG tinh lai o day. */
-  classification: DayClassification;
   /** Trang thai cua CA NGAY (`day.ts`), khong phai cua mot luot. */
   status: AttendanceStatus;
   /** Con mot luot da vao nhung chua tan ca. */
   hasOpenPunch: boolean;
+  /** Tu `resolveDayCredit()` — KHONG tinh lai o day. */
+  credit: DayCredit;
+  /** Tu `classifyDay()` — KHONG tinh lai o day. */
+  classification: DayClassification;
+}
+
+/** Phan GIA cua phep tinh — khong doi trong suot mot ky. */
+export interface DailyPayRates {
   /** `null` = chua khai muc luong HOAC thieu mau so quy doi. */
   dailyRate: number | null;
   hourlyRate: number | null;
@@ -91,6 +123,9 @@ export interface DailyPayInput {
    */
   paysByActualHours: boolean;
 }
+
+/** Mot ngay (so lieu cong) cong voi phan gia cua ky. */
+export type DailyPayInput = DailyPaySource & DailyPayRates;
 
 export interface DailyPayLine {
   date: string;
@@ -261,6 +296,20 @@ export function computeDailyPay({
 }
 
 /**
+ * Quy CA MOT KY ra cac dong ngay. Phan gia (`rates`) khong doi trong ky nen
+ * duoc tinh MOT LAN o noi goi roi dung lai cho moi ngay.
+ */
+export function computeDailyLines({
+  days,
+  rates,
+}: {
+  days: readonly DailyPaySource[];
+  rates: DailyPayRates;
+}): DailyPayLine[] {
+  return days.map((day) => computeDailyPay({ ...day, ...rates }));
+}
+
+/**
  * Cong cac dong ngay lai thanh so cua ky.
  *
  * Ngay `in_progress` KHONG gop gi va KHONG lam tong thanh `null` — no chua co
@@ -268,45 +317,41 @@ export function computeDailyPay({
  */
 export function sumDailyPay(lines: readonly DailyPayLine[]): DailyPaySum {
   const missing = new Set<PayrollMissingInput>();
-  let base = 0;
-  let overtime = 0;
-  let hour = 0;
-  let incomputable = false;
+  // BA THANH PHAN DOC LAP NHAU. Mot ngay thieu he so tang ca lam `overtimePay`
+  // cua ca ky thanh `null`, nhung luong goc thi VAN tinh duoc va van phai duoc
+  // hien — nguoi xem can biet phan nao ra so va phan nao khong. Gop ca ba lai
+  // se giau di thu ma he thong that su biet.
+  let base: number | null = 0;
+  let overtime: number | null = 0;
+  let hour: number | null = 0;
 
   for (const line of lines) {
     for (const key of line.missing) missing.add(key);
+    // Ngay chua ket thuc thi khong co gi de cong — va no KHONG lam thanh phan
+    // nao thanh `null`, vi no khong thieu du kien.
     if (line.state === "in_progress") continue;
 
-    if (
-      line.basePay === null ||
-      line.overtimePay === null ||
-      line.hourAdjustment === null
-    ) {
-      incomputable = true;
-      continue;
-    }
-    base += line.basePay;
-    overtime += line.overtimePay;
-    hour += line.hourAdjustment;
-  }
+    if (line.basePay === null) base = null;
+    else if (base !== null) base += line.basePay;
 
-  if (incomputable) {
-    // KHONG cong bo phan de ra mot tong trong nhu da day du (quy tac (2)).
-    return {
-      basePay: null,
-      overtimePay: null,
-      hourAdjustment: null,
-      dayTotal: null,
-      missing: Array.from(missing),
-    };
+    if (line.overtimePay === null) overtime = null;
+    else if (overtime !== null) overtime += line.overtimePay;
+
+    if (line.hourAdjustment === null) hour = null;
+    else if (hour !== null) hour += line.hourAdjustment;
   }
 
   return {
     basePay: base,
     overtimePay: overtime,
     hourAdjustment: hour,
-    // Tong cua CHINH nhung o hien ra man hinh — bang luong luon doi chieu duoc.
-    dayTotal: base + overtime + hour,
+    // BAT KY thanh phan nao `null` thi tong cung `null` — khong cong phan da
+    // biet lai roi trinh bay nhu mot con so day du (quy tac (2)).
+    dayTotal:
+      base === null || overtime === null || hour === null
+        ? null
+        : // Tong cua CHINH nhung o hien ra man hinh — luon doi chieu duoc.
+          base + overtime + hour,
     missing: Array.from(missing),
   };
 }

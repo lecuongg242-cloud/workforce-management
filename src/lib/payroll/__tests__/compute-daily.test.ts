@@ -249,6 +249,28 @@ describe("sumDailyPay", () => {
     expect(total.missing).toContain("standard_hours_per_day");
   });
 
+  it("13b. thieu HE SO TANG CA -> chi overtimePay null, luong goc VAN ra so", () => {
+    // Ba thanh phan doc lap nhau: nguoi xem can biet phan nao ra so va phan
+    // nao khong. Gop ca ba thanh `null` se giau di thu he thong that su biet.
+    const total = sumDailyPay([
+      day(),
+      day({
+        classification: classification({
+          overtimeMinutes: 60,
+          convertedOvertimeHours: null,
+          missingMultiplierKeys: ["weekday"],
+        }),
+      }),
+    ]);
+
+    // 500.000 x 2 ngay = 1.000.000 — van cong duoc.
+    expect(total.basePay).toBe(1_000_000);
+    expect(total.overtimePay).toBeNull();
+    // Nhung TONG thi khong: khong cong phan da biet roi trinh bay nhu day du.
+    expect(total.dayTotal).toBeNull();
+    expect(total.missing).toContain("overtime_rule:weekday");
+  });
+
   it("14. ngay dang do KHONG lam tong thanh null, no chi khong gop gi", () => {
     const total = sumDailyPay([day(), day({ hasOpenPunch: true })]);
 

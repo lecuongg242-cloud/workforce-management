@@ -156,16 +156,10 @@ export async function buildPayrollRows({
         payrollContext.overtimeRateByEmployee.get(employee.id) ?? null;
 
       const money = computePayrollLine({
-        summary: {
-          creditedDays: summary.creditedDays ?? null,
-          regularMinutes: summary.regularMinutes ?? null,
-          hourDeltaMinutes: summary.hourDeltaMinutes ?? 0,
-          convertedOvertimeHours: summary.convertedOvertimeHours ?? null,
-          overtimeMinutes: summary.overtimeMinutes ?? 0,
-          missingMultiplierKeys: summary.missingMultiplierKeys ?? [],
-          missingWorkModeInputs: summary.missingWorkModeInputs ?? [],
-          lateCount: summary.lateCount,
-        },
+        summary: { lateCount: summary.lateCount },
+        // SO LIEU CONG THEO NGAY di thang xuong — `computePayrollLine()` tu quy
+        // chung ra tien. Khong mot phep tinh nao chay o day.
+        days: summary.days,
         payRate,
         overtimeRate,
         workMode: context.rules.workMode,

@@ -33,6 +33,9 @@ function row(overrides: Partial<PayrollPrepRow> = {}): PayrollPrepRow {
     regularMinutes: 9_570,
     hourDeltaMinutes: 0,
     missingWorkModeInputs: [],
+    // Tep CSV KHONG co cot theo ngay — bo trong o day la dung, khong phai mot
+    // fixture con thieu.
+    days: [],
     // PAY-01 (plan 05-2-04) — phan tien. Bo so nay doi chieu duoc:
     // 10.500.000 + 796.875 + 0 + 730.000 − 100.000 = 11.926.875
     payUnit: "month" as const,

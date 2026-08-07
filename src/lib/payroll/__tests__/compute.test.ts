@@ -4,7 +4,8 @@ import {
   computePayrollLine,
   type PayrollComputeInput,
 } from "@/lib/payroll/compute";
-import type { PayAdjustment } from "@/lib/types/domain";
+import type { DailyPaySource } from "@/lib/payroll/compute-daily";
+import type { OvertimeRuleKey, PayAdjustment } from "@/lib/types/domain";
 
 /**
  * Phep tinh ra TIEN (PAY-01).
@@ -57,8 +58,56 @@ function adjustment(overrides: Partial<PayAdjustment> = {}): PayAdjustment {
   };
 }
 
+/**
+ * SO LIEU CONG CUA CA KY, gop lai thanh MOT ngay tong hop.
+ *
+ * Vi sao mot ngay chu khong phai N ngay: phep tinh tien la TUYEN TINH theo
+ * ngay cong / so phut / gio quy doi, nen mot ngay mang so tong cho ra DUNG con
+ * so ma cong thuc cu (nhan tu so tong) cho ra. Nho vay 33 bai duoi day giu
+ * NGUYEN moi con so ky vong da co, va chung tro thanh bo hoi quy chung minh
+ * rang viec chuyen sang cong-tu-ngay KHONG lam doi so hoc.
+ *
+ * Cac bai can nhieu ngay THAT (lam tron o muc ngay, ngay dang do) truyen
+ * `days` tuong minh — xem `describe` cuoi file.
+ */
+interface AggregateSummary {
+  creditedDays: number | null;
+  regularMinutes: number | null;
+  hourDeltaMinutes: number;
+  convertedOvertimeHours: number | null;
+  overtimeMinutes: number;
+  missingMultiplierKeys: OvertimeRuleKey[];
+  missingWorkModeInputs: Array<"standard_hours_per_day">;
+  lateCount: number;
+}
+
+function aggregateDay(summary: AggregateSummary): DailyPaySource {
+  return {
+    date: "2026-08-03",
+    status: "on_time",
+    hasOpenPunch: false,
+    credit: {
+      creditedDays: summary.creditedDays,
+      regularMinutes: summary.regularMinutes,
+      overtimeMinutes: summary.overtimeMinutes,
+      hourDelta: summary.hourDeltaMinutes,
+      missing: summary.missingWorkModeInputs[0] ?? null,
+    },
+    classification: {
+      dayType: "weekday",
+      nightMinutes: 0,
+      overtimeMinutes: summary.overtimeMinutes,
+      overtimeNightMinutes: 0,
+      convertedOvertimeHours: summary.convertedOvertimeHours,
+      missingMultiplierKeys: summary.missingMultiplierKeys,
+      workModeInputMissing: summary.missingWorkModeInputs.length > 0,
+    },
+  };
+}
+
 function line(overrides: {
-  summary?: Partial<PayrollComputeInput["summary"]>;
+  summary?: Partial<AggregateSummary>;
+  days?: DailyPaySource[];
   payRate?: PayrollComputeInput["payRate"];
   overtimeRate?: PayrollComputeInput["overtimeRate"];
   workMode?: PayrollComputeInput["workMode"];
@@ -66,18 +115,21 @@ function line(overrides: {
   standardHoursPerDay?: number | null;
   adjustments?: PayAdjustment[];
 } = {}) {
+  const summary: AggregateSummary = {
+    creditedDays: 26,
+    regularMinutes: 26 * 8 * 60,
+    hourDeltaMinutes: 0,
+    convertedOvertimeHours: 0,
+    overtimeMinutes: 0,
+    missingMultiplierKeys: [],
+    missingWorkModeInputs: [],
+    lateCount: 0,
+    ...overrides.summary,
+  };
+
   return computePayrollLine({
-    summary: {
-      creditedDays: 26,
-      regularMinutes: 26 * 8 * 60,
-      hourDeltaMinutes: 0,
-      convertedOvertimeHours: 0,
-      overtimeMinutes: 0,
-      missingMultiplierKeys: [],
-      missingWorkModeInputs: [],
-      lateCount: 0,
-      ...overrides.summary,
-    },
+    summary: { lateCount: summary.lateCount },
+    days: overrides.days ?? [aggregateDay(summary)],
     payRate:
       overrides.payRate === undefined
         ? { unit: "month", amount: MONTHLY_SALARY }
@@ -596,5 +648,118 @@ describe("Làm tròn — không ở bước trung gian, và bảng luôn đối 
 
     expect(withRate.basePay).toBe(withoutRate.basePay);
     expect(withRate.overtimePay).not.toBe(withoutRate.overtimePay);
+  });
+});
+
+/**
+ * TONG CUA KY BANG DUNG TONG CAC DONG NGAY.
+ *
+ * Day la loi hua ma ca thay doi nay ton tai vi no. Cac bai o tren dung MOT
+ * ngay gop nen chung khong cham toi duoc dieu do; nhung bai duoi day dung
+ * NHIEU ngay that.
+ */
+describe("Tổng kỳ bằng đúng tổng các dòng ngày", () => {
+  /** Mot ngay thuong du ca: 1 ngay cong, 480 phut thuong. */
+  function workDay(date: string): DailyPaySource {
+    return {
+      date,
+      status: "on_time",
+      hasOpenPunch: false,
+      credit: {
+        creditedDays: 1,
+        regularMinutes: 480,
+        overtimeMinutes: 0,
+        hourDelta: 0,
+        missing: null,
+      },
+      classification: {
+        dayType: "weekday",
+        nightMinutes: 0,
+        overtimeMinutes: 0,
+        overtimeNightMinutes: 0,
+        convertedOvertimeHours: 0,
+        missingMultiplierKeys: [],
+        workModeInputMissing: false,
+      },
+    };
+  }
+
+  /** Mot ngay da cham vao, chua cham ra. */
+  function openDay(date: string): DailyPaySource {
+    return {
+      ...workDay(date),
+      hasOpenPunch: true,
+      credit: {
+        creditedDays: 0,
+        regularMinutes: 0,
+        overtimeMinutes: 0,
+        hourDelta: 0,
+        missing: null,
+      },
+    };
+  }
+
+  const days22 = Array.from({ length: 22 }, (_, index) =>
+    workDay(`2026-08-${String(index + 1).padStart(2, "0")}`),
+  );
+
+  it("34. netPay === Σ dayTotal + phụ cấp − khấu trừ, bằng ĐÚNG chứ không xấp xỉ", () => {
+    const result = line({ days: days22, adjustments: [adjustment()] });
+
+    const sumOfDays = result.days.reduce(
+      (sum, day) => sum + (day.dayTotal ?? 0),
+      0,
+    );
+
+    expect(result.days).toHaveLength(22);
+    // 500.000 x 22 = 11.000.000
+    expect(sumOfDays).toBe(11_000_000);
+    expect(result.basePay).toBe(sumOfDays);
+    // Dang thuc CHINH XAC — day la thu giu cho ke toan doi chieu bang luong
+    // voi chi tiet ngay ma khong lech mot dong.
+    expect(result.netPay).toBe(
+      sumOfDays +
+        (result.allowanceTotal as number) -
+        (result.deductionTotal as number),
+    );
+  });
+
+  it("35. ngày đang dở KHÔNG làm đổi tổng kỳ, và KHÔNG báo thiếu dữ kiện", () => {
+    const a = line({ days: days22 });
+    const b = line({ days: [...days22, openDay("2026-08-23")] });
+
+    expect(b.netPay).toBe(a.netPay);
+    expect(b.missing).toEqual([]);
+    // Ngay do VAN co mat trong danh sach — no chi khong mang con so nao.
+    expect(b.days).toHaveLength(23);
+    expect(b.days[22].state).toBe("in_progress");
+    expect(b.days[22].dayTotal).toBeNull();
+  });
+
+  it("36. LÀM TRÒN Ở MỨC NGÀY: 26 ngày riêng lẻ lệch vài chục đồng so với một ngày gộp", () => {
+    // 10.000.000 / 26 = 384.615,3846.../ngay.
+    //   - Mot ngay gop (26 ngay cong):  384.615,3846... x 26 = 10.000.000
+    //   - 26 ngay rieng le: moi ngay lam tron thanh 384.615 -> x26 = 9.999.990
+    const gop = line({
+      payRate: { unit: "month", amount: 10_000_000 },
+      summary: { creditedDays: 26 },
+    });
+    const rieng = line({
+      payRate: { unit: "month", amount: 10_000_000 },
+      days: Array.from({ length: 26 }, (_, index) =>
+        workDay(`2026-08-${String(index + 1).padStart(2, "0")}`),
+      ),
+    });
+
+    expect(gop.basePay).toBe(10_000_000);
+    expect(rieng.basePay).toBe(9_999_990);
+
+    // 10 dong chenh lech nay la DANH DOI DA DUOC CHAP NHAN CO Y THUC, khong
+    // phai mot loi. Doi lai: cong 26 dong tren man hinh ra DUNG con so thang.
+    const sumOfDays = rieng.days.reduce(
+      (sum, day) => sum + (day.dayTotal ?? 0),
+      0,
+    );
+    expect(rieng.basePay).toBe(sumOfDays);
   });
 });
