@@ -73,10 +73,21 @@ export interface PayrollRowsResult {
 export async function buildPayrollRows({
   companyId,
   month,
+  employeeId,
 }: {
   companyId: string;
   /** "YYYY-MM" */
   month: string;
+  /**
+   * Loc ve MOT nguoi. KHONG phai mot cong quyen — cong nam o Route Handler
+   * (`assertCanViewOwnPayslip`), va tham so nay khong thay the cho no.
+   *
+   * Ly do co tham so nay: phieu TAM TINH cua nhan vien phai di qua CHINH ham
+   * nay. Mo mot duong tinh thu hai cho rieng man hinh nhan vien nghia la con
+   * so ho nhin thay va con so se duoc chot co the lech nhau — dung loai sai
+   * lech ma khoi comment o dau file nay ra doi de ngan.
+   */
+  employeeId?: string;
 }): Promise<PayrollRowsResult> {
   const supabase = await createServerSupabase();
   const context = await loadMonthContext({ companyId, month });
@@ -87,27 +98,39 @@ export async function buildPayrollRows({
   const periodEnd = addDays(context.end, -1);
   const payrollContext = await loadPayrollContext({ companyId, periodEnd });
 
+  // Goi TEN KHOA NGOAI tuong minh: giua `employees` va `departments` co HAI
+  // quan he (`employees.department_id` va `departments.manager_id`) nen
+  // PostgREST khong tu suy dien duoc — bo qua se lam ca truy van hong va ten
+  // phong ban ve `null` hang loat (loi da gap o 05-06).
+  //
+  // `department_id` va `position` khong hien ra bang, nhung phep giai PHAM VI
+  // cua khoan phu cap can ca hai (`scope.ts`).
+  let employeeQuery = supabase
+    .from("employees")
+    .select(
+      "id, code, full_name, status, department_id, position, departments!employees_department_id_fkey(name)",
+    )
+    .eq("company_id", companyId)
+    .order("code", { ascending: true });
+
+  let attendanceQuery = supabase
+    .from("attendance_records")
+    .select(ATTENDANCE_COLUMNS)
+    .eq("company_id", companyId)
+    .gte("work_date", context.start)
+    .lt("work_date", context.end);
+
+  // Loc duoc DAY XUONG truy van chu khong loc trong JS: keo ca doanh nghiep ve
+  // roi bo di tat ca tru mot dong la doc thua du lieu luong cua nguoi khac vao
+  // bo nho cua mot yeu cau do chinh ho goi.
+  if (employeeId) {
+    employeeQuery = employeeQuery.eq("id", employeeId);
+    attendanceQuery = attendanceQuery.eq("employee_id", employeeId);
+  }
+
   const [employeeResult, attendanceResult, periodResult] = await Promise.all([
-    // Goi TEN KHOA NGOAI tuong minh: giua `employees` va `departments` co HAI
-    // quan he (`employees.department_id` va `departments.manager_id`) nen
-    // PostgREST khong tu suy dien duoc — bo qua se lam ca truy van hong va ten
-    // phong ban ve `null` hang loat (loi da gap o 05-06).
-    //
-    // `department_id` va `position` khong hien ra bang, nhung phep giai PHAM VI
-    // cua khoan phu cap can ca hai (`scope.ts`).
-    supabase
-      .from("employees")
-      .select(
-        "id, code, full_name, status, department_id, position, departments!employees_department_id_fkey(name)",
-      )
-      .eq("company_id", companyId)
-      .order("code", { ascending: true }),
-    supabase
-      .from("attendance_records")
-      .select(ATTENDANCE_COLUMNS)
-      .eq("company_id", companyId)
-      .gte("work_date", context.start)
-      .lt("work_date", context.end),
+    employeeQuery,
+    attendanceQuery,
     supabase
       .from("periods")
       .select("status")
