@@ -46,6 +46,13 @@ export const payrollPrepRowSchema = z.object({
    * dung dieu do thay vi hien 0. */
   payUnit: z.enum(["month", "day", "hour"]).nullable(),
   payAmount: z.number().nullable(),
+  // Muc tang ca rieng da ap (0026). `.optional()` vi ky DA CHOT khong luu hai
+  // gia tri nay — xem ghi chu o `PayrollPrepRow`.
+  overtimeRateValueType: z
+    .enum(["multiplier", "fixed_hourly"])
+    .nullable()
+    .optional(),
+  overtimeRateValue: z.number().nullable().optional(),
   basePay: z.number().nullable(),
   overtimePay: z.number().nullable(),
   hourAdjustment: z.number().nullable(),

@@ -28,10 +28,29 @@ interface RawAttendanceRow {
 
 interface RawShiftRow {
   id: string;
-  start_time: string;
-  end_time: string;
+  kind: string;
+  /** `null` o ca linh hoat (migration 0027) */
+  start_time: string | null;
+  end_time: string | null;
+  duration_minutes: number | null;
   break_minutes: number;
   late_tolerance_minutes: number;
+}
+
+const SHIFT_PUNCH_COLUMNS =
+  "id, kind, start_time, end_time, duration_minutes, break_minutes, late_tolerance_minutes";
+
+/**
+ * CA LINH HOAT (migration 0027) KHONG CO GIO MOC, nen ba dai luong do tu mot
+ * gio moc deu khong ton tai o day: di muon, ve som, va "ngoai khung gio ca".
+ *
+ * Day khong phai mot ngoai le duoc bo qua cho tien — no la dinh nghia cua loai
+ * ca do. Nhan vien duoc phep vao luc nao cung duoc; do "muon" so voi mot gio
+ * ma khong ai hua se cho ra mot con so vo nghia, va con so do se chay thang
+ * vao `status = "late"` roi len bao cao di muon cua ca doanh nghiep.
+ */
+function isHoursShift(shift: RawShiftRow): boolean {
+  return shift.kind === "hours";
 }
 
 interface RawWorkSiteRow {
@@ -378,7 +397,7 @@ export async function checkIn(
 
   const { data: shiftRow, error: shiftError } = await supabase
     .from("shifts")
-    .select("id, start_time, end_time, break_minutes, late_tolerance_minutes")
+    .select(SHIFT_PUNCH_COLUMNS)
     .eq("id", employeeRow.shift_id as string)
     .eq("company_id", activeCompanyId)
     .maybeSingle();
@@ -386,14 +405,6 @@ export async function checkIn(
     throw new Error("Nhân viên chưa được gán ca làm việc.");
   }
   const shift = shiftRow as RawShiftRow;
-
-  const { data: scheduledStart, error: scheduledStartError } = await supabase.rpc(
-    "tf_local_instant",
-    { p_date: workDate, p_time: shift.start_time },
-  );
-  if (scheduledStartError || !scheduledStart) {
-    throw new Error("Không thể tính thời gian bắt đầu ca.");
-  }
 
   // CHAM CONG NGOAI KHUNG GIO CA KHONG CON BI TU CHOI.
   //
@@ -450,7 +461,19 @@ export async function checkIn(
   const isFirstPunchOfDay = punchesToday.length === 0;
 
   let lateMinutes = 0;
-  if (isFirstPunchOfDay) {
+  // Ca linh hoat khong co gio bat dau de do muon SO VOI — xem `isHoursShift`.
+  // Bo qua CA phep goi `tf_local_instant` o day: goi no voi `p_time = null` se
+  // tra null va roi vao nhanh nem loi ben duoi, tuc mot nhan vien ca linh hoat
+  // se khong cham cong duoc.
+  if (isFirstPunchOfDay && !isHoursShift(shift)) {
+    const { data: scheduledStart, error: scheduledStartError } = await supabase.rpc(
+      "tf_local_instant",
+      { p_date: workDate, p_time: shift.start_time },
+    );
+    if (scheduledStartError || !scheduledStart) {
+      throw new Error("Không thể tính thời gian bắt đầu ca.");
+    }
+
     // Do muon = hieu (check_in_at - gio bat dau ca THEO KE HOACH), tinh tren
     // TIMESTAMPTZ THAT qua tf_worked_minutes — den som tu dong ve 0 (khong can
     // nguong chan 720 phut nhu tang gia lap, vi day la hieu tuyet doi giua hai
@@ -581,7 +604,7 @@ export async function checkOut(
 
   const { data: shiftRow, error: shiftError } = await supabase
     .from("shifts")
-    .select("id, start_time, end_time, break_minutes, late_tolerance_minutes")
+    .select(SHIFT_PUNCH_COLUMNS)
     .eq("id", beforeRow.shift_id)
     .eq("company_id", companyId)
     .maybeSingle();
@@ -614,43 +637,51 @@ export async function checkOut(
     throw new Error("Không thể tính số phút làm việc.");
   }
 
-  const { data: scheduledStart, error: scheduledStartError } = await supabase.rpc(
-    "tf_local_instant",
-    { p_date: beforeRow.work_date, p_time: shift.start_time },
-  );
-  if (scheduledStartError || !scheduledStart) {
-    throw new Error("Không thể tính thời gian bắt đầu ca.");
-  }
+  // Ca linh hoat khong co gio ket thuc theo ke hoach, nen khong co moc nao de
+  // "ve som" so voi (xem `isHoursShift`). Ba loi goi RPC duoi day deu nhan
+  // `shift.start_time`/`shift.end_time` — voi ca linh hoat chung deu null, nen
+  // day cung la nhanh giu cho `checkOut` khong nem loi giua chung.
+  let earlyLeaveMinutes = 0;
+  if (!isHoursShift(shift)) {
+    const { data: scheduledStart, error: scheduledStartError } = await supabase.rpc(
+      "tf_local_instant",
+      { p_date: beforeRow.work_date, p_time: shift.start_time },
+    );
+    if (scheduledStartError || !scheduledStart) {
+      throw new Error("Không thể tính thời gian bắt đầu ca.");
+    }
 
-  // Thoi luong TRON CA (ke ca gio nghi -- p_break_minutes=0) da xu ly wrap
-  // qua nua dem cho ca qua dem (D-08) o CHINH tf_shift_minutes(), khong phai
-  // tu viet lai o day. Cong so phut nay vao thoi diem bat dau THEO KE HOACH
-  // qua addMinutesToInstant() (phep cong EPOCH DON THUAN, khong phai mot quy
-  // uoc mui gio thu hai) de ra thoi diem KET THUC CA THEO KE HOACH.
-  const { data: rawShiftMinutes, error: shiftMinutesError } = await supabase.rpc(
-    "tf_shift_minutes",
-    { p_start: shift.start_time, p_end: shift.end_time, p_break_minutes: 0 },
-  );
-  if (shiftMinutesError || rawShiftMinutes === null) {
-    throw new Error("Không thể tính thời lượng ca.");
-  }
-  const scheduledEnd = addMinutesToInstant(
-    scheduledStart as string,
-    rawShiftMinutes as number,
-  );
+    // Thoi luong TRON CA (ke ca gio nghi -- p_break_minutes=0) da xu ly wrap
+    // qua nua dem cho ca qua dem (D-08) o CHINH tf_shift_minutes(), khong phai
+    // tu viet lai o day. Cong so phut nay vao thoi diem bat dau THEO KE HOACH
+    // qua addMinutesToInstant() (phep cong EPOCH DON THUAN, khong phai mot quy
+    // uoc mui gio thu hai) de ra thoi diem KET THUC CA THEO KE HOACH.
+    const { data: rawShiftMinutes, error: shiftMinutesError } = await supabase.rpc(
+      "tf_shift_minutes",
+      { p_start: shift.start_time, p_end: shift.end_time, p_break_minutes: 0 },
+    );
+    if (shiftMinutesError || rawShiftMinutes === null) {
+      throw new Error("Không thể tính thời lượng ca.");
+    }
+    const scheduledEnd = addMinutesToInstant(
+      scheduledStart as string,
+      rawShiftMinutes as number,
+    );
 
-  const { data: earlyLeaveMinutes, error: earlyError } = await supabase.rpc(
-    "tf_worked_minutes",
-    { p_check_in: nowIso, p_check_out: scheduledEnd, p_break_minutes: 0 },
-  );
-  if (earlyError || earlyLeaveMinutes === null) {
-    throw new Error("Không thể tính số phút về sớm.");
+    const { data: earlyRaw, error: earlyError } = await supabase.rpc(
+      "tf_worked_minutes",
+      { p_check_in: nowIso, p_check_out: scheduledEnd, p_break_minutes: 0 },
+    );
+    if (earlyError || earlyRaw === null) {
+      throw new Error("Không thể tính số phút về sớm.");
+    }
+    earlyLeaveMinutes = earlyRaw as number;
   }
 
   const status: AttendanceRecord["status"] =
     beforeRow.status === "late"
       ? "late"
-      : (earlyLeaveMinutes as number) > 0
+      : earlyLeaveMinutes > 0
         ? "early_leave"
         : "on_time";
 

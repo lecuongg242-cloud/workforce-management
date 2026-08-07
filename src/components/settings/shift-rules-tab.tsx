@@ -23,6 +23,7 @@ import { SETTINGS_SHIFT_LABEL } from "@/lib/constants";
 import { listShifts, updateShift, type ShiftWithStats } from "@/lib/data/shifts";
 import { useDataStore } from "@/lib/data/store";
 import { formatNumber } from "@/lib/format";
+import { formatShiftSchedule } from "@/lib/shifts/schedule";
 import type { ShiftFormValues } from "@/lib/validation/schemas";
 
 /**
@@ -127,9 +128,7 @@ export function ShiftRulesTab(): React.ReactElement {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className="num">
-                      {shift.startTime} – {shift.endTime}
-                    </span>
+                    <span className="num">{formatShiftSchedule(shift)}</span>
                     {/* `overnight` la COT SINH cua database, chi doc lai —
                         khong bao gio tinh lai o tang ung dung (02-06). */}
                     {shift.overnight ? (

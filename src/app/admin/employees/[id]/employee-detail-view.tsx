@@ -28,6 +28,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { EmployeeForm } from "@/components/employees/employee-form";
+import { OvertimeRatePanel } from "@/components/employees/overtime-rate-panel";
 import { PayRatePanel } from "@/components/employees/pay-rate-panel";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +61,7 @@ import {
   ACCOUNT_LABELS,
   CONTRACT_TYPE_LABEL,
   GENDER_LABEL,
+  NOT_DECLARED,
   REQUEST_TYPE_LABEL,
   SYSTEM_ROLE_LABEL,
   WEEKDAY_LABEL,
@@ -70,8 +72,12 @@ import {
   formatDurationShort,
   formatMonthLabel,
   formatTime,
-  minutesBetween,
 } from "@/lib/format";
+import {
+  formatShiftSchedule,
+  isHoursBasedShift,
+  shiftScheduledMinutes,
+} from "@/lib/shifts/schedule";
 import { getMonthlySummary, listAttendance } from "@/lib/data/attendance";
 import { listAttendancePhotos } from "@/lib/data/attendance-photos";
 import { listDepartments } from "@/lib/data/departments";
@@ -333,21 +339,40 @@ export function EmployeeDetailView({
           <div className="grid gap-4 xl:col-span-2">
             <InfoCard title="Thông tin liên hệ" icon={Mail}>
               <InfoRow label="Email" value={employee.email} />
-              <InfoRow label="Số điện thoại" value={employee.phone} numeric />
+              {/* Sau truong khong bat buoc (0028) hien "—" khi chua khai — KHONG
+                  hien mot gia tri dai dien, thu ma nguoi doc se tuong la that. */}
               <InfoRow
-                label="Ngày sinh"
-                value={formatDate(employee.dateOfBirth)}
+                label="Số điện thoại"
+                value={employee.phone ?? NOT_DECLARED}
                 numeric
               />
-              <InfoRow label="Giới tính" value={GENDER_LABEL[employee.gender]} />
+              <InfoRow
+                label="Ngày sinh"
+                value={
+                  employee.dateOfBirth
+                    ? formatDate(employee.dateOfBirth)
+                    : NOT_DECLARED
+                }
+                numeric
+              />
+              <InfoRow
+                label="Giới tính"
+                value={
+                  employee.gender ? GENDER_LABEL[employee.gender] : NOT_DECLARED
+                }
+              />
             </InfoCard>
 
             <InfoCard title="Thông tin công việc" icon={Briefcase}>
-              <InfoRow label="Phòng ban" value={department?.name ?? "—"} />
-              <InfoRow label="Chức vụ" value={employee.position} />
+              <InfoRow label="Phòng ban" value={department?.name ?? NOT_DECLARED} />
+              <InfoRow label="Chức vụ" value={employee.position ?? NOT_DECLARED} />
               <InfoRow
                 label="Loại hợp đồng"
-                value={CONTRACT_TYPE_LABEL[employee.contractType]}
+                value={
+                  employee.contractType
+                    ? CONTRACT_TYPE_LABEL[employee.contractType]
+                    : NOT_DECLARED
+                }
               />
               <InfoRow
                 label="Ngày bắt đầu"
@@ -414,7 +439,7 @@ export function EmployeeDetailView({
                   <InfoRow label="Tên ca" value={shift.name} />
                   <InfoRow
                     label="Giờ làm"
-                    value={`${shift.startTime} – ${shift.endTime}`}
+                    value={formatShiftSchedule(shift)}
                     numeric
                   />
                   <InfoRow
@@ -565,9 +590,7 @@ export function EmployeeDetailView({
                         {WEEKDAY_LABEL[day]}
                       </p>
                       <p className="num mt-0.5 text-xs text-ink-secondary">
-                        {isWorking
-                          ? `${shift.startTime} – ${shift.endTime}`
-                          : "Ngày nghỉ"}
+                        {isWorking ? formatShiftSchedule(shift) : "Ngày nghỉ"}
                       </p>
                     </div>
                   );
@@ -583,14 +606,15 @@ export function EmployeeDetailView({
               <p className="mt-4 text-sm text-ink-muted">
                 Thời gian làm việc thực tế mỗi ngày:{" "}
                 <span className="num font-medium text-ink">
-                  {formatDuration(
-                    Math.max(
-                      minutesBetween(shift.startTime, shift.endTime) -
-                        shift.breakMinutes,
-                      0,
-                    ),
-                  )}
+                  {formatDuration(shiftScheduledMinutes(shift))}
                 </span>
+                {isHoursBasedShift(shift) ? (
+                  <>
+                    {" "}
+                    — ca linh hoạt, nhân viên vào ra lúc nào cũng được nên không
+                    tính đi muộn và về sớm.
+                  </>
+                ) : null}
               </p>
             ) : null}
           </section>
@@ -649,7 +673,13 @@ export function EmployeeDetailView({
             de mot man hinh loi. */}
         <TabsContent value="salary" className="mt-4">
           {isAdminRole ? (
-            <PayRatePanel employeeId={employeeId} today={today} />
+            <div className="grid gap-4">
+              <PayRatePanel employeeId={employeeId} today={today} />
+              {/* Tien tang ca rieng nam ngay duoi muc luong: hai con so nay
+                  luon duoc doc cung nhau khi ai do kiem tra bang luong cua
+                  mot nguoi. */}
+              <OvertimeRatePanel employeeId={employeeId} today={today} />
+            </div>
           ) : (
             <section className="surface-card">
               <EmptyState
@@ -686,6 +716,7 @@ export function EmployeeDetailView({
             shifts={shifts}
             allEmployees={allEmployees}
             defaultStartDate={today}
+            onSaved={() => setIsEditing(false)}
           />
         </DialogContent>
       </Dialog>

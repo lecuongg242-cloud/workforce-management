@@ -41,8 +41,10 @@ import type { PayAdjustmentScope } from "@/lib/types/domain";
 /** Chi hai truong nay cua mot nhan vien tham gia phep giai pham vi. */
 export interface ScopeEmployee {
   id: string;
+  /** `null` = CHUA XEP phong ban (migration 0028) — khong khop pham vi nao. */
   departmentId: string | null;
-  position: string;
+  /** `null` = CHUA KHAI chuc vu (migration 0028) — cung chieu voi phong ban. */
+  position: string | null;
 }
 
 /** So khop MOT dong pham vi voi MOT nhan vien. */
@@ -54,12 +56,15 @@ function matches(scope: PayAdjustmentScope, employee: ScopeEmployee): boolean {
       return (
         employee.departmentId !== null && employee.departmentId === scope.scopeValue
       );
-    case "position":
+    case "position": {
       // Xem quy tac (3) o khoi tren: cat khoang trang, khong chuan hoa gi khac.
-      return (
-        employee.position.trim() === (scope.scopeValue ?? "").trim() &&
-        employee.position.trim() !== ""
-      );
+      // `null` (chua khai chuc vu, 0028) di CUNG DUONG voi chuoi rong: dieu
+      // kien `!== ""` ben duoi loai ca hai, nen nguoi chua khai chuc vu khong
+      // bao gio bi ap mot khoan khai theo chuc vu — cung chieu an toan voi
+      // phong ban o nhanh tren.
+      const position = (employee.position ?? "").trim();
+      return position === (scope.scopeValue ?? "").trim() && position !== "";
+    }
     case "employee":
       return employee.id === scope.scopeValue;
     default:

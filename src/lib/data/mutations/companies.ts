@@ -160,8 +160,18 @@ export async function createCompanyAction(
     company_id: companyId,
     name: "Ca hành chính",
     code: "CA-HC",
+    // Ca khoi tao la ca CO GIO CU THE (migration 0027). Khai `kind` tuong minh
+    // thay vi dua vao gia tri mac dinh cua cot: day la mot trong hai noi ghi
+    // thang vao bang `shifts` khong di qua `shiftInputSchema`, nen hinh dang
+    // dong phai doc duoc ngay tai cho.
+    kind: "fixed",
     start_time: "08:00",
     end_time: "17:30",
+    duration_minutes: null,
+    // Khung gio nghi (0025) va so phut PHAI khop nhau — day la mot trong hai
+    // noi ghi thang vao bang `shifts` khong di qua `shiftInputSchema`.
+    break_start_time: "12:00",
+    break_end_time: "13:00",
     break_minutes: 60,
     late_tolerance_minutes: 5,
     working_days: [1, 2, 3, 4, 5],
@@ -202,11 +212,18 @@ export async function createCompanyAction(
     full_name: email.split("@")[0] || "Chủ sở hữu",
     email,
     phone: input.phone,
-    date_of_birth: today,
-    gender: "other",
+    // NGAY SINH VA GIOI TINH DE `null`, KHONG dien gia tri dai dien.
+    //
+    // Truoc migration 0028 hai cot nay la NOT NULL nen buoc onboarding phai
+    // dien `today` va `"other"` — mot ngay sinh bang dung ngay tao doanh nghiep
+    // va mot gioi tinh khong ai chon. Ca hai hien ra man hinh y het du lieu
+    // that, nen nguoi dung khong co cach nao biet do la thu he thong tu bia.
+    // 0028 bo rang buoc do; day la cho tra mon no ay (SUMMARY §Known Stubs).
+    date_of_birth: null,
+    gender: null,
     department_id: departmentId,
-    position: "Chủ sở hữu",
-    contract_type: "full_time",
+    position: null,
+    contract_type: null,
     start_date: today,
     shift_id: shiftId,
     work_location: input.address,

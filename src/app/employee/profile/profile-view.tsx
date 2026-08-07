@@ -24,7 +24,9 @@ import {
   useAuthenticatedSession,
   useSession,
 } from "@/lib/auth/session-provider";
+import { NOT_DECLARED } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
+import { formatShiftLabel } from "@/lib/shifts/schedule";
 import { listDepartments } from "@/lib/data/departments";
 import { getEmployee } from "@/lib/data/employees";
 import { listShifts } from "@/lib/data/shifts";
@@ -112,11 +114,11 @@ export function ProfileView(): React.ReactElement {
             <h2 className="heading-sm mb-3 text-ink">Thông tin công việc</h2>
             <dl className="grid gap-2.5 text-[13px]">
               <Row label="Phòng ban" value={department?.name ?? "—"} />
-              <Row label="Chức vụ" value={employee.position} />
+              <Row label="Chức vụ" value={employee.position ?? NOT_DECLARED} />
               <Row
                 label="Ca mặc định"
                 value={
-                  shift ? `${shift.name} (${shift.startTime}–${shift.endTime})` : "—"
+                  shift ? formatShiftLabel(shift) : "—"
                 }
                 numeric
               />

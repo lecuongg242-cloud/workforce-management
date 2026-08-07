@@ -14,7 +14,7 @@ import { shiftListResponseSchema, shiftRowSchema } from "@/lib/validation/api/sh
 export const dynamic = "force-dynamic";
 
 const SHIFT_COLUMNS =
-  "id, company_id, name, code, start_time, end_time, break_minutes, late_tolerance_minutes, overnight, working_days, status";
+  "id, company_id, name, code, kind, start_time, end_time, duration_minutes, break_start_time, break_end_time, break_minutes, late_tolerance_minutes, overnight, working_days, status";
 
 interface EmployeeShiftRow {
   shift_id: string;

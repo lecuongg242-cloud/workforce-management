@@ -119,15 +119,20 @@ insert into departments (id, company_id, name, description, status) values
 
 insert into shifts (
   id, company_id, name, code, start_time, end_time,
+  -- Khung gio nghi (0025) va `break_minutes` phai KHOP nhau: cot so phut la
+  -- gia tri dan xuat tu khung gio, seed nay ghi thang nen phai tu giu dung.
+  break_start_time, break_end_time,
   break_minutes, late_tolerance_minutes, working_days, status
 ) values
-  ('sft-01-day', 'cty-01', 'Ca hành chính', 'HC', '08:00', '17:30', 90, 5, array[1,2,3,4,5]::smallint[], 'active'),
-  ('sft-01-morning', 'cty-01', 'Ca sáng', 'S1', '06:00', '14:00', 30, 10, array[1,2,3,4,5,6]::smallint[], 'active'),
-  ('sft-01-afternoon', 'cty-01', 'Ca chiều', 'C1', '14:00', '22:00', 30, 10, array[1,2,3,4,5,6]::smallint[], 'active'),
-  ('sft-01-night', 'cty-01', 'Ca đêm', 'D1', '22:00', '06:00', 45, 10, array[1,2,3,4,5,6,7]::smallint[], 'active'),
-  ('sft-02-day', 'cty-02', 'Ca ngày 12 tiếng', 'N12', '06:00', '18:00', 60, 10, array[1,3,5,6]::smallint[], 'active'),
-  ('sft-02-night', 'cty-02', 'Ca đêm 12 tiếng', 'D12', '18:00', '06:00', 60, 10, array[2,4,7]::smallint[], 'active'),
-  ('sft-02-admin', 'cty-02', 'Ca hành chính xưởng', 'HCX', '07:30', '16:30', 60, 5, array[1,2,3,4,5,6]::smallint[], 'active');
+  ('sft-01-day', 'cty-01', 'Ca hành chính', 'HC', '08:00', '17:30', '11:30', '13:00', 90, 5, array[1,2,3,4,5]::smallint[], 'active'),
+  ('sft-01-morning', 'cty-01', 'Ca sáng', 'S1', '06:00', '14:00', '09:30', '10:00', 30, 10, array[1,2,3,4,5,6]::smallint[], 'active'),
+  ('sft-01-afternoon', 'cty-01', 'Ca chiều', 'C1', '14:00', '22:00', '17:30', '18:00', 30, 10, array[1,2,3,4,5,6]::smallint[], 'active'),
+  -- Ca dem: khoang nghi VAT QUA nua dem, dung truong hop `break_end_time` nho
+  -- hon `break_start_time` ma migration 0025 noi toi.
+  ('sft-01-night', 'cty-01', 'Ca đêm', 'D1', '22:00', '06:00', '23:45', '00:30', 45, 10, array[1,2,3,4,5,6,7]::smallint[], 'active'),
+  ('sft-02-day', 'cty-02', 'Ca ngày 12 tiếng', 'N12', '06:00', '18:00', '11:00', '12:00', 60, 10, array[1,3,5,6]::smallint[], 'active'),
+  ('sft-02-night', 'cty-02', 'Ca đêm 12 tiếng', 'D12', '18:00', '06:00', '23:00', '00:00', 60, 10, array[2,4,7]::smallint[], 'active'),
+  ('sft-02-admin', 'cty-02', 'Ca hành chính xưởng', 'HCX', '07:30', '16:30', '11:30', '12:30', 60, 5, array[1,2,3,4,5,6]::smallint[], 'active');
 
 /* -------------------------------------------------------------------------- */
 /* employees — 40 dong (28 cty-01 + 12 cty-02), port tu employeeSeeds +      */

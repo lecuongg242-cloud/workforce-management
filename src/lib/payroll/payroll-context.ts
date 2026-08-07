@@ -1,6 +1,10 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { payAdjustmentRowSchema } from "@/lib/validation/api/pay-adjustments";
-import type { PayAdjustment, PayRate } from "@/lib/types/domain";
+import type {
+  EmployeeOvertimeRate,
+  PayAdjustment,
+  PayRate,
+} from "@/lib/types/domain";
 
 /**
  * Ngu canh de tinh TIEN cho ca mot ky (PAY-01, plan 05-2-04).
@@ -39,6 +43,15 @@ const SCOPE_COLUMNS = "id, company_id, adjustment_id, mode, scope_type, scope_va
 export interface PayrollContext {
   /** Muc luong hieu luc tai ngay cuoi ky, theo `employeeId`. Thieu = chua khai. */
   payRateByEmployee: Map<string, Pick<PayRate, "unit" | "amount">>;
+  /**
+   * Muc TANG CA RIENG hieu luc tai ngay cuoi ky (0026), theo `employeeId`.
+   * Thieu nghia la nguoi do an theo he so cua doanh nghiep — KHONG phai "tang
+   * ca bang 0".
+   */
+  overtimeRateByEmployee: Map<
+    string,
+    Pick<EmployeeOvertimeRate, "valueType" | "value">
+  >;
   /** TOAN BO danh muc khoan kem pham vi — loc `isActive`/pham vi o `compute.ts`. */
   adjustments: PayAdjustment[];
 }
@@ -53,7 +66,7 @@ export async function loadPayrollContext({
 }): Promise<PayrollContext> {
   const supabase = await createServerSupabase();
 
-  const [rateResult, adjustmentResult] = await Promise.all([
+  const [rateResult, overtimeRateResult, adjustmentResult] = await Promise.all([
     // Doc MOI phien ban co `effective_from <= periodEnd` roi chon phien ban
     // moi nhat o tang ung dung. Goi `tf_pay_rate_at()` cho tung nguoi la mot
     // round-trip moi nguoi — cung lap luan da dan toi `resolveMultiplier()`
@@ -68,6 +81,14 @@ export async function loadPayrollContext({
       .eq("company_id", companyId)
       .lte("effective_from", periodEnd)
       .order("effective_from", { ascending: true }),
+    // Cung khuon voi muc luong: doc moi phien ban <= `periodEnd` roi chon
+    // phien ban moi nhat o tang ung dung.
+    supabase
+      .from("employee_overtime_rates")
+      .select("employee_id, value_type, value, effective_from")
+      .eq("company_id", companyId)
+      .lte("effective_from", periodEnd)
+      .order("effective_from", { ascending: true }),
     supabase
       .from("pay_adjustments")
       .select(`${ADJUSTMENT_COLUMNS}, pay_adjustment_scopes(${SCOPE_COLUMNS})`)
@@ -76,6 +97,9 @@ export async function loadPayrollContext({
 
   if (rateResult.error) {
     throw new Error("Không thể tải mức lương của nhân viên.");
+  }
+  if (overtimeRateResult.error) {
+    throw new Error("Không thể tải mức tăng ca riêng của nhân viên.");
   }
   if (adjustmentResult.error) {
     throw new Error("Không thể tải danh mục phụ cấp và khấu trừ.");
@@ -96,9 +120,24 @@ export async function loadPayrollContext({
     });
   }
 
+  const overtimeRateByEmployee = new Map<
+    string,
+    Pick<EmployeeOvertimeRate, "valueType" | "value">
+  >();
+  for (const raw of (overtimeRateResult.data ?? []) as Array<{
+    employee_id: string;
+    value_type: "multiplier" | "fixed_hourly";
+    value: string | number;
+  }>) {
+    overtimeRateByEmployee.set(raw.employee_id, {
+      valueType: raw.value_type,
+      value: Number(raw.value),
+    });
+  }
+
   const adjustments = ((adjustmentResult.data ?? []) as unknown[]).map((row) =>
     payAdjustmentRowSchema.parse(row),
   );
 
-  return { payRateByEmployee, adjustments };
+  return { payRateByEmployee, overtimeRateByEmployee, adjustments };
 }

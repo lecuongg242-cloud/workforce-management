@@ -386,4 +386,111 @@ describe("GET /api/attendance/review (plan 03-06)", () => {
 
     expect(response.status).toBe(401);
   });
+  /**
+   * HAI BAI DUOI DAY la hoi quy cho mot loi that o giao dien: loc "Chờ xem
+   * xét" van tra ve nhung dong DA duoc xem xet.
+   *
+   * Goc cua no la danh sach nay co HAI NGUON doc lap — `far_from_site` dung
+   * tu `attendance_photos`, `outside_shift` dung tu `attendance_records` —
+   * va bo loc trang thai truoc day chi duoc ap cho nguon thu nhat.
+   */
+  function outsideShiftRecord(
+    overrides: Record<string, unknown> = {},
+  ): Record<string, unknown> {
+    return {
+      id: "att-out",
+      employee_id: "emp-04",
+      // 09:44Z = 16:44 gio Viet Nam — ngoai khung 06:00-14:00 ke ca voi bien
+      // do 120 phut cua `settingsRow()`.
+      check_in_at: "2026-08-05T09:44:00+00:00",
+      employees: { full_name: "Phạm Quốc Khánh", can_check_in_remotely: false },
+      shifts: { name: "Ca sáng", start_time: "06:00:00", end_time: "14:00:00" },
+      ...overrides,
+    };
+  }
+
+  it("14. loc reviewStatus=pending -> dong NGOAI KHUNG GIO da duoc xem xet KHONG lot vao danh sach", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(SESSION_CTY01_OWNER);
+    const { client } = twoTableClient(
+      {
+        // Khong co khoang cach -> khong phai ung vien `far_from_site`; dong
+        // nay chi ton tai de tra trang thai cho luot ngoai khung gio.
+        data: [
+          {
+            id: "photo-out",
+            attendance_record_id: "att-out",
+            kind: "check_in",
+            captured_at: "2026-08-05T09:44:00+00:00",
+            distance_meters: null,
+            accuracy_meters: null,
+            review_status: "approved",
+            work_sites: null,
+          },
+        ],
+        error: null,
+      },
+      { data: [outsideShiftRecord()], error: null },
+    );
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    const response = await GET(fakeGetRequest({ reviewStatus: "pending" }));
+    const body = (await response.json()) as unknown[];
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual([]);
+  });
+
+  it("15. khong ung vien far_from_site nao -> luot NGOAI KHUNG GIO van hien (khong thoat som)", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(SESSION_CTY01_OWNER);
+    const { client } = twoTableClient(
+      { data: [], error: null },
+      { data: [outsideShiftRecord()], error: null },
+    );
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    const response = await GET(fakeGetRequest());
+    const body = (await response.json()) as Record<string, unknown>[];
+
+    expect(body).toHaveLength(1);
+    expect(body[0]).toMatchObject({
+      attendanceRecordId: "att-out",
+      reason: "outside_shift",
+      // Luot chua co anh duoc coi la chua xem xet — dung mot gia tri o ca cho
+      // loc lan cho hien thi.
+      reviewStatus: "pending",
+      employeeName: "Phạm Quốc Khánh",
+    });
+  });
+
+  it("16. loc reviewStatus=approved -> dong NGOAI KHUNG GIO da xem xet van hien ra", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(SESSION_CTY01_OWNER);
+    const { client } = twoTableClient(
+      {
+        data: [
+          {
+            id: "photo-out",
+            attendance_record_id: "att-out",
+            kind: "check_in",
+            captured_at: "2026-08-05T09:44:00+00:00",
+            distance_meters: null,
+            accuracy_meters: null,
+            review_status: "approved",
+            work_sites: null,
+          },
+        ],
+        error: null,
+      },
+      { data: [outsideShiftRecord()], error: null },
+    );
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    const response = await GET(fakeGetRequest({ reviewStatus: "approved" }));
+    const body = (await response.json()) as Record<string, unknown>[];
+
+    expect(body).toHaveLength(1);
+    expect(body[0]).toMatchObject({
+      reason: "outside_shift",
+      reviewStatus: "approved",
+    });
+  });
 });

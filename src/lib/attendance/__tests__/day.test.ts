@@ -154,7 +154,14 @@ describe("groupAttendanceByDay — nhieu luot trong cung mot ngay", () => {
  */
 describe("tru gio nghi — mot lan cho ca ngay, theo ty le thoi gian co mat", () => {
   const BREAKS = shiftBreakInfoById([
-    { id: "sft-01", breakMinutes: 60, startTime: "08:00", endTime: "17:00" },
+    {
+      id: "sft-01",
+      kind: "fixed",
+      breakMinutes: 60,
+      startTime: "08:00",
+      endTime: "17:00",
+      durationMinutes: null,
+    },
   ]);
 
   it("13. lam DU ca -> tru tron gio nghi, GIU NGUYEN hanh vi cu (du lieu cu khong lech)", () => {
@@ -256,7 +263,14 @@ describe("tru gio nghi — mot lan cho ca ngay, theo ty le thoi gian co mat", ()
 
   it("21. ca QUA DEM tinh dung do dai tron ca, khong ra so am", () => {
     const overnight = shiftBreakInfoById([
-      { id: "sft-01", breakMinutes: 60, startTime: "22:00", endTime: "06:00" },
+      {
+        id: "sft-01",
+        kind: "fixed",
+        breakMinutes: 60,
+        startTime: "22:00",
+        endTime: "06:00",
+        durationMinutes: null,
+      },
     ]);
 
     expect(overnight["sft-01"].shiftMinutes).toBe(480);

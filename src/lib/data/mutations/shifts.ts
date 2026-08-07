@@ -9,7 +9,7 @@ import { shiftInputSchema, shiftRowSchema } from "@/lib/validation/api/shifts";
 import type { Shift, ShiftInput } from "@/lib/types/domain";
 
 const SHIFT_COLUMNS =
-  "id, company_id, name, code, start_time, end_time, break_minutes, late_tolerance_minutes, overnight, working_days, status";
+  "id, company_id, name, code, kind, start_time, end_time, duration_minutes, break_start_time, break_end_time, break_minutes, late_tolerance_minutes, overnight, working_days, status";
 
 /**
  * Ba ham nay giu NGUYEN chu ky cu tu `mock/service.ts` (call site khong
@@ -89,10 +89,30 @@ export async function updateShift(
   const merged = {
     name: "name" in patch ? (patch.name as string) : before.name,
     code: "code" in patch ? (patch.code as string) : before.code,
-    startTime: "startTime" in patch ? (patch.startTime as string) : before.startTime,
-    endTime: "endTime" in patch ? (patch.endTime as string) : before.endTime,
-    breakMinutes:
-      "breakMinutes" in patch ? (patch.breakMinutes as number) : before.breakMinutes,
+    // `kind` doi duoc, nhung khi doi thi noi goi phai gui KEM cac truong cua
+    // loai moi (gio vao/ra cho `fixed`, so phut cho `hours`) — neu khong,
+    // `shiftInputSchema` se bao thieu chinh truong do bang tieng Viet.
+    kind: "kind" in patch ? (patch.kind as Shift["kind"]) : before.kind,
+    startTime:
+      "startTime" in patch
+        ? (patch.startTime as string | null)
+        : before.startTime,
+    endTime:
+      "endTime" in patch ? (patch.endTime as string | null) : before.endTime,
+    durationMinutes:
+      "durationMinutes" in patch
+        ? (patch.durationMinutes as number | null)
+        : before.durationMinutes,
+    // Khung gio nghi di CUNG NHAU trong patch — `break_minutes` khong nam o
+    // day, no do `shiftInputSchema` tinh ra tu hai moc nay (migration 0025).
+    breakStartTime:
+      "breakStartTime" in patch
+        ? (patch.breakStartTime as string | null)
+        : before.breakStartTime,
+    breakEndTime:
+      "breakEndTime" in patch
+        ? (patch.breakEndTime as string | null)
+        : before.breakEndTime,
     lateToleranceMinutes:
       "lateToleranceMinutes" in patch
         ? (patch.lateToleranceMinutes as number)
@@ -160,9 +180,12 @@ export async function duplicateShift(id: string): Promise<Shift> {
   const writeRow = shiftInputSchema.parse({
     name: `${source.name} (bản sao)`,
     code: `${source.code}2`,
+    kind: source.kind,
     startTime: source.startTime,
     endTime: source.endTime,
-    breakMinutes: source.breakMinutes,
+    durationMinutes: source.durationMinutes,
+    breakStartTime: source.breakStartTime,
+    breakEndTime: source.breakEndTime,
     lateToleranceMinutes: source.lateToleranceMinutes,
     workingDays: source.workingDays,
     status: source.status,

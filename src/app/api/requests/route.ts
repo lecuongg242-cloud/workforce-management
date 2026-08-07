@@ -72,8 +72,15 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     // Khong truyen employeeId: quan tri thay toan bo doanh nghiep, hai vai
     // tro con lai mac dinh gioi han ve chinh minh (khong phai bo qua loc).
-    const effectiveEmployeeId =
-      queryParams.employeeId ?? (isAdminRole ? undefined : (sessionEmployeeId ?? undefined));
+    const effectiveEmployeeId = queryParams.employeeId ?? sessionEmployeeId;
+
+    // `sessionEmployeeId` co the la `null` (co membership nhung chua gan voi
+    // mot dong `employees`). Voi nguoi khong phai quan tri, khi ay KHONG co
+    // pham vi nao hop le — tra rong. De `undefined` roi bo qua dieu kien loc
+    // se cho ho doc toan bo yeu cau cua doanh nghiep.
+    if (!isAdminRole && !effectiveEmployeeId) {
+      return NextResponse.json(workRequestListResponseSchema.parse([]));
+    }
 
     const supabase = await createServerSupabase();
     let query = supabase

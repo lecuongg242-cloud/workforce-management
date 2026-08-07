@@ -151,6 +151,25 @@ export function isOvernight(start: string, end: string): boolean {
   return timeToMinutes(end) <= timeToMinutes(start);
 }
 
+/**
+ * DO DAI khoang nghi giua ca, tinh tu khung gio nghi (migration 0025).
+ *
+ * Ca khong co gio nghi tra `0` — day la mot su that ("khong nghi"), khac han
+ * voi `null` cua nhung ca tao truoc 0025 (chua khai khung gio nhung van co
+ * so phut nghi), nen noi goi phai tu quyet dinh dung con so nao truoc khi goi
+ * ham nay.
+ *
+ * Khoang nghi vat qua nua dem trong mot ca dem duoc tinh dung nho
+ * `minutesBetween` — cung quy uoc voi do dai ca.
+ */
+export function breakWindowMinutes(
+  start: string | null,
+  end: string | null,
+): number {
+  if (!start || !end) return 0;
+  return minutesBetween(start, end);
+}
+
 /* -------------------------------------------------------------------------- */
 /* Tien te va so lieu                                                          */
 /* -------------------------------------------------------------------------- */

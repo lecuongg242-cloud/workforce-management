@@ -151,6 +151,9 @@ export async function buildPayrollRows({
       // Mot dong thieu du kien thi thieu MOT MINH NO — ham tra `null` cho dong
       // do va cac dong khac van ra so.
       const payRate = payrollContext.payRateByEmployee.get(employee.id) ?? null;
+      // Muc tang ca RIENG cua nguoi nay (0026); thieu = an theo he so doanh nghiep.
+      const overtimeRate =
+        payrollContext.overtimeRateByEmployee.get(employee.id) ?? null;
 
       const money = computePayrollLine({
         summary: {
@@ -158,11 +161,13 @@ export async function buildPayrollRows({
           regularMinutes: summary.regularMinutes ?? null,
           hourDeltaMinutes: summary.hourDeltaMinutes ?? 0,
           convertedOvertimeHours: summary.convertedOvertimeHours ?? null,
+          overtimeMinutes: summary.overtimeMinutes ?? 0,
           missingMultiplierKeys: summary.missingMultiplierKeys ?? [],
           missingWorkModeInputs: summary.missingWorkModeInputs ?? [],
           lateCount: summary.lateCount,
         },
         payRate,
+        overtimeRate,
         workMode: context.rules.workMode,
         standardDaysPerMonth: context.rules.standardDaysPerMonth,
         standardHoursPerDay: context.rules.standardHoursPerDay,
@@ -185,6 +190,11 @@ export async function buildPayrollRows({
         leaveDays: summary.leaveDays,
         overtimeMinutes: summary.overtimeMinutes ?? 0,
         overtimeNightMinutes: summary.overtimeNightMinutes ?? 0,
+        // Cot "Gio quy doi" luon la con so CUA TANG CONG (Phase 4), de bang
+        // luong va man hinh cham cong khong bao gio noi hai con so khac nhau —
+        // mot bai test doi chieu dung hai duong do. Nguoi co muc tang ca rieng
+        // duoc giai thich bang `overtimeRateValueType`/`overtimeRateValue` o
+        // duoi, KHONG bang cach viet lai con so nay.
         convertedOvertimeHours: summary.convertedOvertimeHours ?? null,
         missingMultiplierKeys: summary.missingMultiplierKeys ?? [],
         // D-36/D-39: `creditedDays` co the la so thap phan va co the la `null`
@@ -198,6 +208,10 @@ export async function buildPayrollRows({
         // Muc luong DA AP — ban chot (D-42) chep lai truong nay.
         payUnit: payRate?.unit ?? null,
         payAmount: payRate?.amount ?? null,
+        // Ban chot (D-42) chep lai CA muc tang ca rieng — khong co no thi khong
+        // ai giai thich duoc con so tang ca cua ky da chot.
+        overtimeRateValueType: overtimeRate?.valueType ?? null,
+        overtimeRateValue: overtimeRate?.value ?? null,
         ...money,
       };
     });

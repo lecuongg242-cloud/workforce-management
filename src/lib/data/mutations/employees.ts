@@ -4,6 +4,10 @@ import { randomUUID } from "node:crypto";
 
 import { ForbiddenError, getSessionContext, requireRole } from "@/lib/auth/session-context";
 import { logMutation } from "@/lib/data/audit";
+import {
+  resolveHoursShiftId,
+  type HoursShiftSelection,
+} from "@/lib/shifts/resolve-hours-shift";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { employeeInputSchema, employeeRowSchema } from "@/lib/validation/api/employees";
 import type { Employee, EmployeeInput } from "@/lib/types/domain";
@@ -21,15 +25,32 @@ const DUPLICATE_CODE_MESSAGE = (code: string): string =>
  * (khong tu tham so client — D-12b) -> `logMutation` NGAY TRONG cung ham
  * (D-17), before/after la nguyen dong (D-18).
  */
+/**
+ * `hoursShift` di KEM loi goi tao/sua nhan vien thay vi de man hinh tu goi mot
+ * ham "tao ca" roi moi goi ham nay: hai loi goi tach roi thi mot loi o buoc hai
+ * se de lai mot dong `shifts` mo coi ma khong man hinh nao noi den. O day ca
+ * hai di chung mot duong, va `shiftId` cua ho so luon tro toi mot ca CO THAT.
+ */
 export async function createEmployee(
   companyId: string,
   input: EmployeeInput,
+  hoursShift?: HoursShiftSelection | null,
 ): Promise<Employee> {
   void companyId;
   const { companyId: activeCompanyId, userId, role } = await getSessionContext();
   requireRole(role, ["owner", "admin"]);
 
   const supabase = await createServerSupabase();
+
+  const shiftId = hoursShift
+    ? await resolveHoursShiftId({
+        supabase,
+        companyId: activeCompanyId,
+        actorUserId: userId,
+        hours: hoursShift.hours,
+        workingDays: hoursShift.workingDays,
+      })
+    : input.shiftId;
 
   // Lop MOT: kiem ma trung khong phan biet hoa thuong qua RPC dung lai
   // public.tf_normalize() (migration 0009) -- rang buoc `unique (company_id,
@@ -46,7 +67,7 @@ export async function createEmployee(
   }
 
   const id = randomUUID();
-  const writeRow = employeeInputSchema.parse(input);
+  const writeRow = employeeInputSchema.parse({ ...input, shiftId });
 
   const { data: inserted, error } = await supabase
     .from("employees")
@@ -82,6 +103,7 @@ export async function createEmployee(
 export async function updateEmployee(
   id: string,
   patch: Partial<EmployeeInput>,
+  hoursShift?: HoursShiftSelection | null,
 ): Promise<Employee> {
   const { companyId, userId, role, employeeId } = await getSessionContext();
 
@@ -107,6 +129,18 @@ export async function updateEmployee(
   }
   const before = employeeRowSchema.parse(beforeRow);
 
+  // Khai so gio DE LEN TREN `patch.shiftId`: hai thu cung tra loi mot cau hoi
+  // ("nguoi nay lam ca nao"), va man hinh chi gui mot trong hai.
+  const resolvedShiftId = hoursShift
+    ? await resolveHoursShiftId({
+        supabase,
+        companyId,
+        actorUserId: userId,
+        hours: hoursShift.hours,
+        workingDays: hoursShift.workingDays,
+      })
+    : null;
+
   // Hop nhat giong `{...current, ...patch}` cua mock/service.ts. Dung "in"
   // (khong phai "??") de truong CO mat trong patch (ke ca gia tri falsy hoac
   // null tuong minh nhu managerId/avatarUrl) luon duoc ap dung, truong khong
@@ -115,15 +149,20 @@ export async function updateEmployee(
     code: "code" in patch ? (patch.code as string) : before.code,
     fullName: "fullName" in patch ? (patch.fullName as string) : before.fullName,
     email: "email" in patch ? (patch.email as string) : before.email,
-    phone: "phone" in patch ? (patch.phone as string) : before.phone,
+    phone: "phone" in patch ? (patch.phone as string | null) : before.phone,
     dateOfBirth:
-      "dateOfBirth" in patch ? (patch.dateOfBirth as string) : before.dateOfBirth,
+      "dateOfBirth" in patch
+        ? (patch.dateOfBirth as string | null)
+        : before.dateOfBirth,
     gender: "gender" in patch ? (patch.gender as Employee["gender"]) : before.gender,
     avatarUrl:
       "avatarUrl" in patch ? (patch.avatarUrl as string | null) : before.avatarUrl,
     departmentId:
-      "departmentId" in patch ? (patch.departmentId as string) : before.departmentId,
-    position: "position" in patch ? (patch.position as string) : before.position,
+      "departmentId" in patch
+        ? (patch.departmentId as string | null)
+        : before.departmentId,
+    position:
+      "position" in patch ? (patch.position as string | null) : before.position,
     contractType:
       "contractType" in patch
         ? (patch.contractType as Employee["contractType"])
@@ -131,7 +170,9 @@ export async function updateEmployee(
     startDate: "startDate" in patch ? (patch.startDate as string) : before.startDate,
     managerId:
       "managerId" in patch ? (patch.managerId as string | null) : before.managerId,
-    shiftId: "shiftId" in patch ? (patch.shiftId as string) : before.shiftId,
+    shiftId:
+      resolvedShiftId ??
+      ("shiftId" in patch ? (patch.shiftId as string) : before.shiftId),
     workLocation:
       "workLocation" in patch ? (patch.workLocation as string) : before.workLocation,
     status: "status" in patch ? (patch.status as Employee["status"]) : before.status,

@@ -266,6 +266,12 @@ export function GeneralSettingsForm({
         <p className="mt-1 text-sm text-ink-muted">
           {SETTINGS_GENERAL_LABEL.workModeSectionDescription}
         </p>
+        {/* Nguoi khai LUONG GIO khong theo lua chon nay — noi ngay o day, vi
+            day chinh la cho nguoi dung tuong minh dang quyet dinh cach tra
+            luong cho moi nguoi. */}
+        <p className="mt-2 rounded-control border border-hairline bg-canvas-soft px-3 py-2.5 text-[13px] text-ink-secondary">
+          {SETTINGS_GENERAL_LABEL.workModeHourlyNote}
+        </p>
 
         <div className="mt-5 grid gap-5">
           <Field

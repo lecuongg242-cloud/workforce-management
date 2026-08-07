@@ -118,7 +118,15 @@ export function PayAdjustmentDialog({
   onOpenChange: (open: boolean) => void;
   /** `null` khi dang TAO mot khoan moi. */
   adjustment: PayAdjustment | null;
-  employees: Array<{ id: string; fullName: string; departmentId: string; position: string }>;
+  // `departmentId`/`position` co the `null` (migration 0028: chua xep phong ban
+  // / chua khai chuc vu). `resolveTargets` xu ly ca hai — nguoi nhu vay khong
+  // khop pham vi tuong ung, nen khoi xem truoc ben duoi cung khong liet ke ho.
+  employees: Array<{
+    id: string;
+    fullName: string;
+    departmentId: string | null;
+    position: string | null;
+  }>;
   departments: Department[];
   onSubmit: (values: PayAdjustmentInput) => Promise<void>;
 }): React.ReactElement {
@@ -145,9 +153,13 @@ export function PayAdjustmentDialog({
   /** Danh sach chuc vu co that trong doanh nghiep — de nguoi khai khong go tay. */
   const positions = React.useMemo(
     () =>
+      // `filter(Boolean)` bo ca chuoi rong lan nguoi CHUA KHAI chuc vu (0028) —
+      // mot muc rong trong danh sach nay se khai duoc mot pham vi khong ai khop.
       Array.from(
         new Set(
-          employees.map((employee) => employee.position.trim()).filter(Boolean),
+          employees
+            .map((employee) => (employee.position ?? "").trim())
+            .filter(Boolean),
         ),
       ).sort((a, b) => a.localeCompare(b, "vi")),
     [employees],

@@ -86,8 +86,10 @@ function firstOrSelf<T>(value: T | T[] | null): T | null {
 
 interface RawShiftJoin {
   name: string;
-  start_time: string;
-  end_time: string;
+  kind: string;
+  /** `null` o ca linh hoat (migration 0027) */
+  start_time: string | null;
+  end_time: string | null;
 }
 
 interface RawOutsideShiftRow {
@@ -121,6 +123,7 @@ async function collectOutsideShiftItems({
   from,
   to,
   graceMinutes,
+  reviewStatus,
 }: {
   supabase: Awaited<ReturnType<typeof createServerSupabase>>;
   companyId: string;
@@ -128,11 +131,19 @@ async function collectOutsideShiftItems({
   to?: string;
   /** `company_settings.shift_window_grace_minutes` cua chinh doanh nghiep nay (D-29) */
   graceMinutes: number;
+  /**
+   * Loc theo trang thai xem xet — PHAI ap o CA NHANH NAY, khong chi o nhanh
+   * `far_from_site`. Nhanh nay dung tu `attendance_records` nen truy van anh
+   * o tren khong cham toi no; thieu cho loc nay thi loc "Chờ xem xét" van tra
+   * ve nhung dong DA duoc xem xet, va nguoi duyet nhin thay dung thu ma ho
+   * vua bao la khong muon thay.
+   */
+  reviewStatus?: "pending" | "approved" | "rejected";
 }) {
   let query = supabase
     .from("attendance_records")
     .select(
-      "id, employee_id, check_in_at, employees(full_name, can_check_in_remotely), shifts(name, start_time, end_time)",
+      "id, employee_id, check_in_at, employees(full_name, can_check_in_remotely), shifts(name, kind, start_time, end_time)",
     )
     .eq("company_id", companyId)
     .not("check_in_at", "is", null);
@@ -151,6 +162,13 @@ async function collectOutsideShiftItems({
     // `toVnTime` nem RangeError neu nhan mot gia tri khong phai dau thoi
     // gian, nen phai chan TRUOC khi goi chu khong bat loi sau.
     if (!shift || typeof row.check_in_at !== "string") return false;
+    // CA LINH HOAT (migration 0027) khong co khung gio ca de nam ngoai. Nguoi
+    // khai ca nay da noi ro nhan vien vao ra luc nao cung duoc, nen dua ho vao
+    // danh sach "Can xem lai" vi gio giac la bao lai chinh dieu doanh nghiep
+    // vua cho phep — va se lam nguoi duyet ngung tin ca danh sach.
+    if (shift.kind === "hours" || !shift.start_time || !shift.end_time) {
+      return false;
+    }
     const punchTime = toVnTime(row.check_in_at);
     if (!punchTime) return false;
     return isOutsideShiftWindow({
@@ -192,6 +210,11 @@ async function collectOutsideShiftItems({
       if (!shift || !employee || !row.check_in_at) return null;
 
       const photo = photoByRecordId.get(row.id);
+      // Luot chua co anh duoc coi la `pending` — dung mot gia tri o CA HAI
+      // cho (loc va hien thi) de bang khong bao gio noi khac bo loc.
+      const status = photo?.review_status ?? "pending";
+      if (reviewStatus && status !== reviewStatus) return null;
+
       return attendanceReviewRowSchema.parse({
         // Khong co anh thi dung id ban ghi lam khoa hien thi — van duy nhat.
         id: photo?.id ?? row.id,
@@ -201,12 +224,14 @@ async function collectOutsideShiftItems({
         reason: "outside_shift" as const,
         distance_meters: null,
         accuracy_meters: photo?.accuracy_meters ?? null,
-        review_status: photo?.review_status ?? "pending",
+        review_status: status,
         employee_name: employee.full_name,
         work_site_name: null,
         multiplier: null,
         punch_time: toVnTime(row.check_in_at),
-        shift_window: `${shift.name} ${toHourMinute(shift.start_time)}–${toHourMinute(shift.end_time)}`,
+        // Nhanh nay chi con ca `fixed`: bo loc o tren da loai het ca linh hoat
+        // (chung khong co khung gio de nam ngoai), nen hai gio nay luon co.
+        shift_window: `${shift.name} ${toHourMinute(shift.start_time ?? "")}–${toHourMinute(shift.end_time ?? "")}`,
       });
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -263,42 +288,46 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
 
     const candidates = (photoRows ?? []) as unknown as RawReviewPhotoRow[];
-    if (candidates.length === 0) {
-      return NextResponse.json(attendanceReviewListResponseSchema.parse([]));
-    }
 
-    // Buoc 2: doc ten nhan vien + canCheckInRemotely CHI cho cac ban ghi cham
-    // cong con lai sau buoc 1 -- van dieu kien company_id tu session (khong
-    // bao gio tu ket qua buoc 1), phong khi mot lo hong o buoc 1 lot mot
-    // attendance_record_id cua doanh nghiep khac.
+    // KHONG return som khi buoc nay khong con ung vien nao. Danh sach co HAI
+    // nguon doc lap, va nhanh "ngoai khung gio ca" dung tu `attendance_records`
+    // chu khong tu truy van anh o tren — thoat o day lam bien mat toan bo
+    // nhung luot cham sai khung gio chi vi khong luot nao o xa diem lam viec.
     const recordIds = Array.from(
       new Set(candidates.map((row) => row.attendance_record_id)),
     );
-
-    const { data: recordRows, error: recordError } = await supabase
-      .from("attendance_records")
-      .select(REVIEW_RECORD_COLUMNS)
-      .eq("company_id", companyId)
-      .in("id", recordIds);
-
-    if (recordError) {
-      return NextResponse.json(
-        { error: "Không thể tải thông tin nhân viên." },
-        { status: 500 },
-      );
-    }
 
     const employeeByRecordId = new Map<
       string,
       { fullName: string; canCheckInRemotely: boolean }
     >();
-    for (const row of (recordRows ?? []) as unknown as RawReviewRecordRow[]) {
-      const employee = firstOrSelf(row.employees);
-      if (!employee) continue;
-      employeeByRecordId.set(row.id, {
-        fullName: employee.full_name,
-        canCheckInRemotely: employee.can_check_in_remotely,
-      });
+
+    if (recordIds.length > 0) {
+      // Buoc 2: doc ten nhan vien + canCheckInRemotely CHI cho cac ban ghi cham
+      // cong con lai sau buoc 1 -- van dieu kien company_id tu session (khong
+      // bao gio tu ket qua buoc 1), phong khi mot lo hong o buoc 1 lot mot
+      // attendance_record_id cua doanh nghiep khac.
+      const { data: recordRows, error: recordError } = await supabase
+        .from("attendance_records")
+        .select(REVIEW_RECORD_COLUMNS)
+        .eq("company_id", companyId)
+        .in("id", recordIds);
+
+      if (recordError) {
+        return NextResponse.json(
+          { error: "Không thể tải thông tin nhân viên." },
+          { status: 500 },
+        );
+      }
+
+      for (const row of (recordRows ?? []) as unknown as RawReviewRecordRow[]) {
+        const employee = firstOrSelf(row.employees);
+        if (!employee) continue;
+        employeeByRecordId.set(row.id, {
+          fullName: employee.full_name,
+          canCheckInRemotely: employee.can_check_in_remotely,
+        });
+      }
     }
 
     const items = candidates
@@ -346,6 +375,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       from,
       to,
       graceMinutes: settings.shiftWindowGraceMinutes,
+      reviewStatus,
     });
 
     // Mot luot vua o xa VUA sai khung gio chi hien MOT dong (uu tien khoang

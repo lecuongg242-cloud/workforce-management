@@ -2,6 +2,7 @@ import * as React from "react";
 import { CalendarClock, MapPin, MoonStar } from "lucide-react";
 
 import { StatusBadge } from "@/components/common/status-badge";
+import { formatShiftSchedule } from "@/lib/shifts/schedule";
 import type { Shift } from "@/lib/types/domain";
 
 /** The hien thi ca lam viec cua ngay hom nay */
@@ -42,7 +43,7 @@ export function CurrentShiftCard({
             ) : null}
           </div>
           <p className="num mt-0.5 text-[15px] text-ink-secondary">
-            {shift.startTime} – {shift.endTime}
+            {formatShiftSchedule(shift)}
           </p>
           <p className="mt-1 flex items-center gap-1.5 text-[13px] text-ink-muted">
             <MapPin aria-hidden="true" className="size-3.5 shrink-0" />

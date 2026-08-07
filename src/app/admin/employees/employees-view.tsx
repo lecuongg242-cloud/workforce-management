@@ -35,6 +35,7 @@ import {
   listEmployees,
   updateEmployee,
 } from "@/lib/data/employees";
+import { NOT_DECLARED } from "@/lib/constants";
 import { useDataStore } from "@/lib/data/store";
 import type {
   ContractType,
@@ -354,7 +355,11 @@ export function EmployeesView(): React.ReactElement {
                 <EmployeeMobileCard
                   key={employee.id}
                   employee={employee}
-                  departmentName={departmentNames[employee.departmentId] ?? "—"}
+                  departmentName={
+                    employee.departmentId
+                      ? (departmentNames[employee.departmentId] ?? NOT_DECLARED)
+                      : NOT_DECLARED
+                  }
                   isSelected={selectedIds.includes(employee.id)}
                   onToggle={toggleOne}
                   onMoveDepartment={(item) => setMoveTarget([item])}

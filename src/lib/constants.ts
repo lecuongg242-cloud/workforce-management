@@ -26,6 +26,17 @@ export const DEFAULT_TIMEZONE = "Asia/Ho_Chi_Minh";
 export const DEFAULT_LOCALE = "vi-VN";
 export const DEFAULT_CURRENCY = "VND";
 
+/**
+ * Hien thi cho mot truong CHUA KHAI (migration 0028: so dien thoai, ngay sinh,
+ * gioi tinh, phong ban, chuc vu, loai hop dong).
+ *
+ * Mot ky tu duy nhat, dung o moi man hinh, va tuyet doi khong phai mot gia tri
+ * dai dien ("1990-01-01", "Nam", "Nhân viên"). Mot gia tri dai dien khong phan
+ * biet duoc voi du lieu that: no hien ra, loc va sap xep y het, nen doanh
+ * nghiep se doc no nhu thu ho da khai.
+ */
+export const NOT_DECLARED = "—";
+
 /* -------------------------------------------------------------------------- */
 /* Nhan hien thi                                                               */
 /* -------------------------------------------------------------------------- */
@@ -132,6 +143,66 @@ export const REQUEST_REVIEW_LABEL = {
   historyEmpty: "Yêu cầu này chưa được xử lý lần nào.",
   historyError: "Không tải được lịch sử xử lý.",
   unknownReviewer: "Quản trị viên",
+
+  /* ---- Bộ lọc ------------------------------------------------------------- */
+  searchLabel: "Tìm theo tên hoặc mã nhân viên",
+  searchPlaceholder: "Tên hoặc mã nhân viên…",
+  filterStatusLabel: "Lọc theo trạng thái",
+  filterStatusAll: "Mọi trạng thái",
+  filterTypeLabel: "Lọc theo loại yêu cầu",
+  filterTypeAll: "Mọi loại yêu cầu",
+  filterDepartmentLabel: "Lọc theo phòng ban",
+  filterDepartmentAll: "Tất cả phòng ban",
+  filterNoDepartment: "Chưa có phòng ban",
+  filterRangeLabel: "Lọc theo ngày gửi",
+  filterRangeAll: "Toàn bộ thời gian",
+  filterRange7: "Gửi trong 7 ngày",
+  filterRange30: "Gửi trong 30 ngày",
+  filterRange90: "Gửi trong 90 ngày",
+  filterCountSuffix: "yêu cầu",
+  filteredEmptyTitle: "Không có yêu cầu nào khớp bộ lọc",
+  filteredEmptyBody:
+    "Thử bỏ bớt điều kiện lọc hoặc mở rộng khoảng thời gian để xem lại danh sách.",
+
+  /* ---- Duyệt hàng loạt ---------------------------------------------------- */
+  selectAllLabel: "Chọn tất cả yêu cầu chờ duyệt",
+  selectRowPrefix: "Chọn yêu cầu của",
+  bulkSelectedPrefix: "Đã chọn",
+  bulkSelectedSuffix: "yêu cầu",
+  bulkApproveAction: "Duyệt hàng loạt",
+  bulkClear: "Bỏ chọn",
+  bulkDialogTitle: "Duyệt {n} yêu cầu cùng lúc?",
+  // Duyệt hàng loạt bỏ qua phần XEM TRƯỚC tác động của từng yêu cầu, mà tác
+  // động đó là ghi thật vào bảng công. Nói ra trước khi bấm, không phải sau.
+  bulkDialogBody:
+    "Yêu cầu nghỉ phép và bổ sung chấm công sẽ ghi ngày công ngay khi duyệt. Duyệt hàng loạt KHÔNG hiện bảng xem trước của từng yêu cầu — sau khi xong, hệ thống báo tổng số bản ghi công đã tạo và đã sửa.",
+  // Vượt trần tăng ca vẫn duyệt được (người duyệt quyết định), nhưng phải
+  // được nói ra TRƯỚC và được ghi vào lịch sử xử lý — giống hệt luồng duyệt
+  // từng yêu cầu, nếu không thì duyệt hàng loạt là một lối lách khỏi dấu vết.
+  bulkOverCapWarning:
+    "Trong đó có {n} yêu cầu tăng ca sẽ vượt trần. Vẫn duyệt được, và hệ thống sẽ ghi lại điều đó vào lịch sử xử lý của từng yêu cầu.",
+  bulkConfirm: "Duyệt tất cả",
+  bulkSuccess: "Đã duyệt {n} yêu cầu.",
+  bulkPartial: "Đã duyệt {ok} yêu cầu; {fail} yêu cầu chưa xong, thử lại sau.",
+  bulkError: "Không duyệt được yêu cầu nào.",
+
+  /* ---- Từ chối hàng loạt -------------------------------------------------- */
+  bulkRejectAction: "Từ chối hàng loạt",
+  bulkRejectDialogTitle: "Từ chối {n} yêu cầu cùng lúc?",
+  bulkRejectDialogBody:
+    "Người gửi sẽ thấy kết quả và lý do dưới đây. Không có ngày công nào bị ghi hay bị xoá khi từ chối.",
+  // Lý do là BẮT BUỘC, y như từ chối từng yêu cầu — người bị từ chối cần biết
+  // vì sao để gửi lại cho đúng. Ở đây một lý do dùng chung cho cả lô, nên câu
+  // đó phải đúng với TỪNG người trong lô: nhắc thẳng điều ấy tại chỗ nhập.
+  bulkReasonLabel: "Lý do từ chối (dùng chung cho cả lô)",
+  bulkReasonPlaceholder: "Ví dụ: trùng với yêu cầu đã gửi tuần trước",
+  bulkReasonRequired:
+    "Mỗi người trong lô đều nhận đúng câu này, nên hãy viết câu đúng với tất cả. Ai cần lý do riêng thì từ chối riêng ở nút cuối dòng.",
+  bulkRejectConfirm: "Từ chối tất cả",
+  bulkRejectSuccess: "Đã từ chối {n} yêu cầu.",
+  bulkRejectPartial:
+    "Đã từ chối {ok} yêu cầu; {fail} yêu cầu chưa xong, thử lại sau.",
+  bulkRejectError: "Không từ chối được yêu cầu nào.",
 } as const;
 
 export const REQUEST_DECISION_LABEL: Record<"approved" | "rejected", string> = {
@@ -440,6 +511,46 @@ export const ATTENDANCE_REVIEW_LABEL = {
   accuracyPrefix: "Độ chính xác GPS",
   outsideShiftLabel: "Ngoài khung giờ ca",
   punchTimePrefix: "Chấm lúc",
+
+  /* ---- Bộ lọc ------------------------------------------------------------- */
+  searchLabel: "Tìm theo tên nhân viên",
+  searchPlaceholder: "Tên nhân viên…",
+  filterStatusLabel: "Lọc theo trạng thái xem xét",
+  filterStatusAll: "Mọi trạng thái",
+  filterReasonLabel: "Lọc theo dấu hiệu",
+  filterReasonAll: "Mọi dấu hiệu",
+  filterReasonFarFromSite: "Cách xa điểm làm việc",
+  filterReasonOutsideShift: "Ngoài khung giờ ca",
+  filterSiteLabel: "Lọc theo điểm làm việc / ca",
+  filterSiteAll: "Mọi điểm làm việc",
+  filterSiteNone: "Không gắn điểm làm việc",
+  filterRangeLabel: "Lọc theo khoảng thời gian",
+  filterRangeAll: "Toàn bộ thời gian",
+  filterRange7: "7 ngày qua",
+  filterRange30: "30 ngày qua",
+  filterRange90: "90 ngày qua",
+  filteredEmptyTitle: "Không có bản ghi nào khớp bộ lọc",
+  filteredEmptyBody:
+    "Thử bỏ bớt điều kiện lọc hoặc mở rộng khoảng thời gian để xem lại toàn bộ danh sách.",
+  // Đếm hiện/tổng: sau khi lọc, con số ở đầu trang không còn là toàn bộ danh
+  // sách nữa, mà người duyệt hàng loạt cần biết mình đang thao tác trên bao nhiêu.
+  filterCountSuffix: "bản ghi",
+
+  /* ---- Duyệt hàng loạt ---------------------------------------------------- */
+  selectAllLabel: "Chọn tất cả bản ghi chưa xem xét",
+  selectRowPrefix: "Chọn bản ghi của",
+  bulkSelectedPrefix: "Đã chọn",
+  bulkSelectedSuffix: "bản ghi",
+  bulkClear: "Bỏ chọn",
+  // Nhắc lại phạm vi ngay tại nút: "đã xem xét" nghĩa là NGƯỜI ĐÃ NHÌN, không
+  // phải "hệ thống xác nhận đúng người" — dấu này không kết luận thay ai.
+  bulkHint: "Đánh dấu là đã có người nhìn qua, không phải kết luận đúng/sai.",
+  bulkSuccess: "Đã đánh dấu {n} bản ghi là đã xem xét.",
+  // Hỏng một phần thì phải nói ra CẢ HAI con số: im lặng ở đây khiến người
+  // dùng tưởng đã xong hết và bỏ sót đúng những bản ghi chưa xử lý được.
+  bulkPartial: "Đã đánh dấu {ok} bản ghi; {fail} bản ghi chưa xong, thử lại sau.",
+  bulkError: "Không đánh dấu được bản ghi nào.",
+  reviewedRowHint: "Bản ghi này đã được xem xét.",
 } as const;
 
 export const PHOTO_REVIEW_STATUS_LABEL: Record<PhotoReviewStatus, string> = {
@@ -538,7 +649,7 @@ export const SETTINGS_GENERAL_LABEL = {
   nightStartLabel: "Ca đêm bắt đầu",
   nightEndLabel: "Ca đêm kết thúc",
   nightHelp:
-    "Khoảng giờ được tính là làm đêm, dùng cho hệ số ca đêm ở tab Tăng ca. Mặc định 22:00–06:00 theo Bộ luật Lao động.",
+    "",
   // SET-05. Đơn vị nằm ngay trên nhãn: "trần tăng ca" có thể hiểu là mỗi tuần,
   // mỗi tháng hay mỗi năm, và đoán sai đơn vị thì con số vô nghĩa.
   overtimeCapLabel: "Trần tăng ca (giờ / nhân viên / tháng)",
@@ -553,6 +664,11 @@ export const SETTINGS_GENERAL_LABEL = {
   workModeLabel: "Cách tính công",
   workModeHelp:
     "Đổi cách tính công giữa chừng làm số liệu hai kỳ không so sánh được với nhau — cách tính đang dùng sẽ được ghi vào bản chốt lương của từng kỳ.",
+  // Quy tắc này phải hiện Ở ĐÂY, vì đây là nơi người dùng tưởng mình đang
+  // quyết định cách trả lương cho MỌI người. Không nói ra thì một doanh
+  // nghiệp trả công nhật theo giờ sẽ không hiểu vì sao con số của họ khác.
+  workModeHourlyNote:
+    "Riêng người khai LƯƠNG GIỜ luôn được trả theo giờ làm thực tế, không phụ thuộc lựa chọn này — khai lương giờ tức là muốn trả theo giờ. Lựa chọn ở đây quyết định cách tính của người khai lương tháng hoặc lương ngày, và mốc tính tăng ca của tất cả.",
   standardHoursPerDayLabel: "Số giờ chuẩn một ngày công",
   standardHoursPerDayHelp:
     "Mẫu số để quy đổi một ngày công ra giờ. Để trống nghĩa là chưa khai — hệ thống sẽ nói rõ là chưa khai chứ không tự đoán 8 giờ.",
@@ -621,6 +737,61 @@ export const PAY_RATE_UNIT_OPTIONS = (["month", "day", "hour"] as const).map(
  * và không có nút xoá, và người dùng phải hiểu đó là CÓ CHỦ ĐÍCH chứ không
  * phải một tính năng còn thiếu (D-37a).
  */
+/** Hai cách khai tiền tăng ca riêng của một người (migration 0026). */
+export const OVERTIME_RATE_VALUE_TYPE_LABEL: Record<
+  "multiplier" | "fixed_hourly",
+  string
+> = {
+  multiplier: "Hệ số nhân đơn giá giờ",
+  fixed_hourly: "Số tiền mỗi giờ tăng ca",
+};
+
+export const OVERTIME_RATE_VALUE_TYPE_OPTIONS = (
+  ["fixed_hourly", "multiplier"] as const
+).map((value) => ({ value, label: OVERTIME_RATE_VALUE_TYPE_LABEL[value] }));
+
+export const EMPLOYEE_OVERTIME_RATE_LABEL = {
+  sectionTitle: "Tiền tăng ca riêng",
+  currentTitle: "Đang hiệu lực hôm nay",
+  // KHÔNG khai nghĩa là ăn theo hệ số của doanh nghiệp — khác hẳn "tăng ca
+  // bằng 0". Câu chữ phải nói đúng cái đang xảy ra.
+  notDeclared: "Không có mức riêng",
+  notDeclaredHint:
+    "Người này ăn theo hệ số tăng ca chung của doanh nghiệp (tab Tăng ca ở trang Cài đặt). Chỉ khai ở đây khi có thoả thuận riêng.",
+  futureOnlyHint:
+    "Mức riêng đã khai chỉ bắt đầu hiệu lực trong tương lai, nên hôm nay người này vẫn ăn theo hệ số của doanh nghiệp.",
+  historyTitle: "Lịch sử mức tăng ca riêng",
+  historyEmpty: "Chưa có phiên bản nào.",
+  columnEffectiveFrom: "Hiệu lực từ",
+  columnValueType: "Cách khai",
+  columnValue: "Giá trị",
+  columnCreatedBy: "Người khai",
+  unknownAuthor: "—",
+  declareAction: "Khai mức riêng",
+  appendOnlyNote:
+    "Không có nút sửa và không có nút xoá: mỗi lần đổi là một phiên bản mới, nhờ vậy tiền tăng ca của kỳ đã trả không đổi theo.",
+  dialogTitle: "Khai mức tăng ca riêng",
+  dialogDescription:
+    "Mức này áp dụng từ ngày hiệu lực trở đi và thay cho hệ số chung của doanh nghiệp.",
+  fieldValueType: "Cách khai",
+  fieldValueFixed: "Số tiền mỗi giờ tăng ca (₫)",
+  fieldValueMultiplier: "Hệ số (1,5 = 150% đơn giá giờ)",
+  fieldEffectiveFrom: "Hiệu lực từ ngày",
+  // Hệ quả PHẢI nói trước khi bấm lưu: mức riêng ăn trọn cả bốn loại ngày.
+  scopeWarning:
+    "Mức này áp cho MỌI giờ tăng ca của người này — cả ngày thường, ngày nghỉ, ngày lễ và ca đêm — thay cho toàn bộ hệ số theo loại ngày của doanh nghiệp.",
+  legalNote:
+    "Điều 98 Bộ luật Lao động quy định tăng ca tối thiểu 150% ngày thường, 200% ngày nghỉ, 300% ngày lễ. Hệ thống không chặn con số thấp hơn, nhưng đây là điều thanh tra sẽ hỏi.",
+  retroWarning:
+    "Ngày hiệu lực nằm trong quá khứ. Mức này sẽ áp cho cả những ngày đã qua kể từ ngày đó — hãy chắc chắn đó là điều bạn muốn.",
+  cancel: "Huỷ",
+  save: "Khai mức riêng",
+  saveSuccess: "Đã khai mức tăng ca riêng.",
+  saveError: "Không thể khai mức tăng ca riêng.",
+  suffixPerHour: "/ giờ tăng ca",
+  suffixMultiplier: "× đơn giá giờ",
+} as const;
+
 export const PAY_RATE_LABEL = {
   sectionTitle: "Mức lương",
   currentTitle: "Đang hiệu lực hôm nay",
@@ -808,7 +979,7 @@ export const ATTENDANCE_GRID_SYMBOL: Record<AttendanceStatus, string> = {
 export const PAYROLL_LABEL = {
   pageTitle: "Bảng lương",
   pageDescription:
-    "Tổng hợp công theo tháng để bàn giao cho kế toán. Bảng này không tính tiền — thuế, bảo hiểm và phiếu lương thuộc phiên bản sau.",
+    "",
   periodClosed: "Kỳ đã chốt — số liệu đã khoá",
   periodOpen: "Kỳ đang mở — số liệu còn thay đổi được",
   periodMissing: "Kỳ chưa được tạo — số liệu còn thay đổi được",
@@ -855,7 +1026,7 @@ export const PAYROLL_LABEL = {
   // bảo hiểm là điều dễ xảy ra nhất của cả màn hình, và hậu quả là doanh
   // nghiệp trả thiếu cho người lao động.
   taxDisclaimer:
-    "Các con số tiền dưới đây CHƯA GỒM thuế thu nhập cá nhân và bảo hiểm xã hội / y tế / thất nghiệp. Hai khoản đó chưa được tính trong phiên bản này.",
+    "",
   taxDisclaimerCsv:
     "CHƯA GỒM thuế TNCN và BHXH/BHYT/BHTN",
   // Mỗi lý do thiếu được nói bằng một câu người dùng làm được gì với nó —
@@ -866,7 +1037,17 @@ export const PAYROLL_LABEL = {
   missingReasonOvertimeRule: "chưa khai hệ số tăng ca",
   missingReasonFallback: "chưa đủ dữ kiện",
   detailTitle: "Chi tiết dòng lương",
+  // Hai người cùng số ngày công vẫn có lương gốc khác nhau, vì người khai
+  // lương giờ được trả theo GIỜ THỰC TẾ còn người khai lương tháng/ngày được
+  // trả theo NGÀY CÔNG. Không nói ra cơ sở tính thì dòng "Lương gốc" trông
+  // như một con số rơi từ trên trời xuống.
+  detailBasisLabel: "Cơ sở tính",
+  detailBasisHourSuffix: "giờ làm thực tế",
+  detailBasisDaySuffix: "ngày công quy đổi",
   detailBaseLabel: "Lương gốc",
+  // Người có mức tăng ca riêng: nói rõ tiền tăng ca ra từ đâu, vì cột "Giờ
+  // quy đổi" của họ vẫn là con số theo hệ số CHUNG của doanh nghiệp.
+  detailOvertimeRateLabel: "Tăng ca tính theo mức riêng",
   detailOvertimeLabel: "Tiền tăng ca",
   detailHourAdjustmentLabel: "Cộng/trừ theo giờ thực tế",
   detailAllowanceTitle: "Phụ cấp",
@@ -875,7 +1056,7 @@ export const PAYROLL_LABEL = {
   detailEmptyAdjustments: "Không có khoản nào áp cho người này.",
   detailPerLateSuffix: "lần",
   detailMissingTitle: "Chưa tính được, vì:",
-  expandHint: "Bấm một dòng để xem vì sao ra con số đó.",
+  expandHint: "Bấm vào dòng để xem chi tiết",
 
   /* ---- D-42/D-45 (plan 05-2-05): chốt lương kỳ ---------------------------- */
   payrollClosed: "Đã chốt lương — con số đã đóng khung",
@@ -892,7 +1073,7 @@ export const PAYROLL_LABEL = {
   closeError: "Không thể chốt lương kỳ này.",
   // Nút bị vô hiệu KHÔNG được im lặng — người dùng phải biết cần làm gì.
   closeBlockedPeriodOpen:
-    "Chưa chốt lương được: kỳ công của tháng này chưa chốt, nên số liệu công còn thay đổi được. Chốt kỳ công ở trang Kỳ công trước.",
+    "Chưa chốt lương được: kỳ công của tháng này chưa chốt, nên số liệu công còn thay đổi được. Chốt kỳ công ở trang Chấm công trước.",
   closeBlockedIncomplete:
     "Chưa chốt lương được: còn {n} dòng chưa đủ dữ kiện. Bấm vào dòng có chữ màu cam để xem thiếu gì.",
   reopenAction: "Huỷ chốt lương",
@@ -906,6 +1087,27 @@ export const PAYROLL_LABEL = {
   reopenConfirm: "Huỷ chốt lương",
   reopenSuccess: "Đã huỷ chốt lương kỳ.",
   reopenError: "Không thể huỷ chốt lương kỳ này.",
+
+  /* ---- Lọc và sắp xếp ----------------------------------------------------- */
+  searchLabel: "Tìm theo tên hoặc mã nhân viên",
+  searchPlaceholder: "Tên hoặc mã nhân viên…",
+  filterDepartmentLabel: "Lọc theo phòng ban",
+  filterDepartmentAll: "Tất cả phòng ban",
+  filterNoDepartment: "Chưa có phòng ban",
+  filterDataLabel: "Lọc theo tình trạng dữ liệu",
+  filterDataAll: "Tất cả dòng",
+  filterDataIncomplete: "Chưa đủ dữ kiện",
+  filterDataComplete: "Đã đủ dữ kiện",
+  // Con số tóm tắt phải nói rõ nó đang mô tả CÁI GÌ: sau khi lọc, nó không
+  // còn là cả kỳ nữa, và một tổng bị hiểu nhầm là tổng cả kỳ thì nguy hiểm.
+  filteredSummarySuffix: "(theo bộ lọc đang bật)",
+  filteredEmptyTitle: "Không có dòng nào khớp bộ lọc",
+  filteredEmptyBody:
+    "Thử bỏ bớt điều kiện lọc hoặc xoá từ khoá tìm kiếm để xem lại cả kỳ.",
+  // Xuất CSV đi theo những gì đang thấy trên màn hình — nhưng phải nói ra,
+  // để không ai tưởng tệp vừa tải là cả kỳ.
+  exportedFilteredToast:
+    "Đã tải CSV cho {n} dòng đang hiển thị (không phải cả kỳ).",
 } as const;
 
 /**
