@@ -11,10 +11,19 @@ import {
   buildShiftContext,
   type RawShiftContextRow,
 } from "@/lib/attendance/shift-context";
-import { resolveDayCredit, sumCreditedDays } from "@/lib/attendance/work-mode";
+import {
+  resolveDayCredit,
+  sumCreditedDays,
+  type DayCredit,
+} from "@/lib/attendance/work-mode";
 import { shiftMonth } from "@/lib/format";
 import { createServerSupabase } from "@/lib/supabase/server";
-import type { AttendanceRecord, MonthlySummary } from "@/lib/types/domain";
+import type {
+  AttendanceRecord,
+  AttendanceStatus,
+  MonthlySummary,
+} from "@/lib/types/domain";
+import type { DayClassification } from "@/lib/attendance/classification-context";
 
 /**
  * Ngu canh de tong hop MOT THANG cong, va phep tong hop dung ngu canh do.
@@ -40,6 +49,37 @@ export interface MonthContext {
   breaks: Record<string, ShiftBreakInfo>;
   shiftRules: Map<string, ShiftRuleInfo>;
   rules: CompanyRules;
+}
+
+/**
+ * MOT NGAY trong ban tong hop thang — du de `payroll-rows.ts` quy ra tien ma
+ * KHONG phai chay lai `classifyDay()` hay `resolveDayCredit()`.
+ *
+ * Hai truong `credit` va `classification` duoc mang NGUYEN VEN, khong rut gon:
+ * rut gon o day nghia la moi lan `compute-daily.ts` can them mot truong thi
+ * phai sua ca hai file, va mot trong hai lan sua se bi quen.
+ */
+export interface MonthlyDayDetail {
+  /** "YYYY-MM-DD" */
+  date: string;
+  /** Trang thai cua CA NGAY (`day.ts`), khong phai cua mot luot. */
+  status: AttendanceStatus;
+  /** Con mot luot da vao nhung chua tan ca. */
+  hasOpenPunch: boolean;
+  workedMinutes: number;
+  credit: DayCredit;
+  classification: DayClassification;
+}
+
+/**
+ * `MonthlySummary` cong them mang ngay.
+ *
+ * MO RONG, KHONG PHA: moi truong cu giu nguyen ten va y nghia, nen
+ * `GET /api/attendance/summary` khong bi anh huong — no khong doc truong moi,
+ * va `zod` cua no loai bo khoa la khi `parse`.
+ */
+export interface MonthSummaryWithDays extends MonthlySummary {
+  days: MonthlyDayDetail[];
 }
 
 /**
@@ -100,7 +140,7 @@ export function summarizeMonth({
   context: MonthContext;
   /** "YYYY-MM" */
   month: string;
-}): MonthlySummary {
+}): MonthSummaryWithDays {
   // Tu migration 0013 mot ngay co the co NHIEU dong, va tu 0014 gio nghi duoc
   // tru mot lan cho moi ngay. Gop ngay roi mo, khong cong thang cac dong.
   const days = groupAttendanceByDay(records, context.breaks);
@@ -130,6 +170,17 @@ export function summarizeMonth({
 
   return {
     month,
+    // Mang NGAY di kem — dung CHINH `days`, `classifications` va `credits` da
+    // tinh o tren. KHONG mot phep tinh nao chay lai o day, va ba mang deu cung
+    // thu tu vi chung sinh ra tu cung mot phep `map`.
+    days: days.map((day, index) => ({
+      date: day.date,
+      status: day.status,
+      hasOpenPunch: day.hasOpenPunch,
+      workedMinutes: day.workedMinutes,
+      credit: credits[index],
+      classification: classifications[index],
+    })),
     // `workedDays` GIU NGUYEN y nghia cu (dem ngay co gio lam) de khong man
     // hinh nao dang doc no bi doi so. Con so dung de TINH TIEN la
     // `creditedDays` — hai dai luong khac nhau, va o che do `daily_hours`
