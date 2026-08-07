@@ -9,7 +9,7 @@ import { shiftInputSchema, shiftRowSchema } from "@/lib/validation/api/shifts";
 import type { Shift, ShiftInput } from "@/lib/types/domain";
 
 const SHIFT_COLUMNS =
-  "id, company_id, name, code, start_time, end_time, break_minutes, late_tolerance_minutes, overnight, working_days, status";
+  "id, company_id, name, code, start_time, end_time, break_start_time, break_end_time, break_minutes, late_tolerance_minutes, overnight, working_days, status";
 
 /**
  * Ba ham nay giu NGUYEN chu ky cu tu `mock/service.ts` (call site khong
@@ -91,8 +91,16 @@ export async function updateShift(
     code: "code" in patch ? (patch.code as string) : before.code,
     startTime: "startTime" in patch ? (patch.startTime as string) : before.startTime,
     endTime: "endTime" in patch ? (patch.endTime as string) : before.endTime,
-    breakMinutes:
-      "breakMinutes" in patch ? (patch.breakMinutes as number) : before.breakMinutes,
+    // Khung gio nghi di CUNG NHAU trong patch — `break_minutes` khong nam o
+    // day, no do `shiftInputSchema` tinh ra tu hai moc nay (migration 0025).
+    breakStartTime:
+      "breakStartTime" in patch
+        ? (patch.breakStartTime as string | null)
+        : before.breakStartTime,
+    breakEndTime:
+      "breakEndTime" in patch
+        ? (patch.breakEndTime as string | null)
+        : before.breakEndTime,
     lateToleranceMinutes:
       "lateToleranceMinutes" in patch
         ? (patch.lateToleranceMinutes as number)
@@ -162,7 +170,8 @@ export async function duplicateShift(id: string): Promise<Shift> {
     code: `${source.code}2`,
     startTime: source.startTime,
     endTime: source.endTime,
-    breakMinutes: source.breakMinutes,
+    breakStartTime: source.breakStartTime,
+    breakEndTime: source.breakEndTime,
     lateToleranceMinutes: source.lateToleranceMinutes,
     workingDays: source.workingDays,
     status: source.status,

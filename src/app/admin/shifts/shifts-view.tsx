@@ -49,6 +49,10 @@ export function ShiftsView(): React.ReactElement {
       const payload = {
         ...values,
         code: values.code.toUpperCase(),
+        // O `<input type="time">` de trong tra ve chuoi rong; database va
+        // domain dung `null` cho "ca khong co gio nghi".
+        breakStartTime: values.breakStartTime || null,
+        breakEndTime: values.breakEndTime || null,
         overnight,
       };
       if (editing) {

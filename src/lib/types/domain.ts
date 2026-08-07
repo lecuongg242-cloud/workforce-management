@@ -113,6 +113,18 @@ export interface Shift {
   startTime: string;
   /** "HH:mm" — co the nho hon startTime neu la ca qua dem */
   endTime: string;
+  /**
+   * Khung gio nghi giua ca, "HH:mm". `null` khi ca khong co gio nghi — hoac
+   * khi ca duoc tao TRUOC migration 0025 va chi con con so `breakMinutes`.
+   * Hai truong nay luon di cung nhau (rang buoc o database).
+   */
+  breakStartTime: string | null;
+  breakEndTime: string | null;
+  /**
+   * DO DAI khoang nghi (phut) — thu ma moi phep tinh cong dung de tru. Tu
+   * 0025 day la gia tri DAN XUAT tu khung gio o tren, do duong ghi tinh;
+   * khong noi goi nao dat rieng no.
+   */
   breakMinutes: number;
   /** So phut cho phep di muon ma van tinh dung gio */
   lateToleranceMinutes: number;
@@ -851,7 +863,12 @@ export type EmployeeInput = Omit<Employee, "id" | "companyId">;
 
 export type DepartmentInput = Omit<Department, "id" | "companyId">;
 
-export type ShiftInput = Omit<Shift, "id" | "companyId">;
+/**
+ * `breakMinutes` KHONG nam trong duong ghi: tu migration 0025 no la gia tri
+ * dan xuat tu khung gio nghi, do `shiftInputSchema` tinh. Cho phep noi goi
+ * truyen no vao la mo duong cho hai gia tri lech nhau.
+ */
+export type ShiftInput = Omit<Shift, "id" | "companyId" | "breakMinutes">;
 
 export type WorkSiteInput = Omit<WorkSite, "id" | "companyId" | "createdAt">;
 

@@ -101,8 +101,12 @@ export function AttendancePhotoDialog({
         photos.map((photo) => markPhotoReviewed(photo.id, "approved")),
       );
       invalidate();
-      reload();
       toast.success(ATTENDANCE_PHOTO_DIALOG_LABEL.reviewSuccessToast);
+      // DONG LUON sau khi danh dau. Xem xet la mot viec LAM XONG ROI DI
+      // TIEP: de hop thoai mo lai sau khi bam chi bat nguoi dung tu tay dong
+      // no truoc moi ban ghi tiep theo, va lam ho tuong con viec gi chua xong.
+      // Khong `reload()` o day — dialog dang dong, tai lai la phi.
+      onOpenChange(false);
     } catch (cause) {
       toast.error(
         cause instanceof Error

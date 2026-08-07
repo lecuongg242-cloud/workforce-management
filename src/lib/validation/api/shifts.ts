@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { breakWindowMinutes } from "@/lib/format";
+
 /**
  * Schema Zod cho ca lam viec (plan 02-06). Ba phep bien doi phai nam CA
  * trong schema de chi co dung MOT noi dinh nghia (D-12d):
@@ -53,6 +55,9 @@ export const shiftRowSchema = z
     code: z.string(),
     start_time: z.string().transform(cutSeconds),
     end_time: z.string().transform(cutSeconds),
+    // Ca tao truoc migration 0025 chua co khung gio nghi -> `null`.
+    break_start_time: z.string().transform(cutSeconds).nullable(),
+    break_end_time: z.string().transform(cutSeconds).nullable(),
     break_minutes: z.number(),
     late_tolerance_minutes: z.number(),
     overnight: z.boolean(),
@@ -66,6 +71,8 @@ export const shiftRowSchema = z
     code: row.code,
     startTime: row.start_time,
     endTime: row.end_time,
+    breakStartTime: row.break_start_time,
+    breakEndTime: row.break_end_time,
     breakMinutes: row.break_minutes,
     lateToleranceMinutes: row.late_tolerance_minutes,
     overnight: row.overnight,
@@ -85,6 +92,8 @@ export const shiftWithStatsSchema = z.object({
   code: z.string(),
   startTime: z.string(),
   endTime: z.string(),
+  breakStartTime: z.string().nullable(),
+  breakEndTime: z.string().nullable(),
   breakMinutes: z.number(),
   lateToleranceMinutes: z.number(),
   overnight: z.boolean(),
@@ -109,17 +118,45 @@ export const shiftInputSchema = z
     code: z.string(),
     startTime: z.string(),
     endTime: z.string(),
-    breakMinutes: z.number(),
+    breakStartTime: z.string().nullable(),
+    breakEndTime: z.string().nullable(),
     lateToleranceMinutes: z.number(),
     workingDays: workingDaysSchema,
     status: shiftStatusSchema,
   })
+  // Hai cot khung gio di cung nhau — khop rang buoc
+  // `shifts_break_window_both_or_neither` cua database, va chan o day de loi
+  // doc duoc bang tieng Viet thay vi mot thong diep cua Postgres.
+  .refine(
+    (input) =>
+      (input.breakStartTime === null) === (input.breakEndTime === null),
+    {
+      message: "Khung giờ nghỉ phải có cả giờ bắt đầu và giờ kết thúc.",
+      path: ["breakEndTime"],
+    },
+  )
+  .refine(
+    (input) =>
+      input.breakStartTime === null ||
+      input.breakStartTime !== input.breakEndTime,
+    {
+      message: "Giờ bắt đầu nghỉ và giờ kết thúc nghỉ không được trùng nhau.",
+      path: ["breakEndTime"],
+    },
+  )
   .transform((input) => ({
     name: input.name,
     code: input.code,
     start_time: `${input.startTime}:00`,
     end_time: `${input.endTime}:00`,
-    break_minutes: input.breakMinutes,
+    break_start_time:
+      input.breakStartTime === null ? null : `${input.breakStartTime}:00`,
+    break_end_time:
+      input.breakEndTime === null ? null : `${input.breakEndTime}:00`,
+    // DAY LA NOI DUY NHAT tinh `break_minutes` (migration 0025). Khong nhan
+    // no tu noi goi: hai gia tri lech nhau thi phep tinh cong se tru mot
+    // khoang khong ai nhin thay o giao dien.
+    break_minutes: breakWindowMinutes(input.breakStartTime, input.breakEndTime),
     late_tolerance_minutes: input.lateToleranceMinutes,
     working_days: input.workingDays,
     status: input.status,

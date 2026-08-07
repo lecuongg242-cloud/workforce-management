@@ -75,7 +75,10 @@ export function AdminShell({
           onOpenSidebar={() => setDrawerOpen(true)}
           onSignOut={handleSignOut}
         />
-        <main className="mx-auto w-full max-w-[1440px] px-4 py-6 lg:px-8 lg:py-8">
+        {/* KHONG CO TRAN BE NGANG. Khu vuc quan tri gan nhu toan la bang
+            nhieu cot, va mot bang bi cuon ngang thi khong con doc duoc theo
+            hang — do la thu duy nhat nguoi dung lam voi mot bang. */}
+        <main className="mx-auto w-full px-4 py-6 lg:px-8 lg:py-8">
           {children}
         </main>
       </div>
@@ -89,7 +92,8 @@ function AdminShellSkeleton(): React.ReactElement {
       <div className="fixed inset-y-0 left-0 hidden w-sidebar bg-brand-dark lg:block" />
       <div className="lg:pl-sidebar">
         <div className="h-topbar border-b border-hairline bg-white" />
-        <div className="mx-auto w-full max-w-[1440px] space-y-4 px-4 py-8 lg:px-8">
+        {/* Cung be ngang voi `main` that, de luc tai xong khung khong nhay. */}
+        <div className="mx-auto w-full space-y-4 px-4 py-8 lg:px-8">
           <Skeleton className="h-9 w-64" />
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (

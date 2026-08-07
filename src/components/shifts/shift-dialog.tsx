@@ -24,7 +24,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { WEEKDAY_OPTIONS } from "@/lib/constants";
-import { formatDuration, isOvernight, minutesBetween } from "@/lib/format";
+import {
+  breakWindowMinutes,
+  formatDuration,
+  isOvernight,
+  minutesBetween,
+} from "@/lib/format";
 import type { Shift, ShiftStatus, WeekdayNumber } from "@/lib/types/domain";
 import { shiftSchema, type ShiftFormValues } from "@/lib/validation/schemas";
 import { cn } from "@/lib/utils";
@@ -59,7 +64,8 @@ export function ShiftDialog({
       code: "",
       startTime: "08:00",
       endTime: "17:30",
-      breakMinutes: 60,
+      breakStartTime: "12:00",
+      breakEndTime: "13:00",
       lateToleranceMinutes: 5,
       workingDays: [1, 2, 3, 4, 5],
       status: "active",
@@ -75,7 +81,10 @@ export function ShiftDialog({
             code: shift.code,
             startTime: shift.startTime,
             endTime: shift.endTime,
-            breakMinutes: shift.breakMinutes,
+            // Ca tao truoc migration 0025 chua co khung gio -> de trong, va
+            // cau nhac ben duoi noi ro no dang tru bao nhieu phut theo cach cu.
+            breakStartTime: shift.breakStartTime ?? "",
+            breakEndTime: shift.breakEndTime ?? "",
             lateToleranceMinutes: shift.lateToleranceMinutes,
             workingDays: shift.workingDays,
             status: shift.status,
@@ -85,7 +94,8 @@ export function ShiftDialog({
             code: "",
             startTime: "08:00",
             endTime: "17:30",
-            breakMinutes: 60,
+            breakStartTime: "12:00",
+            breakEndTime: "13:00",
             lateToleranceMinutes: 5,
             workingDays: [1, 2, 3, 4, 5],
             status: "active",
@@ -95,12 +105,22 @@ export function ShiftDialog({
 
   const startTime = watch("startTime");
   const endTime = watch("endTime");
-  const breakMinutes = watch("breakMinutes");
+  const breakStartTime = watch("breakStartTime");
+  const breakEndTime = watch("breakEndTime");
   const workingDays = watch("workingDays");
 
   const overnight = isOvernight(startTime, endTime);
+  // Ca cu (co so phut nghi nhung chua khai khung gio) van tinh theo con so cu
+  // cho toi khi nguoi dung khai khung gio — man hinh khong tu bia mot khung
+  // gio ma he thong khong biet.
+  const legacyBreakMinutes =
+    shift && !shift.breakStartTime ? shift.breakMinutes : 0;
+  const breakMinutes =
+    breakStartTime && breakEndTime
+      ? breakWindowMinutes(breakStartTime, breakEndTime)
+      : legacyBreakMinutes;
   const workingMinutes = Math.max(
-    minutesBetween(startTime, endTime) - (breakMinutes || 0),
+    minutesBetween(startTime, endTime) - breakMinutes,
     0,
   );
 
@@ -166,18 +186,20 @@ export function ShiftDialog({
             </Field>
 
             <Field
-              id="shift-form-break"
-              label="Thời gian nghỉ (phút)"
-              error={errors.breakMinutes?.message}
-              required
+              id="shift-form-break-start"
+              label="Giờ nghỉ"
+              error={errors.breakStartTime?.message}
+              hint="Để trống nếu ca không có giờ nghỉ."
             >
-              <Input
-                type="number"
-                min={0}
-                max={240}
-                className="num"
-                {...register("breakMinutes", { valueAsNumber: true })}
-              />
+              <Input type="time" className="num" {...register("breakStartTime")} />
+            </Field>
+
+            <Field
+              id="shift-form-break-end"
+              label="Kết thúc giờ nghỉ"
+              error={errors.breakEndTime?.message}
+            >
+              <Input type="time" className="num" {...register("breakEndTime")} />
             </Field>
 
             <Field
@@ -259,7 +281,26 @@ export function ShiftDialog({
               <span className="num font-medium text-ink">
                 {formatDuration(workingMinutes)}
               </span>
+              {breakMinutes > 0 ? (
+                <>
+                  {" "}
+                  <span className="text-ink-muted">
+                    (đã trừ {formatDuration(breakMinutes)} nghỉ)
+                  </span>
+                </>
+              ) : null}
             </p>
+
+            {/* Ca khai theo cach cu: noi ro he thong dang tru theo con so nao
+                va vi sao nen khai khung gio — khong tu bia mot khung gio. */}
+            {legacyBreakMinutes > 0 && !(breakStartTime && breakEndTime) ? (
+              <p className="mt-1.5 text-[13px] text-warning">
+                Ca này đang khai {formatDuration(legacyBreakMinutes)} nghỉ theo
+                cách cũ, chưa có khung giờ. Chọn giờ nghỉ để nhân viên biết nghỉ
+                lúc mấy giờ — số phút trừ vào công vẫn tính theo khung giờ bạn
+                chọn.
+              </p>
+            ) : null}
             {overnight ? (
               <p className="mt-1.5 flex items-center gap-1.5 text-[13px] font-medium text-info">
                 <MoonStar aria-hidden="true" className="size-3.5" />

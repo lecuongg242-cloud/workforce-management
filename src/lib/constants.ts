@@ -132,6 +132,66 @@ export const REQUEST_REVIEW_LABEL = {
   historyEmpty: "Yêu cầu này chưa được xử lý lần nào.",
   historyError: "Không tải được lịch sử xử lý.",
   unknownReviewer: "Quản trị viên",
+
+  /* ---- Bộ lọc ------------------------------------------------------------- */
+  searchLabel: "Tìm theo tên hoặc mã nhân viên",
+  searchPlaceholder: "Tên hoặc mã nhân viên…",
+  filterStatusLabel: "Lọc theo trạng thái",
+  filterStatusAll: "Mọi trạng thái",
+  filterTypeLabel: "Lọc theo loại yêu cầu",
+  filterTypeAll: "Mọi loại yêu cầu",
+  filterDepartmentLabel: "Lọc theo phòng ban",
+  filterDepartmentAll: "Tất cả phòng ban",
+  filterNoDepartment: "Chưa có phòng ban",
+  filterRangeLabel: "Lọc theo ngày gửi",
+  filterRangeAll: "Toàn bộ thời gian",
+  filterRange7: "Gửi trong 7 ngày",
+  filterRange30: "Gửi trong 30 ngày",
+  filterRange90: "Gửi trong 90 ngày",
+  filterCountSuffix: "yêu cầu",
+  filteredEmptyTitle: "Không có yêu cầu nào khớp bộ lọc",
+  filteredEmptyBody:
+    "Thử bỏ bớt điều kiện lọc hoặc mở rộng khoảng thời gian để xem lại danh sách.",
+
+  /* ---- Duyệt hàng loạt ---------------------------------------------------- */
+  selectAllLabel: "Chọn tất cả yêu cầu chờ duyệt",
+  selectRowPrefix: "Chọn yêu cầu của",
+  bulkSelectedPrefix: "Đã chọn",
+  bulkSelectedSuffix: "yêu cầu",
+  bulkApproveAction: "Duyệt hàng loạt",
+  bulkClear: "Bỏ chọn",
+  bulkDialogTitle: "Duyệt {n} yêu cầu cùng lúc?",
+  // Duyệt hàng loạt bỏ qua phần XEM TRƯỚC tác động của từng yêu cầu, mà tác
+  // động đó là ghi thật vào bảng công. Nói ra trước khi bấm, không phải sau.
+  bulkDialogBody:
+    "Yêu cầu nghỉ phép và bổ sung chấm công sẽ ghi ngày công ngay khi duyệt. Duyệt hàng loạt KHÔNG hiện bảng xem trước của từng yêu cầu — sau khi xong, hệ thống báo tổng số bản ghi công đã tạo và đã sửa.",
+  // Vượt trần tăng ca vẫn duyệt được (người duyệt quyết định), nhưng phải
+  // được nói ra TRƯỚC và được ghi vào lịch sử xử lý — giống hệt luồng duyệt
+  // từng yêu cầu, nếu không thì duyệt hàng loạt là một lối lách khỏi dấu vết.
+  bulkOverCapWarning:
+    "Trong đó có {n} yêu cầu tăng ca sẽ vượt trần. Vẫn duyệt được, và hệ thống sẽ ghi lại điều đó vào lịch sử xử lý của từng yêu cầu.",
+  bulkConfirm: "Duyệt tất cả",
+  bulkSuccess: "Đã duyệt {n} yêu cầu.",
+  bulkPartial: "Đã duyệt {ok} yêu cầu; {fail} yêu cầu chưa xong, thử lại sau.",
+  bulkError: "Không duyệt được yêu cầu nào.",
+
+  /* ---- Từ chối hàng loạt -------------------------------------------------- */
+  bulkRejectAction: "Từ chối hàng loạt",
+  bulkRejectDialogTitle: "Từ chối {n} yêu cầu cùng lúc?",
+  bulkRejectDialogBody:
+    "Người gửi sẽ thấy kết quả và lý do dưới đây. Không có ngày công nào bị ghi hay bị xoá khi từ chối.",
+  // Lý do là BẮT BUỘC, y như từ chối từng yêu cầu — người bị từ chối cần biết
+  // vì sao để gửi lại cho đúng. Ở đây một lý do dùng chung cho cả lô, nên câu
+  // đó phải đúng với TỪNG người trong lô: nhắc thẳng điều ấy tại chỗ nhập.
+  bulkReasonLabel: "Lý do từ chối (dùng chung cho cả lô)",
+  bulkReasonPlaceholder: "Ví dụ: trùng với yêu cầu đã gửi tuần trước",
+  bulkReasonRequired:
+    "Mỗi người trong lô đều nhận đúng câu này, nên hãy viết câu đúng với tất cả. Ai cần lý do riêng thì từ chối riêng ở nút cuối dòng.",
+  bulkRejectConfirm: "Từ chối tất cả",
+  bulkRejectSuccess: "Đã từ chối {n} yêu cầu.",
+  bulkRejectPartial:
+    "Đã từ chối {ok} yêu cầu; {fail} yêu cầu chưa xong, thử lại sau.",
+  bulkRejectError: "Không từ chối được yêu cầu nào.",
 } as const;
 
 export const REQUEST_DECISION_LABEL: Record<"approved" | "rejected", string> = {
@@ -440,6 +500,46 @@ export const ATTENDANCE_REVIEW_LABEL = {
   accuracyPrefix: "Độ chính xác GPS",
   outsideShiftLabel: "Ngoài khung giờ ca",
   punchTimePrefix: "Chấm lúc",
+
+  /* ---- Bộ lọc ------------------------------------------------------------- */
+  searchLabel: "Tìm theo tên nhân viên",
+  searchPlaceholder: "Tên nhân viên…",
+  filterStatusLabel: "Lọc theo trạng thái xem xét",
+  filterStatusAll: "Mọi trạng thái",
+  filterReasonLabel: "Lọc theo dấu hiệu",
+  filterReasonAll: "Mọi dấu hiệu",
+  filterReasonFarFromSite: "Cách xa điểm làm việc",
+  filterReasonOutsideShift: "Ngoài khung giờ ca",
+  filterSiteLabel: "Lọc theo điểm làm việc / ca",
+  filterSiteAll: "Mọi điểm làm việc",
+  filterSiteNone: "Không gắn điểm làm việc",
+  filterRangeLabel: "Lọc theo khoảng thời gian",
+  filterRangeAll: "Toàn bộ thời gian",
+  filterRange7: "7 ngày qua",
+  filterRange30: "30 ngày qua",
+  filterRange90: "90 ngày qua",
+  filteredEmptyTitle: "Không có bản ghi nào khớp bộ lọc",
+  filteredEmptyBody:
+    "Thử bỏ bớt điều kiện lọc hoặc mở rộng khoảng thời gian để xem lại toàn bộ danh sách.",
+  // Đếm hiện/tổng: sau khi lọc, con số ở đầu trang không còn là toàn bộ danh
+  // sách nữa, mà người duyệt hàng loạt cần biết mình đang thao tác trên bao nhiêu.
+  filterCountSuffix: "bản ghi",
+
+  /* ---- Duyệt hàng loạt ---------------------------------------------------- */
+  selectAllLabel: "Chọn tất cả bản ghi chưa xem xét",
+  selectRowPrefix: "Chọn bản ghi của",
+  bulkSelectedPrefix: "Đã chọn",
+  bulkSelectedSuffix: "bản ghi",
+  bulkClear: "Bỏ chọn",
+  // Nhắc lại phạm vi ngay tại nút: "đã xem xét" nghĩa là NGƯỜI ĐÃ NHÌN, không
+  // phải "hệ thống xác nhận đúng người" — dấu này không kết luận thay ai.
+  bulkHint: "Đánh dấu là đã có người nhìn qua, không phải kết luận đúng/sai.",
+  bulkSuccess: "Đã đánh dấu {n} bản ghi là đã xem xét.",
+  // Hỏng một phần thì phải nói ra CẢ HAI con số: im lặng ở đây khiến người
+  // dùng tưởng đã xong hết và bỏ sót đúng những bản ghi chưa xử lý được.
+  bulkPartial: "Đã đánh dấu {ok} bản ghi; {fail} bản ghi chưa xong, thử lại sau.",
+  bulkError: "Không đánh dấu được bản ghi nào.",
+  reviewedRowHint: "Bản ghi này đã được xem xét.",
 } as const;
 
 export const PHOTO_REVIEW_STATUS_LABEL: Record<PhotoReviewStatus, string> = {
@@ -538,7 +638,7 @@ export const SETTINGS_GENERAL_LABEL = {
   nightStartLabel: "Ca đêm bắt đầu",
   nightEndLabel: "Ca đêm kết thúc",
   nightHelp:
-    "Khoảng giờ được tính là làm đêm, dùng cho hệ số ca đêm ở tab Tăng ca. Mặc định 22:00–06:00 theo Bộ luật Lao động.",
+    "",
   // SET-05. Đơn vị nằm ngay trên nhãn: "trần tăng ca" có thể hiểu là mỗi tuần,
   // mỗi tháng hay mỗi năm, và đoán sai đơn vị thì con số vô nghĩa.
   overtimeCapLabel: "Trần tăng ca (giờ / nhân viên / tháng)",
@@ -808,7 +908,7 @@ export const ATTENDANCE_GRID_SYMBOL: Record<AttendanceStatus, string> = {
 export const PAYROLL_LABEL = {
   pageTitle: "Bảng lương",
   pageDescription:
-    "Tổng hợp công theo tháng để bàn giao cho kế toán. Bảng này không tính tiền — thuế, bảo hiểm và phiếu lương thuộc phiên bản sau.",
+    "",
   periodClosed: "Kỳ đã chốt — số liệu đã khoá",
   periodOpen: "Kỳ đang mở — số liệu còn thay đổi được",
   periodMissing: "Kỳ chưa được tạo — số liệu còn thay đổi được",
@@ -855,7 +955,7 @@ export const PAYROLL_LABEL = {
   // bảo hiểm là điều dễ xảy ra nhất của cả màn hình, và hậu quả là doanh
   // nghiệp trả thiếu cho người lao động.
   taxDisclaimer:
-    "Các con số tiền dưới đây CHƯA GỒM thuế thu nhập cá nhân và bảo hiểm xã hội / y tế / thất nghiệp. Hai khoản đó chưa được tính trong phiên bản này.",
+    "",
   taxDisclaimerCsv:
     "CHƯA GỒM thuế TNCN và BHXH/BHYT/BHTN",
   // Mỗi lý do thiếu được nói bằng một câu người dùng làm được gì với nó —
@@ -875,7 +975,7 @@ export const PAYROLL_LABEL = {
   detailEmptyAdjustments: "Không có khoản nào áp cho người này.",
   detailPerLateSuffix: "lần",
   detailMissingTitle: "Chưa tính được, vì:",
-  expandHint: "Bấm một dòng để xem vì sao ra con số đó.",
+  expandHint: "Bấm vào dòng để xem chi tiết",
 
   /* ---- D-42/D-45 (plan 05-2-05): chốt lương kỳ ---------------------------- */
   payrollClosed: "Đã chốt lương — con số đã đóng khung",
@@ -906,6 +1006,27 @@ export const PAYROLL_LABEL = {
   reopenConfirm: "Huỷ chốt lương",
   reopenSuccess: "Đã huỷ chốt lương kỳ.",
   reopenError: "Không thể huỷ chốt lương kỳ này.",
+
+  /* ---- Lọc và sắp xếp ----------------------------------------------------- */
+  searchLabel: "Tìm theo tên hoặc mã nhân viên",
+  searchPlaceholder: "Tên hoặc mã nhân viên…",
+  filterDepartmentLabel: "Lọc theo phòng ban",
+  filterDepartmentAll: "Tất cả phòng ban",
+  filterNoDepartment: "Chưa có phòng ban",
+  filterDataLabel: "Lọc theo tình trạng dữ liệu",
+  filterDataAll: "Tất cả dòng",
+  filterDataIncomplete: "Chưa đủ dữ kiện",
+  filterDataComplete: "Đã đủ dữ kiện",
+  // Con số tóm tắt phải nói rõ nó đang mô tả CÁI GÌ: sau khi lọc, nó không
+  // còn là cả kỳ nữa, và một tổng bị hiểu nhầm là tổng cả kỳ thì nguy hiểm.
+  filteredSummarySuffix: "(theo bộ lọc đang bật)",
+  filteredEmptyTitle: "Không có dòng nào khớp bộ lọc",
+  filteredEmptyBody:
+    "Thử bỏ bớt điều kiện lọc hoặc xoá từ khoá tìm kiếm để xem lại cả kỳ.",
+  // Xuất CSV đi theo những gì đang thấy trên màn hình — nhưng phải nói ra,
+  // để không ai tưởng tệp vừa tải là cả kỳ.
+  exportedFilteredToast:
+    "Đã tải CSV cho {n} dòng đang hiển thị (không phải cả kỳ).",
 } as const;
 
 /**

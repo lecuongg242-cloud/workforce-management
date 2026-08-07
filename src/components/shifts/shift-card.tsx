@@ -104,8 +104,17 @@ export function ShiftCard({
         </div>
         <div className="flex items-center gap-2 text-ink-secondary">
           <Coffee aria-hidden="true" className="size-4 shrink-0 text-ink-muted" />
-          <dt className="sr-only">Thời gian nghỉ</dt>
-          <dd className="num">Nghỉ {shift.breakMinutes} phút</dd>
+          <dt className="sr-only">Giờ nghỉ</dt>
+          {/* Khung gio noi duoc dieu ma con so phut khong noi duoc: nghi LUC
+              MAY GIO. Ca chua khai khung gio (truoc 0025) lui ve so phut —
+              khong bia ra mot khung gio. */}
+          <dd className="num">
+            {shift.breakStartTime && shift.breakEndTime
+              ? `Nghỉ ${shift.breakStartTime}–${shift.breakEndTime}`
+              : shift.breakMinutes > 0
+                ? `Nghỉ ${shift.breakMinutes} phút (chưa có khung giờ)`
+                : "Không có giờ nghỉ"}
+          </dd>
         </div>
         <div className="flex items-center gap-2 text-ink-secondary">
           <Users aria-hidden="true" className="size-4 shrink-0 text-ink-muted" />

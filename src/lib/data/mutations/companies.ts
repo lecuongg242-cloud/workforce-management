@@ -162,6 +162,10 @@ export async function createCompanyAction(
     code: "CA-HC",
     start_time: "08:00",
     end_time: "17:30",
+    // Khung gio nghi (0025) va so phut PHAI khop nhau — day la mot trong hai
+    // noi ghi thang vao bang `shifts` khong di qua `shiftInputSchema`.
+    break_start_time: "12:00",
+    break_end_time: "13:00",
     break_minutes: 60,
     late_tolerance_minutes: 5,
     working_days: [1, 2, 3, 4, 5],

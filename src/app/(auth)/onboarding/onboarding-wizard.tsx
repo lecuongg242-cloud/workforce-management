@@ -39,7 +39,12 @@ import {
   WEEKDAY_OPTIONS,
 } from "@/lib/constants";
 import { createCompany } from "@/lib/data/companies";
-import { formatDuration, isOvernight, minutesBetween } from "@/lib/format";
+import {
+  breakWindowMinutes,
+  formatDuration,
+  isOvernight,
+  minutesBetween,
+} from "@/lib/format";
 import { useDataStore } from "@/lib/data/store";
 import type { CompanySize, WeekdayNumber } from "@/lib/types/domain";
 import {
@@ -80,7 +85,8 @@ export function OnboardingWizard(): React.ReactElement {
       name: "Ca hành chính",
       startTime: "08:00",
       endTime: "17:30",
-      breakMinutes: 90,
+      breakStartTime: "12:00",
+      breakEndTime: "13:30",
       lateToleranceMinutes: 5,
       workingDays: [1, 2, 3, 4, 5],
     },
@@ -415,12 +421,14 @@ function ShiftStep({
 
   const startTime = watch("startTime");
   const endTime = watch("endTime");
-  const breakMinutes = watch("breakMinutes");
+  const breakStartTime = watch("breakStartTime");
+  const breakEndTime = watch("breakEndTime");
   const workingDays = watch("workingDays");
 
   const overnight = isOvernight(startTime, endTime);
   const totalMinutes = Math.max(
-    minutesBetween(startTime, endTime) - (breakMinutes || 0),
+    minutesBetween(startTime, endTime) -
+      breakWindowMinutes(breakStartTime || null, breakEndTime || null),
     0,
   );
 
@@ -464,18 +472,20 @@ function ShiftStep({
         </Field>
 
         <Field
-          id="shift-break"
-          label="Thời gian nghỉ (phút)"
-          error={errors.breakMinutes?.message}
-          required
+          id="shift-break-start"
+          label="Giờ nghỉ"
+          error={errors.breakStartTime?.message}
+          hint="Để trống nếu ca không có giờ nghỉ."
         >
-          <Input
-            type="number"
-            min={0}
-            max={240}
-            className="num"
-            {...register("breakMinutes", { valueAsNumber: true })}
-          />
+          <Input type="time" className="num" {...register("breakStartTime")} />
+        </Field>
+
+        <Field
+          id="shift-break-end"
+          label="Kết thúc giờ nghỉ"
+          error={errors.breakEndTime?.message}
+        >
+          <Input type="time" className="num" {...register("breakEndTime")} />
         </Field>
 
         <Field
@@ -636,7 +646,11 @@ function SummaryStep({
             />
             <SummaryRow
               label="Nghỉ giữa ca"
-              value={`${shift.breakMinutes} phút`}
+              value={
+                shift.breakStartTime && shift.breakEndTime
+                  ? `${shift.breakStartTime} – ${shift.breakEndTime}`
+                  : "Không có giờ nghỉ"
+              }
               numeric
             />
             <SummaryRow

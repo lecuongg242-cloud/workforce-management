@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { timeToMinutes } from "@/lib/format";
+
 /**
  * Toan bo schema kiem tra du lieu bieu mau.
  * Thong bao loi viet bang tieng Viet de hien thi truc tiep tren giao dien.
@@ -8,6 +10,66 @@ import { z } from "zod";
 const VIETNAM_PHONE = /^0\d{9,10}$/;
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const EMPLOYEE_CODE = /^[A-Za-z0-9._-]{2,20}$/;
+
+/** Khoang cach tu `from` toi `to` theo chieu kim dong ho, 0..1439 phut. */
+function forwardMinutes(from: string, to: string): number {
+  return (timeToMinutes(to) - timeToMinutes(from) + 1440) % 1440;
+}
+
+/**
+ * Kiem tra khung gio nghi cua mot ca (migration 0025) — dung chung cho bieu
+ * mau tao ca va buoc khai ca o onboarding.
+ *
+ * Ba dieu kien, va ca ba deu la de con so cong khong the sai trong im lang:
+ *   1. Hai moc di CUNG NHAU — mot khung gio thieu mot dau khong tru duoc gi.
+ *   2. Hai moc khong trung nhau — khoang nghi dai 0 phut la mot cach viet
+ *      long vong cua "khong nghi".
+ *   3. Khung nghi phai NAM TRONG ca. Nghi 12:00-13:00 cho ca 18:00-02:00 la
+ *      mot khai bao vo nghia, nhung neu de lot thi he thong van tru dung 60
+ *      phut cua ai do — mot gio cong bien mat ma khong ai giai thich duoc.
+ */
+function checkBreakWindow(
+  values: {
+    startTime: string;
+    endTime: string;
+    breakStartTime: string;
+    breakEndTime: string;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const { breakStartTime, breakEndTime, startTime, endTime } = values;
+  if (breakStartTime === "" && breakEndTime === "") return;
+
+  if (breakStartTime === "" || breakEndTime === "") {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [breakStartTime === "" ? "breakStartTime" : "breakEndTime"],
+      message: "Khai giờ nghỉ thì phải có cả giờ bắt đầu và giờ kết thúc.",
+    });
+    return;
+  }
+
+  if (breakStartTime === breakEndTime) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["breakEndTime"],
+      message: "Giờ kết thúc nghỉ phải khác giờ bắt đầu nghỉ.",
+    });
+    return;
+  }
+
+  const shiftMinutes = forwardMinutes(startTime, endTime);
+  const offset = forwardMinutes(startTime, breakStartTime);
+  const breakMinutes = forwardMinutes(breakStartTime, breakEndTime);
+
+  if (offset + breakMinutes > shiftMinutes) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["breakEndTime"],
+      message: `Khung giờ nghỉ phải nằm trong ca ${startTime}–${endTime}.`,
+    });
+  }
+}
 
 /* -------------------------------------------------------------------------- */
 /* Dang nhap                                                                   */
@@ -86,11 +148,17 @@ export const shiftStepSchema = z
     name: z.string().min(1, "Vui lòng nhập tên ca làm việc."),
     startTime: z.string().regex(TIME_PATTERN, "Giờ bắt đầu không hợp lệ."),
     endTime: z.string().regex(TIME_PATTERN, "Giờ kết thúc không hợp lệ."),
-    breakMinutes: z
-      .number({ invalid_type_error: "Vui lòng nhập số phút nghỉ." })
-      .int("Số phút nghỉ phải là số nguyên.")
-      .min(0, "Số phút nghỉ không được âm.")
-      .max(240, "Thời gian nghỉ không vượt quá 240 phút."),
+    // Khung gio nghi (0025) thay cho con so phut. Chuoi rong = ca khong co
+    // gio nghi — o `<input type="time">` de trong tra ve "" chu khong phai
+    // `null`, nen schema nhan ca hai va duong ghi quy ve `null`.
+    breakStartTime: z
+      .string()
+      .regex(TIME_PATTERN, "Giờ bắt đầu nghỉ không hợp lệ.")
+      .or(z.literal("")),
+    breakEndTime: z
+      .string()
+      .regex(TIME_PATTERN, "Giờ kết thúc nghỉ không hợp lệ.")
+      .or(z.literal("")),
     lateToleranceMinutes: z
       .number({ invalid_type_error: "Vui lòng nhập số phút cho phép đi muộn." })
       .int("Số phút phải là số nguyên.")
@@ -103,7 +171,8 @@ export const shiftStepSchema = z
   .refine((values) => values.startTime !== values.endTime, {
     message: "Giờ bắt đầu và giờ kết thúc không được trùng nhau.",
     path: ["endTime"],
-  });
+  })
+  .superRefine(checkBreakWindow);
 
 export type ShiftStepValues = z.infer<typeof shiftStepSchema>;
 
@@ -197,11 +266,17 @@ export const shiftSchema = z
       .max(8, "Mã ca không được vượt quá 8 ký tự."),
     startTime: z.string().regex(TIME_PATTERN, "Giờ bắt đầu không hợp lệ."),
     endTime: z.string().regex(TIME_PATTERN, "Giờ kết thúc không hợp lệ."),
-    breakMinutes: z
-      .number({ invalid_type_error: "Vui lòng nhập số phút nghỉ." })
-      .int()
-      .min(0, "Số phút nghỉ không được âm.")
-      .max(240, "Thời gian nghỉ không vượt quá 240 phút."),
+    // Khung gio nghi (0025) thay cho con so phut. Chuoi rong = ca khong co
+    // gio nghi — o `<input type="time">` de trong tra ve "" chu khong phai
+    // `null`, nen schema nhan ca hai va duong ghi quy ve `null`.
+    breakStartTime: z
+      .string()
+      .regex(TIME_PATTERN, "Giờ bắt đầu nghỉ không hợp lệ.")
+      .or(z.literal("")),
+    breakEndTime: z
+      .string()
+      .regex(TIME_PATTERN, "Giờ kết thúc nghỉ không hợp lệ.")
+      .or(z.literal("")),
     lateToleranceMinutes: z
       .number({ invalid_type_error: "Vui lòng nhập số phút cho phép đi muộn." })
       .int()
@@ -215,7 +290,8 @@ export const shiftSchema = z
   .refine((values) => values.startTime !== values.endTime, {
     message: "Giờ bắt đầu và giờ kết thúc không được trùng nhau.",
     path: ["endTime"],
-  });
+  })
+  .superRefine(checkBreakWindow);
 
 export type ShiftFormValues = z.infer<typeof shiftSchema>;
 

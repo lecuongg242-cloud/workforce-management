@@ -10,6 +10,7 @@ import {
   Info,
   Lock,
   LockKeyhole,
+  SearchX,
   Unlock,
   Users,
 } from "lucide-react";
@@ -18,6 +19,9 @@ import { toast } from "sonner";
 import { DataTableSkeleton } from "@/components/common/data-table-skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
+import { FilterBar } from "@/components/common/filter-bar";
+import { SearchInput } from "@/components/common/search-input";
+import { SortableHead, type SortState } from "@/components/common/sortable-head";
 import { StatusBadge } from "@/components/common/status-badge";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -25,11 +29,11 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { useDataQuery } from "@/hooks/use-data-query";
+import { useDebounce } from "@/hooks/use-debounce";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import {
   PAYROLL_LABEL,
@@ -45,6 +49,7 @@ import {
   formatMonthLabel,
   formatNumber,
   formatVnd,
+  normalizeText,
   shiftMonth,
 } from "@/lib/format";
 import { downloadPayrollCsv } from "@/lib/payroll/csv";
@@ -72,42 +77,161 @@ function toHours(minutes: number): number {
   return Math.round((minutes / 60) * 100) / 100;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Loc va sap xep                                                             */
+/* -------------------------------------------------------------------------- */
+
+/** Gia tri gia cho "chua gan phong ban" trong o chon. */
+const NO_DEPARTMENT = "__none__";
+
+type DataFilter = "all" | "incomplete" | "complete";
+
+type SortKey =
+  | "employee"
+  | "department"
+  | "workedDays"
+  | "creditedDays"
+  | "hourDelta"
+  | "totalHours"
+  | "overtime"
+  | "converted"
+  | "leave"
+  | "late"
+  | "basePay"
+  | "overtimePay"
+  | "allowance"
+  | "deduction"
+  | "netPay";
+
+const SORT_VALUE: Record<
+  SortKey,
+  (row: PayrollPrepRow) => string | number | null
+> = {
+  employee: (row) => row.employeeName,
+  department: (row) => row.departmentName,
+  workedDays: (row) => row.workedDays,
+  creditedDays: (row) => row.creditedDays,
+  hourDelta: (row) => row.hourDeltaMinutes,
+  totalHours: (row) => row.totalMinutes,
+  overtime: (row) => row.overtimeMinutes,
+  converted: (row) => row.convertedOvertimeHours,
+  leave: (row) => row.leaveDays,
+  late: (row) => row.lateCount,
+  basePay: (row) => row.basePay,
+  overtimePay: (row) => row.overtimePay,
+  allowance: (row) => row.allowanceTotal,
+  deduction: (row) => row.deductionTotal,
+  netPay: (row) => row.netPay,
+};
+
+/**
+ * DONG CHUA DU DU KIEN LUON NAM CUOI, o ca hai chieu sap xep.
+ *
+ * `null` khong phai mot gia tri nho hay lon — no la "chua biet". Cho no chay
+ * len dau khi sap tang dan se lam nguoi doc tuong day la nhung nguoi luong
+ * thap nhat, ma do la mot cau sai ve chinh nhung nguoi de bi tra thieu nhat.
+ */
+function compareRows(
+  a: PayrollPrepRow,
+  b: PayrollPrepRow,
+  sort: SortState<SortKey>,
+): number {
+  const left = SORT_VALUE[sort.key](a);
+  const right = SORT_VALUE[sort.key](b);
+  if (left === null || right === null) {
+    if (left === right) return 0;
+    return left === null ? 1 : -1;
+  }
+  const compared =
+    typeof left === "string" && typeof right === "string"
+      ? left.localeCompare(right, "vi")
+      : Number(left) - Number(right);
+  return sort.direction === "asc" ? compared : -compared;
+}
+
+/**
+ * Mot o DEM (ngay cong, gio, so lan).
+ *
+ * SO 0 LUI VE SAU. Mot bang ma moi con so cung mot mau xam thi mat khong co
+ * cho dung: nua bang la `0` khong noi gi ca, va chung dang doc to bang cac
+ * con so co nghia. Lam nhat so 0 la cach re nhat de phan con lai noi to len.
+ */
+function CountCell({
+  value,
+  tone = "default",
+}: {
+  value: number;
+  /** `alert`: con so nay la mot NGOAI LE (di muon) — dang de mat dung lai. */
+  tone?: "default" | "alert";
+}): React.ReactElement {
+  if (value === 0) {
+    return <TableCell className="num text-right text-ink-muted">0</TableCell>;
+  }
+  return (
+    <TableCell
+      className={
+        tone === "alert"
+          ? "num text-right font-medium text-warning"
+          : "num text-right text-ink-secondary"
+      }
+    >
+      {formatNumber(value)}
+    </TableCell>
+  );
+}
+
 /**
  * Mot o SO TIEN.
  *
  * `null` KHONG BAO GIO duoc hien thanh 0: mot o `0` trong bang luong doc nhu
  * MOT SU THAT ("nguoi nay khong duoc tra gi") va nguoi ky duyet se ky. O do
  * mang chu noi THIEU GI, va chu do la mot cau nguoi dung lam duoc gi voi no.
+ *
+ * Mau o day KHONG phai trang tri, no la thu tu doc: THUC NHAN dam nhat vi do
+ * la ket luan cua ca dong, KHAU TRU mang dau tru va mau canh bao vi do la
+ * tien bi tru khoi luong nguoi lao dong, so 0 lui ve sau.
  */
 function MoneyCell({
   value,
   missing,
   emphasis = false,
+  negative = false,
+  groupStart = false,
 }: {
   value: number | null;
   missing: readonly string[];
+  /** Cot THUC NHAN — ket luan cua dong, dam nhat bang. */
   emphasis?: boolean;
+  /** Cot KHAU TRU — tien bi tru, hien dau `−`. */
+  negative?: boolean;
+  /** Cot dau tien cua nhom TIEN — ke mot vach ngan voi nhom cong. */
+  groupStart?: boolean;
 }): React.ReactElement {
+  const edge = groupStart ? " border-l border-hairline" : "";
+
   if (value === null) {
     const reason =
       missing.length > 0
         ? describeMissingReason(missing[0])
         : PAYROLL_LABEL.missingReasonFallback;
     return (
-      <TableCell className="text-right">
+      <TableCell className={`text-right${edge}`}>
         <span className="text-xs font-normal text-warning">{reason}</span>
       </TableCell>
     );
   }
 
+  const tone = emphasis
+    ? "bg-brand-wash font-semibold text-ink"
+    : value === 0
+      ? "text-ink-muted"
+      : negative
+        ? "text-danger"
+        : "text-ink-secondary";
+
   return (
-    <TableCell
-      className={
-        emphasis
-          ? "num text-right font-semibold text-ink"
-          : "num text-right text-ink-secondary"
-      }
-    >
+    <TableCell className={`num text-right ${tone}${edge}`}>
+      {negative && value !== 0 ? "−" : ""}
       {formatVnd(value)}
     </TableCell>
   );
@@ -318,8 +442,78 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
     [session.companyId, month],
   );
 
+  /* ------------------------------------------------------------------ */
+  /* Loc va sap xep                                                      */
+  /*                                                                     */
+  /* Lam o phia trinh duyet, khong goi lai API: ca thang cua mot doanh    */
+  /* nghiep vua va nho chi la vai chuc dong, va loc tren du lieu da co    */
+  /* thi khong the lam bang lech voi tong o tren.                        */
+  /* ------------------------------------------------------------------ */
+  const [search, setSearch] = React.useState("");
+  const debouncedSearch = useDebounce(search, 250);
+  const [departmentFilter, setDepartmentFilter] = React.useState("all");
+  const [dataFilter, setDataFilter] = React.useState<DataFilter>("all");
+  const [sort, setSort] = React.useState<SortState<SortKey> | null>(null);
+
+  const allRows = React.useMemo(() => data?.rows ?? [], [data]);
+
+  const departmentOptions = React.useMemo(() => {
+    const names = new Set<string>();
+    let hasNone = false;
+    allRows.forEach((row) => {
+      if (row.departmentName) names.add(row.departmentName);
+      else hasNone = true;
+    });
+    const options = [...names]
+      .sort((a, b) => a.localeCompare(b, "vi"))
+      .map((name) => ({ value: name, label: name }));
+    // Nguoi chua gan phong ban van phai loc ra duoc — ho la nhom de bi bo sot
+    // nhat khi ra soat truoc luc chot.
+    return hasNone
+      ? [
+          ...options,
+          { value: NO_DEPARTMENT, label: PAYROLL_LABEL.filterNoDepartment },
+        ]
+      : options;
+  }, [allRows]);
+
+  const rows = React.useMemo(() => {
+    const keyword = normalizeText(debouncedSearch);
+    const filtered = allRows.filter((row) => {
+      if (
+        keyword !== "" &&
+        !normalizeText(`${row.employeeName} ${row.employeeCode}`).includes(keyword)
+      ) {
+        return false;
+      }
+      if (
+        departmentFilter !== "all" &&
+        (row.departmentName ?? NO_DEPARTMENT) !== departmentFilter
+      ) {
+        return false;
+      }
+      if (dataFilter === "incomplete" && row.netPay !== null) return false;
+      if (dataFilter === "complete" && row.netPay === null) return false;
+      return true;
+    });
+    // Chua chon cot nao thi giu nguyen thu tu tu API (theo ma nhan vien) —
+    // do la thu tu ke toan doi chieu voi danh sach cua ho.
+    return sort ? [...filtered].sort((a, b) => compareRows(a, b, sort)) : filtered;
+  }, [allRows, debouncedSearch, departmentFilter, dataFilter, sort]);
+
+  const hasActiveFilter =
+    search.trim() !== "" || departmentFilter !== "all" || dataFilter !== "all";
+
+  const resetFilters = (): void => {
+    setSearch("");
+    setDepartmentFilter("all");
+    setDataFilter("all");
+    setSort(null);
+  };
+
+  // Tong mo ta NHUNG DONG DANG THAY. Loc mot phong ban roi van hien tong ca
+  // ky thi con so tren man hinh khong con noi ve cai bang ben duoi no nua.
   const totals = React.useMemo(() => {
-    const rows = data?.rows ?? [];
     return {
       employees: rows.length,
       workedDays: rows.reduce((sum, row) => sum + row.workedDays, 0),
@@ -332,22 +526,29 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
       netPay: rows.reduce((sum, row) => sum + (row.netPay ?? 0), 0),
       incompleteCount: rows.filter((row) => row.netPay === null).length,
     };
-  }, [data]);
+  }, [rows]);
 
   // Dong dang mo khoi chi tiet — `null` khi khong dong nao mo.
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
 
-  const hasMissingWorkModeInput = (data?.rows ?? []).some(
+  const hasMissingWorkModeInput = allRows.some(
     (row) => row.missingWorkModeInputs.length > 0,
   );
   // Cot "Lech gio so voi ca" chi co nghia o `shift_hourly`; o hai che do con
   // lai no luon bang 0, va mot cot toan so 0 lam bang dai ra ma khong noi gi.
   const showHourDelta = data?.workMode === "shift_hourly";
 
+  // Xuat DUNG NHUNG GI DANG THAY — nguoi vua loc ra mot phong ban ma bam xuat
+  // thi mong doi tep chua dung phong ban do. Nhung im lang thi nguy hiem: cau
+  // toast noi ro tep nay khong phai ca ky.
   const handleExport = (): void => {
     if (!data) return;
-    downloadPayrollCsv(data);
-    toast.success(PAYROLL_LABEL.exportedToast);
+    downloadPayrollCsv({ ...data, rows });
+    toast.success(
+      hasActiveFilter
+        ? PAYROLL_LABEL.exportedFilteredToast.replace("{n}", String(rows.length))
+        : PAYROLL_LABEL.exportedToast,
+    );
   };
 
   /* ------------------------------------------------------------------ */
@@ -359,7 +560,9 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
   const [isPending, setIsPending] = React.useState(false);
 
   const isPayrollClosed = data?.payrollStatus === "closed";
-  const incompleteCount = totals.incompleteCount;
+  // Dem tren CA KY, khong tren cac dong dang thay: neu khong, loc bot vai dong
+  // thieu du kien di la nut "Chot luong" sang len va ky bi chot voi cho trong.
+  const incompleteCount = allRows.filter((row) => row.netPay === null).length;
   // Hai ly do khien nut bi vo hieu, moi ly do co MOT CAU noi ro phai lam gi —
   // mot nut xam im lang chi lam nguoi dung doan.
   const closeBlockedReason: string | null = !data
@@ -533,6 +736,13 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                 người chưa đủ dữ kiện)
               </span>
             ) : null}
+            {/* Sau khi loc, day khong con la tong ca ky — phai noi ra. */}
+            {hasActiveFilter ? (
+              <span className="text-ink-muted">
+                {" "}
+                {PAYROLL_LABEL.filteredSummarySuffix}
+              </span>
+            ) : null}
           </span>
         </div>
       ) : null}
@@ -566,78 +776,233 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
       ) : null}
 
       <div className="surface-card overflow-hidden">
+        {/* Thanh loc chi hien khi da co du lieu de loc — mot bo loc treo tren
+            mot bang trong chi lam nguoi dung tuong minh vua loc mat het. */}
+        {data && allRows.length > 0 ? (
+          <FilterBar
+            search={
+              <SearchInput
+                value={search}
+                onValueChange={setSearch}
+                label={PAYROLL_LABEL.searchLabel}
+                placeholder={PAYROLL_LABEL.searchPlaceholder}
+              />
+            }
+            filters={[
+              {
+                id: "payroll-filter-department",
+                label: PAYROLL_LABEL.filterDepartmentLabel,
+                value: departmentFilter,
+                allLabel: PAYROLL_LABEL.filterDepartmentAll,
+                options: departmentOptions,
+                onChange: setDepartmentFilter,
+              },
+              {
+                id: "payroll-filter-data",
+                label: PAYROLL_LABEL.filterDataLabel,
+                value: dataFilter,
+                allLabel: PAYROLL_LABEL.filterDataAll,
+                // Loc ra dung nhung dong con thieu la viec phai lam TRUOC khi
+                // chot ky — no la danh sach viec, khong phai mot bo loc cho vui.
+                options: [
+                  {
+                    value: "incomplete",
+                    label: PAYROLL_LABEL.filterDataIncomplete,
+                  },
+                  { value: "complete", label: PAYROLL_LABEL.filterDataComplete },
+                ],
+                onChange: (value) => setDataFilter(value as DataFilter),
+              },
+            ]}
+            hasActiveFilter={hasActiveFilter}
+            onReset={resetFilters}
+            trailing={
+              <p className="num text-[13px] text-ink-muted">
+                {formatNumber(rows.length)}/{formatNumber(allRows.length)} dòng
+              </p>
+            }
+          />
+        ) : null}
+
         {error ? (
           <ErrorState description={error} onRetry={reload} />
         ) : isLoading || !data ? (
           <DataTableSkeleton rows={6} columns={8} />
-        ) : data.rows.length === 0 ? (
+        ) : allRows.length === 0 ? (
           <EmptyState
             icon={Users}
             title={PAYROLL_LABEL.emptyTitle}
             description={PAYROLL_LABEL.emptyBody}
           />
+        ) : rows.length === 0 ? (
+          // Loc khong ra gi KHAC voi ky khong co ai: mot ben la bo loc qua chat,
+          // ben kia la thang khong co du lieu. Noi nham thi nguoi dung di sai
+          // huong hoan toan.
+          <EmptyState
+            icon={SearchX}
+            title={PAYROLL_LABEL.filteredEmptyTitle}
+            description={PAYROLL_LABEL.filteredEmptyBody}
+            action={
+              <Button variant="outline" onClick={resetFilters}>
+                Xóa bộ lọc
+              </Button>
+            }
+          />
         ) : (
           <div className="overflow-x-auto">
-            <Table>
+            {/* Nen bang lai de 14-16 cot vao vua mot man hinh: dem ngang hep
+                hon va tieu de duoc phep xuong dong ("Ngày công quy đổi" chiem
+                hai dong thay vi keo cot rong gap doi). O du lieu van
+                `whitespace-nowrap` — mot so tien bi ngat dong thi doc sai. */}
+            <Table className="[&_th]:px-2 [&_th]:leading-tight [&_th]:whitespace-normal [&_td]:px-2">
               <TableHeader>
+                {/* MOI cot deu sap xep duoc. Cau hoi cua nguoi lam luong luon
+                    la mot cau so sanh — "ai tang ca nhieu nhat", "ai bi tru
+                    nhieu nhat" — va cot nao cung co the la cot bi hoi.
+
+                    Cot chu mac dinh sap TANG (A-Z), cot so mac dinh sap GIAM:
+                    hoi ve mot cot so gan nhu luon la hoi "ai nhieu nhat". */}
                 <TableRow>
-                  <TableHead>{PAYROLL_LABEL.employeeColumn}</TableHead>
-                  <TableHead>{PAYROLL_LABEL.departmentColumn}</TableHead>
-                  <TableHead className="text-right">
+                  <SortableHead sortKey="employee" sort={sort} onSort={setSort}>
+                    {PAYROLL_LABEL.employeeColumn}
+                  </SortableHead>
+                  <SortableHead sortKey="department" sort={sort} onSort={setSort}>
+                    {PAYROLL_LABEL.departmentColumn}
+                  </SortableHead>
+                  <SortableHead
+                    sortKey="workedDays"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                  >
                     {PAYROLL_LABEL.workedDaysColumn}
-                  </TableHead>
+                  </SortableHead>
                   {/* Cot RIENG, khong thay the "Ngay cong": o che do
                       `daily_hours` hai con so nay khac nhau, va gop chung lai
                       se lam ke toan cong nham. */}
-                  <TableHead
-                    className="text-right"
+                  <SortableHead
+                    sortKey="creditedDays"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
                     title={PAYROLL_LABEL.creditedDaysHint}
                   >
                     {PAYROLL_LABEL.creditedDaysColumn}
-                  </TableHead>
+                  </SortableHead>
                   {showHourDelta ? (
-                    <TableHead
-                      className="text-right"
+                    <SortableHead
+                      sortKey="hourDelta"
+                      sort={sort}
+                      onSort={setSort}
+                      align="right"
+                      defaultDirection="desc"
                       title={PAYROLL_LABEL.hourDeltaHint}
                     >
                       {PAYROLL_LABEL.hourDeltaColumn}
-                    </TableHead>
+                    </SortableHead>
                   ) : null}
-                  <TableHead className="text-right">
+                  <SortableHead
+                    sortKey="totalHours"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                  >
                     {PAYROLL_LABEL.totalHoursColumn}
-                  </TableHead>
-                  <TableHead className="text-right">
+                  </SortableHead>
+                  <SortableHead
+                    sortKey="overtime"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                  >
                     {PAYROLL_LABEL.overtimeColumn}
-                  </TableHead>
-                  <TableHead className="text-right">
+                  </SortableHead>
+                  <SortableHead
+                    sortKey="converted"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                  >
                     {PAYROLL_LABEL.convertedColumn}
-                  </TableHead>
-                  <TableHead className="text-right">
+                  </SortableHead>
+                  <SortableHead
+                    sortKey="leave"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                  >
                     {PAYROLL_LABEL.leaveColumn}
-                  </TableHead>
-                  <TableHead className="text-right">
+                  </SortableHead>
+                  <SortableHead
+                    sortKey="late"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                  >
                     {PAYROLL_LABEL.lateColumn}
-                  </TableHead>
-                  {/* Cac cot TIEN, ben phai cac cot cong. */}
-                  <TableHead className="text-right">
+                  </SortableHead>
+                  {/* Cac cot TIEN, ben phai cac cot cong — vach ngan o day noi
+                      cho mat biet minh vua doi tu "cong" sang "tien". */}
+                  <SortableHead
+                    sortKey="basePay"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                    className="border-l border-hairline"
+                  >
                     {PAYROLL_LABEL.basePayColumn}
-                  </TableHead>
-                  <TableHead className="text-right">
+                  </SortableHead>
+                  <SortableHead
+                    sortKey="overtimePay"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                  >
                     {PAYROLL_LABEL.overtimePayColumn}
-                  </TableHead>
-                  <TableHead className="text-right">
+                  </SortableHead>
+                  <SortableHead
+                    sortKey="allowance"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                  >
                     {PAYROLL_LABEL.allowanceColumn}
-                  </TableHead>
-                  <TableHead className="text-right">
+                  </SortableHead>
+                  <SortableHead
+                    sortKey="deduction"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                  >
                     {PAYROLL_LABEL.deductionColumn}
-                  </TableHead>
-                  <TableHead className="text-right">
+                  </SortableHead>
+                  {/* Cot ket luan: mot mang nen rat nhat chay doc suot bang de
+                      mat tim duoc no ngay ma khong can to mau tung con so. */}
+                  <SortableHead
+                    sortKey="netPay"
+                    sort={sort}
+                    onSort={setSort}
+                    align="right"
+                    defaultDirection="desc"
+                    className="bg-brand-wash text-ink"
+                  >
                     {PAYROLL_LABEL.netPayColumn}
-                  </TableHead>
+                  </SortableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.rows.map((row) => (
+                {rows.map((row) => (
                   <React.Fragment key={row.employeeId}>
                   <TableRow
                     // (b) Bam mot dong de thay VI SAO ra con so do. Khoi chi
@@ -659,9 +1024,7 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     <TableCell className="text-ink-secondary">
                       {row.departmentName ?? "—"}
                     </TableCell>
-                    <TableCell className="num text-right text-ink-secondary">
-                      {formatNumber(row.workedDays)}
-                    </TableCell>
+                    <CountCell value={row.workedDays} />
                     <TableCell className="num text-right">
                       {row.creditedDays === null ? (
                         // Thieu mau so quy doi (D-38) — noi thang la chua
@@ -674,22 +1037,22 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                           {PAYROLL_LABEL.missingWorkModeInput}
                         </span>
                       ) : (
-                        <span className="font-medium text-ink">
+                        <span
+                          className={
+                            row.creditedDays === 0
+                              ? "text-ink-muted"
+                              : "font-medium text-ink"
+                          }
+                        >
                           {formatNumber(row.creditedDays)}
                         </span>
                       )}
                     </TableCell>
                     {showHourDelta ? (
-                      <TableCell className="num text-right text-ink-secondary">
-                        {formatNumber(toHours(row.hourDeltaMinutes))}
-                      </TableCell>
+                      <CountCell value={toHours(row.hourDeltaMinutes)} />
                     ) : null}
-                    <TableCell className="num text-right text-ink-secondary">
-                      {formatNumber(toHours(row.totalMinutes))}
-                    </TableCell>
-                    <TableCell className="num text-right text-ink-secondary">
-                      {formatNumber(toHours(row.overtimeMinutes))}
-                    </TableCell>
+                    <CountCell value={toHours(row.totalMinutes)} />
+                    <CountCell value={toHours(row.overtimeMinutes)} />
                     <TableCell className="num text-right">
                       {row.convertedOvertimeHours === null ? (
                         // D-26: thieu he so tra `null`, KHONG BAO GIO ngam lay
@@ -702,25 +1065,37 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                           {PAYROLL_LABEL.missingMultiplier}
                         </span>
                       ) : (
-                        <span className="font-medium text-ink">
+                        <span
+                          className={
+                            row.convertedOvertimeHours === 0
+                              ? "text-ink-muted"
+                              : "font-medium text-ink"
+                          }
+                        >
                           {formatNumber(row.convertedOvertimeHours)}
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="num text-right text-ink-secondary">
-                      {formatNumber(row.leaveDays)}
-                    </TableCell>
-                    <TableCell className="num text-right text-ink-secondary">
-                      {formatNumber(row.lateCount)}
-                    </TableCell>
+                    <CountCell value={row.leaveDays} />
+                    {/* Di muon la NGOAI LE — no duoc phep dung mat lai, khac
+                        voi cac cot dem con lai. */}
+                    <CountCell value={row.lateCount} tone="alert" />
 
                     {/* Nam o TIEN. Dong thieu du kien hien CHU noi thieu gi,
                         khong hien mot con so — mot o `0` doc nhu mot su that
                         va nguoi ky duyet se ky. */}
-                    <MoneyCell value={row.basePay} missing={row.missing} />
+                    <MoneyCell
+                      value={row.basePay}
+                      missing={row.missing}
+                      groupStart
+                    />
                     <MoneyCell value={row.overtimePay} missing={row.missing} />
                     <MoneyCell value={row.allowanceTotal} missing={row.missing} />
-                    <MoneyCell value={row.deductionTotal} missing={row.missing} />
+                    <MoneyCell
+                      value={row.deductionTotal}
+                      missing={row.missing}
+                      negative
+                    />
                     <MoneyCell value={row.netPay} missing={row.missing} emphasis />
                   </TableRow>
 
