@@ -118,9 +118,24 @@ export async function createEmployeeAccount(
     throw new Error("Không thể gán quyền truy cập cho tài khoản vừa tạo.");
   }
 
+  /**
+   * `pending_invite` nghia la "CHUA co tai khoan de dang nhap" — nhan hien ra
+   * man hinh la "Chưa kích hoạt tài khoản". Ngay dong nay chay xong thi dieu
+   * do khong con dung nua, nen trang thai phai di theo trong CUNG mot lan ghi:
+   * tach lam hai lan ghi se de lai mot khoang thoi gian ma ho so vua co tai
+   * khoan vua bao chua kich hoat.
+   *
+   * CHI doi tu `pending_invite`. `on_leave` va `terminated` la nhung su that
+   * NGHIEP VU doc lap voi viec co tai khoan hay khong — dat het ve `active` o
+   * day la dung mot su that de sua mot nhan hien thi, va lam bien mat viec
+   * nguoi do dang nghi hoac da nghi viec.
+   */
+  const nextStatus =
+    employee.status === "pending_invite" ? { status: "active" as const } : {};
+
   const { data: afterRow, error: updateError } = await supabase
     .from("employees")
-    .update({ user_id: newUserId })
+    .update({ user_id: newUserId, ...nextStatus })
     .eq("id", employeeId)
     .eq("company_id", companyId)
     .select("*")

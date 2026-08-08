@@ -237,3 +237,152 @@ describe("createEmployeeAccount — chan tao trung (T-02-10)", () => {
     expect(admin.auth.admin.createUser).not.toHaveBeenCalled();
   });
 });
+
+/* -------------------------------------------------------------------------- */
+/* Trang thai ho so sau khi tao tai khoan                                      */
+/* -------------------------------------------------------------------------- */
+
+/** Mot dong `employees` day du de `employeeRowSchema` parse duoc. */
+function employeeRow(
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    id: "emp-1",
+    company_id: "cty-01",
+    code: "NV023",
+    full_name: "lecuong",
+    email: "cuonglm@pamoteam.com",
+    phone: null,
+    date_of_birth: null,
+    gender: null,
+    avatar_url: null,
+    department_id: "dept-01",
+    position: null,
+    contract_type: null,
+    start_date: "2026-08-07",
+    manager_id: null,
+    shift_id: "sft-01-morning",
+    work_location: "Văn phòng chính",
+    status: "pending_invite",
+    system_role: "employee",
+    invitation_sent: true,
+    can_view_payslip: true,
+    can_check_in_remotely: false,
+    user_id: null,
+    ...overrides,
+  };
+}
+
+/**
+ * Client gia di het duong tao tai khoan: doc dong truoc, chen membership, roi
+ * cap nhat `employees`. Ghi lai payload cua `.update()` — day la thu bai test
+ * duoi day doc.
+ */
+function fakeServerSupabaseForAccountCreate(beforeRow: Record<string, unknown>): {
+  client: FakeServerClient;
+  updates: Record<string, unknown>[];
+  membershipInserts: Record<string, unknown>[];
+} {
+  const updates: Record<string, unknown>[] = [];
+  const membershipInserts: Record<string, unknown>[] = [];
+
+  const client = {
+    from: vi.fn((table: string) => {
+      if (table === "memberships") {
+        return {
+          insert: async (payload: Record<string, unknown>) => {
+            membershipInserts.push(payload);
+            return { error: null };
+          },
+        };
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            eq: () => ({
+              maybeSingle: async () => ({ data: beforeRow, error: null }),
+            }),
+          }),
+        }),
+        update: (payload: Record<string, unknown>) => {
+          updates.push(payload);
+          return {
+            eq: () => ({
+              eq: () => ({
+                select: () => ({
+                  single: async () => ({
+                    data: { ...beforeRow, ...payload },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          };
+        },
+      };
+    }),
+  };
+
+  return {
+    client: client as unknown as FakeServerClient,
+    updates,
+    membershipInserts,
+  };
+}
+
+function adminThatCreatesUser(newUserId: string): FakeAdminClient {
+  return {
+    auth: {
+      admin: {
+        createUser: vi.fn().mockResolvedValue({
+          data: { user: { id: newUserId } },
+          error: null,
+        }),
+      },
+    },
+  } as unknown as FakeAdminClient;
+}
+
+describe("createEmployeeAccount — hồ sơ thôi 'chưa kích hoạt' ngay khi có tài khoản", () => {
+  beforeEach(() => {
+    vi.mocked(getSessionContext).mockResolvedValue({
+      userId: "user-admin",
+      email: "admin@timeflow.test",
+      companyId: "cty-01",
+      role: "admin",
+      employeeId: null,
+      isPlatformAdmin: false,
+      mustChangePassword: false,
+    });
+    vi.mocked(createAdminSupabase).mockReturnValue(
+      adminThatCreatesUser("user-new"),
+    );
+  });
+
+  it("6. pending_invite -> active, cùng một lần ghi với user_id", async () => {
+    const { client, updates } = fakeServerSupabaseForAccountCreate(employeeRow());
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    await createEmployeeAccount("emp-1");
+
+    expect(updates).toHaveLength(1);
+    // Mot lan ghi duy nhat mang CA HAI cot: hai lan ghi rieng se de lai mot
+    // khoang thoi gian ma ho so co tai khoan nhung van bao "chua kich hoat".
+    expect(updates[0]).toEqual({ user_id: "user-new", status: "active" });
+  });
+
+  it("7. KHÔNG ghi đè trạng thái khác pending_invite", async () => {
+    // Nguoi dang nghi phep duoc cap tai khoan van phai giu `on_leave`. Dat
+    // cung "active" o day la dung mot su that nghiep vu de sua mot nhan hien
+    // thi — va lam bien mat viec ho dang nghi.
+    const { client, updates } = fakeServerSupabaseForAccountCreate(
+      employeeRow({ status: "on_leave" }),
+    );
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    await createEmployeeAccount("emp-1");
+
+    expect(updates).toHaveLength(1);
+    expect(updates[0]).toEqual({ user_id: "user-new" });
+  });
+});
