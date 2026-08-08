@@ -107,8 +107,13 @@ export function EmployeeForm({
    * Chi dung o `mode="edit"`. Khi bieu mau nam trong mot hop thoai, luu xong
    * phai DONG hop thoai — dieu huong sang chinh trang dang dung khong dong
    * duoc gi, va nguoi dung ngoi nhin mot bieu mau da luu roi.
+   *
+   * Nhan HO SO DA LUU: noi mo bieu mau can biet ca MOI la ca nao de quyet dinh
+   * co hoi "ap ca linh hoat cho ky chua chot" hay khong. Doc lai tu kho du lieu
+   * o do se dua vao thoi diem `invalidate()` keo xong — mot cuoc dua khong can
+   * thiet khi con so dung da nam ngay day.
    */
-  onSaved?: () => void;
+  onSaved?: (employee: Employee) => void;
 }): React.ReactElement {
   const router = useRouter();
   const { invalidate } = useDataStore();
@@ -309,7 +314,7 @@ export function EmployeeForm({
         });
         router.push("/admin/employees");
       } else if (employee) {
-        await updateEmployee(
+        const updated = await updateEmployee(
           employee.id,
           toEmployeeInput(values),
           toHoursShift(values),
@@ -321,7 +326,7 @@ export function EmployeeForm({
         // `invalidate()` o tren da keo lai du lieu moi, nen khong can dieu huong
         // de lam moi man hinh — chi can tra quyen dieu khien ve cho noi mo
         // bieu mau.
-        if (onSaved) onSaved();
+        if (onSaved) onSaved(updated);
         else router.push(`/admin/employees/${employee.id}`);
       }
     } catch (cause) {

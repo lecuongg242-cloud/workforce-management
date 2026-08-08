@@ -125,6 +125,13 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
     return { records, employees, shifts, departments };
   }, [session.companyId, month]);
 
+  // Ten ca theo dinh danh — moi dong tra cuu bang `record.shiftId`, tuc ca cua
+  // CHINH ngay do chu khong phai ca hien tai cua nhan vien.
+  const shiftNameById = React.useMemo(
+    () => new Map((data?.shifts ?? []).map((shift) => [shift.id, shift.name])),
+    [data],
+  );
+
   const breaks = React.useMemo(
     () =>
       shiftBreakInfoById(
@@ -368,6 +375,7 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
               <AttendanceRecordTable
                 records={visibleRecords}
                 employeeById={employeeById}
+                shiftNameById={shiftNameById}
                 onOpenRecord={setOpenRecordId}
               />
             </TabsContent>

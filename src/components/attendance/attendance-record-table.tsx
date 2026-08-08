@@ -30,10 +30,17 @@ import type { AttendanceRecord, Employee } from "@/lib/types/domain";
 export function AttendanceRecordTable({
   records,
   employeeById,
+  shiftNameById,
   onOpenRecord,
 }: {
   records: AttendanceRecord[];
   employeeById: Map<string, Employee>;
+  /**
+   * Ten ca theo dinh danh. Moi dong tra cuu bang `record.shiftId` — ca cua
+   * CHINH NGAY DO, khong phai ca hien tai cua nhan vien: doi ca khong sua lich
+   * su, nen mot ngay cu van mang ca cu.
+   */
+  shiftNameById: Map<string, string>;
   onOpenRecord: (recordId: string) => void;
 }): React.ReactElement {
   return (
@@ -46,6 +53,7 @@ export function AttendanceRecordTable({
             <TableHead>Vào</TableHead>
             <TableHead>Ra</TableHead>
             <TableHead className="text-right">Thời lượng lượt</TableHead>
+            <TableHead>Ca</TableHead>
             <TableHead>Trạng thái</TableHead>
             <TableHead>Nơi chấm</TableHead>
           </TableRow>
@@ -83,6 +91,9 @@ export function AttendanceRecordTable({
                   {record.checkIn === null
                     ? "—"
                     : formatDurationShort(record.workedMinutes)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-ink-muted">
+                  {shiftNameById.get(record.shiftId) ?? "—"}
                 </TableCell>
                 <TableCell>
                   <StatusBadge kind="attendance" value={record.status} size="sm" />

@@ -734,6 +734,26 @@ export const PAY_RATE_UNIT_OPTIONS = (["month", "day", "hour"] as const).map(
 /* Luong theo NGAY — dung o ca man hinh nhan vien va man hinh quan tri         */
 /* -------------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------- */
+/* Ap ca linh hoat cho ky chua chot                                            */
+/* -------------------------------------------------------------------------- */
+
+export const SHIFT_REALIGN_LABEL = {
+  title: "Cập nhật chấm công theo ca linh hoạt?",
+  /**
+   * Loi nay phai noi ro day la mot hanh dong MOT LAN do nguoi dung chu dong
+   * bam. `SETTINGS_SHIFT_LABEL.sectionDescription` dang hua "cac ban ghi da co
+   * giu nguyen cach phan loai cua ngay hom do" — cau do noi ve SUA QUY TAC cua
+   * mot ca, khac voi CHUYEN NGUOI SANG CA KHAC, nhung hai viec nam canh nhau
+   * trong dau nguoi dung.
+   */
+  confirmLabel: "Cập nhật",
+  cancelLabel: "Giữ nguyên",
+  successPrefix: "Đã cập nhật",
+  successSuffix: "ngày chấm công theo ca mới.",
+  errorFallback: "Không cập nhật được chấm công theo ca mới.",
+} as const;
+
 export const DAY_TYPE_LABEL: Record<
   "weekday" | "weekend" | "holiday",
   string

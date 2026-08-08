@@ -63,6 +63,7 @@ import {
   GENDER_LABEL,
   NOT_DECLARED,
   REQUEST_TYPE_LABEL,
+  SHIFT_REALIGN_LABEL,
   SYSTEM_ROLE_LABEL,
   WEEKDAY_LABEL,
 } from "@/lib/constants";
@@ -83,6 +84,12 @@ import { listAttendancePhotos } from "@/lib/data/attendance-photos";
 import { listDepartments } from "@/lib/data/departments";
 import { getEmployee, listAllEmployees, updateEmployee } from "@/lib/data/employees";
 import { createEmployeeAccount } from "@/lib/data/mutations/accounts";
+import {
+  applyShiftRealign,
+  previewShiftRealign,
+  type ShiftRealignPreview,
+} from "@/lib/data/mutations/shift-realign";
+import type { Employee } from "@/lib/types/domain";
 import { listRequests } from "@/lib/data/requests";
 import { listShifts } from "@/lib/data/shifts";
 import { useDataStore } from "@/lib/data/store";
@@ -100,6 +107,9 @@ export function EmployeeDetailView({
   const { invalidate } = useDataStore();
   const [isEditing, setIsEditing] = React.useState(false);
   const [confirmTerminate, setConfirmTerminate] = React.useState(false);
+  /** `null` = khong co gi de hoi. Khac rong: hop thoai chi mo khi co ngay that. */
+  const [realignPreview, setRealignPreview] =
+    React.useState<ShiftRealignPreview | null>(null);
   const [isPending, setIsPending] = React.useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = React.useState(false);
   const [newAccount, setNewAccount] = React.useState<{
@@ -176,6 +186,49 @@ export function EmployeeDetailView({
     }
   };
 
+  /**
+   * Sau khi luu ho so: neu ca MOI la ca linh hoat va con ngay cham cong cua ky
+   * CHUA CHOT dang gan ca cu, hoi nguoi dung co ap ca moi cho nhung ngay do
+   * khong.
+   *
+   * CHI hoi o chieu sang ca linh hoat. Chieu nguoc lai khong hoi va khong lam
+   * gi: tinh lai theo chieu do se bien nguoi ta thanh di muon HOI TO cho nhung
+   * ngay ma luc do ho khong he co gio moc nao de muon.
+   */
+  const offerRealign = async (updated: Employee): Promise<void> => {
+    const nextShift = shifts.find((item) => item.id === updated.shiftId);
+    if (nextShift?.kind !== "hours") return;
+
+    try {
+      const preview = await previewShiftRealign(employeeId);
+      if (preview.dayCount > 0) setRealignPreview(preview);
+    } catch {
+      // Khong hoi duoc thi thoi — day la mot loi moi, khong phai mot loi. Luu
+      // ho so DA thanh cong roi, va bao loi o day se lam nguoi dung tuong viec
+      // vua lam bi hong.
+    }
+  };
+
+  const handleRealign = async (): Promise<void> => {
+    setIsPending(true);
+    try {
+      const result = await applyShiftRealign(employeeId);
+      invalidate();
+      toast.success(
+        `${SHIFT_REALIGN_LABEL.successPrefix} ${result.dayCount} ${SHIFT_REALIGN_LABEL.successSuffix}`,
+      );
+      setRealignPreview(null);
+    } catch (cause) {
+      toast.error(
+        cause instanceof Error
+          ? cause.message
+          : SHIFT_REALIGN_LABEL.errorFallback,
+      );
+    } finally {
+      setIsPending(false);
+    }
+  };
+
   const handleTerminate = async (): Promise<void> => {
     setIsPending(true);
     try {
@@ -232,6 +285,9 @@ export function EmployeeDetailView({
   } = data;
   const department = departments.find((item) => item.id === employee.departmentId);
   const shift = shifts.find((item) => item.id === employee.shiftId);
+  // Tra ten ca cho TUNG BAN GHI. Khong dung `shift` o tren — do la ca HIEN TAI
+  // cua nhan vien, con moi ban ghi mang ca cua chinh ngay do.
+  const shiftNameById = new Map(shifts.map((item) => [item.id, item.name]));
   const manager = allEmployees.find((item) => item.id === employee.managerId);
   const isAdminRole = session.role === "owner" || session.role === "admin";
   const canCreateAccount = isAdminRole && !employee.hasAccount;
@@ -500,6 +556,12 @@ export function EmployeeDetailView({
                           duoc tru mot lan cho ca ngay, khong thuoc luot nao.
                           So gio duoc tinh cong xem o the tong hop thang. */}
                       <TableHead>Thời lượng</TableHead>
+                      {/* CA CUA CHINH NGAY DO, khong phai ca hien tai cua nhan
+                          vien. Doi ca khong sua lich su, nen mot ngay cu van
+                          mang ca cu — va khong co cot nay thi "Đi muộn" cua no
+                          doc ra nhu mot loi khi nguoi xem dang nhin ca moi o
+                          the ben canh. */}
+                      <TableHead>Ca</TableHead>
                       <TableHead>Trạng thái</TableHead>
                       <TableHead>Địa điểm</TableHead>
                       <TableHead className="text-right">Ảnh</TableHead>
@@ -521,6 +583,9 @@ export function EmployeeDetailView({
                           {record.workedMinutes > 0
                             ? formatDurationShort(record.workedMinutes)
                             : "—"}
+                        </TableCell>
+                        <TableCell className="text-ink-muted">
+                          {shiftNameById.get(record.shiftId) ?? NOT_DECLARED}
                         </TableCell>
                         <TableCell>
                           <StatusBadge
@@ -716,10 +781,30 @@ export function EmployeeDetailView({
             shifts={shifts}
             allEmployees={allEmployees}
             defaultStartDate={today}
-            onSaved={() => setIsEditing(false)}
+            onSaved={(updated) => {
+              setIsEditing(false);
+              void offerRealign(updated);
+            }}
           />
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={realignPreview !== null}
+        onOpenChange={(open) => {
+          // Bam "Giu nguyen" hoac dong hop thoai deu la mot cau tra loi: KHONG.
+          // Khong hoi lai lan hai.
+          if (!open) setRealignPreview(null);
+        }}
+        title={SHIFT_REALIGN_LABEL.title}
+        description={
+          realignPreview === null ? "" : describeRealign(realignPreview)
+        }
+        confirmLabel={SHIFT_REALIGN_LABEL.confirmLabel}
+        cancelLabel={SHIFT_REALIGN_LABEL.cancelLabel}
+        onConfirm={handleRealign}
+        isPending={isPending}
+      />
 
       <ConfirmDialog
         open={confirmTerminate}
@@ -764,6 +849,29 @@ export function EmployeeDetailView({
 }
 
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Cau mo ta cua hop thoai xac nhan.
+ *
+ * Neu ten so ngay VA so ngay dang tinh di muon: nguoi bam phai nhin thay dung
+ * thiet hai truoc khi dong y, vi so lieu nay chay thang vao bang luong.
+ *
+ * Cau cuoi noi ro day la hanh dong MOT LAN — `SETTINGS_SHIFT_LABEL` dang hua
+ * "cac ban ghi da co giu nguyen cach phan loai cua ngay hom do", va nguoi dung
+ * can biet vi sao lan nay khac.
+ */
+function describeRealign(preview: ShiftRealignPreview): string {
+  const late =
+    preview.lateDayCount > 0
+      ? `, trong đó ${preview.lateDayCount} ngày đang tính đi muộn`
+      : "";
+
+  return (
+    `Có ${preview.dayCount} ngày chấm công trong kỳ chưa chốt đang gắn ca cũ${late}. ` +
+    `Ca "${preview.shiftName}" không có giờ bắt đầu nên những ngày này sẽ thôi tính đi muộn và về sớm. ` +
+    `Ngày thuộc kỳ đã chốt không bị ảnh hưởng.`
+  );
+}
 
 function InfoCard({
   title,
