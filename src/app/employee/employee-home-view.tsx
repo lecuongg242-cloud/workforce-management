@@ -8,9 +8,6 @@ import { ErrorState } from "@/components/common/error-state";
 import { AttendanceStatusCard } from "@/components/employee-app/attendance-status-card";
 import { CameraSheet } from "@/components/employee-app/camera-sheet";
 import type { PunchSubmitResult } from "@/components/employee-app/camera-sheet";
-import { CurrentShiftCard } from "@/components/employee-app/current-shift-card";
-import { MonthSummary } from "@/components/employee-app/month-summary";
-import { QuickActions } from "@/components/employee-app/quick-actions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentGreeting } from "@/hooks/use-current-greeting";
 import { useDataQuery } from "@/hooks/use-data-query";
@@ -18,7 +15,6 @@ import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import {
   checkIn as checkInService,
   checkOut as checkOutService,
-  getMonthlySummary,
   listAttendance,
 } from "@/lib/data/attendance";
 import { getEmployee } from "@/lib/data/employees";
@@ -29,10 +25,8 @@ import type { CheckInState, PunchEvidence } from "@/lib/types/domain";
 
 export function EmployeeHomeView({
   today,
-  month,
 }: {
   today: string;
-  month: string;
 }): React.ReactElement {
   const session = useAuthenticatedSession();
   const { invalidate } = useDataStore();
@@ -51,7 +45,11 @@ export function EmployeeHomeView({
 
   const { data, isLoading, error, reload } = useDataQuery(
     async () => {
-      const [employee, shifts, todayRecords, summary] = await Promise.all([
+      // KHONG doc tong hop thang o day nua: man hinh nay chi con o cham cong,
+      // va con so cua thang da nam o tab Lich su. Mot truy van khong ai doc la
+      // mot lan cho khong can thiet ngay truoc thao tac nguoi dung mo app de
+      // lam.
+      const [employee, shifts, todayRecords] = await Promise.all([
         getEmployee(employeeId),
         listShifts(session.companyId),
         listAttendance({
@@ -59,11 +57,10 @@ export function EmployeeHomeView({
           employeeId,
           date: today,
         }),
-        getMonthlySummary(session.companyId, employeeId, month),
       ]);
-      return { employee, shifts, todayRecords, summary };
+      return { employee, shifts, todayRecords };
     },
-    [employeeId, session.companyId, today, month],
+    [employeeId, session.companyId, today],
   );
 
   const greeting = useCurrentGreeting();
@@ -196,33 +193,18 @@ export function EmployeeHomeView({
       </header>
 
       {isLoading || !data ? (
-        <>
-          <Skeleton className="h-24 w-full rounded-card" />
-          <Skeleton className="h-64 w-full rounded-card" />
-          <Skeleton className="h-40 w-full rounded-card" />
-          <Skeleton className="h-24 w-full rounded-card" />
-        </>
+        <Skeleton className="h-64 w-full rounded-card" />
       ) : (
-        <>
-          <CurrentShiftCard
-            shift={shift}
-            workLocation={data.employee?.workLocation ?? "Văn phòng chính"}
-          />
-
-          <AttendanceStatusCard
-            state={realState}
-            day={todayDay}
-            shift={shift}
-            isPending={isPending}
-            onCheckIn={handleOpenCamera}
-            onCheckOut={handleOpenCheckOut}
-            canCheckInRemotely={data.employee?.canCheckInRemotely ?? false}
-          />
-
-          <MonthSummary summary={data.summary} />
-
-          <QuickActions />
-        </>
+        <AttendanceStatusCard
+          state={realState}
+          day={todayDay}
+          shift={shift}
+          workLocation={data.employee?.workLocation ?? "Văn phòng chính"}
+          isPending={isPending}
+          onCheckIn={handleOpenCamera}
+          onCheckOut={handleOpenCheckOut}
+          canCheckInRemotely={data.employee?.canCheckInRemotely ?? false}
+        />
       )}
 
       <CameraSheet

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { LogIn, LogOut, MapPin, Timer } from "lucide-react";
+import { LogIn, LogOut, MapPin, MoonStar, Timer } from "lucide-react";
 
 import { StatusBadge } from "@/components/common/status-badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ export function AttendanceStatusCard({
   state,
   day,
   shift,
+  workLocation,
   isPending,
   onCheckIn,
   onCheckOut,
@@ -36,6 +37,12 @@ export function AttendanceStatusCard({
   state: CheckInState;
   day: AttendanceDay | null;
   shift: Shift | null;
+  /**
+   * Dia diem lam viec DUOC GAN cua nhan vien. Chi hien o trang thai "chua vao
+   * ca" — hai trang thai kia da hien dia diem CHAM CONG THAT o cuoi the, va no
+   * moi la bang chung (co the khac noi duoc gan khi nguoi ta di cong tac).
+   */
+  workLocation: string;
   isPending: boolean;
   /**
    * Khong con nhan tham so `time`: bam "Vào ca"/"Tan ca" deu CHI MO Camera
@@ -68,6 +75,40 @@ export function AttendanceStatusCard({
     : "--:--";
   const seconds = now ? `${now.getSeconds()}`.padStart(2, "0") : "--";
 
+  /**
+   * Dong TEN CA, dat ngay duoi nhan trang thai va TRUOC dong ho.
+   *
+   * Cau hoi no tra loi la "toi dang cham cong cho ca nao", nen no phai doc
+   * duoc TRUOC khi bam nut — the ca rieng truoc day nam tren cung va bi cuon
+   * qua.
+   *
+   * `shift` la `null` thi khong hien gi: nhanh "chua vao ca" da co san cau
+   * "Bạn chưa được gán ca làm việc.", va lap lai o day chi lam loang.
+   */
+  const shiftLine =
+    shift === null ? null : (
+      <p className="mt-1 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1 text-[13px] text-ink-secondary">
+        <span className="font-medium text-ink">{shift.name}</span>
+        {shift.overnight ? (
+          <StatusBadge
+            kind="custom"
+            label="Ca qua đêm"
+            tone="info"
+            icon={MoonStar}
+            size="sm"
+          />
+        ) : null}
+        {/* Dia diem DUOC GAN chi hien khi chua co dia diem cham that o cuoi
+            the — xem chu thich cua prop `workLocation`. */}
+        {state === "not_started" ? (
+          <>
+            <span className="text-ink-muted">·</span>
+            <span className="text-ink-muted">{workLocation}</span>
+          </>
+        ) : null}
+      </p>
+    );
+
   /* ------------------------------------------------ Da tan ca */
   if (state === "finished" && day) {
     const badge =
@@ -83,6 +124,9 @@ export function AttendanceStatusCard({
           <h2 className="heading-sm text-ink">Đã tan ca</h2>
           <StatusBadge kind="attendance" value={badge} size="sm" />
         </div>
+        {/* Can trai o hai trang thai co tieu de trai — `shiftLine` mac dinh can
+            giua cho nhanh "chua vao ca". */}
+        <div className="text-left [&>p]:justify-start">{shiftLine}</div>
 
         {day.punches.length > 1 ? (
           <PunchList day={day} />
@@ -148,13 +192,14 @@ export function AttendanceStatusCard({
             size="sm"
           />
         </div>
+        <div className="text-left [&>p]:justify-start">{shiftLine}</div>
 
         <p className="num display-xl mt-3 text-ink">
           {formatDuration(currentMinutes)}
         </p>
+        {/* Ten ca da nam o `shiftLine` ngay tren — khong lap lai o day. */}
         <p className="num mt-1 text-[13px] text-ink-muted">
           Vào ca lúc {formatTime(openPunch.checkIn)}
-          {shift ? ` · ${shift.name}` : ""}
         </p>
 
         {earlierMinutes > 0 ? (
@@ -213,6 +258,7 @@ export function AttendanceStatusCard({
         size="sm"
         className="mx-auto"
       />
+      {shiftLine}
 
       <p className="num display-xl mt-4 text-ink" aria-live="off">
         {clock}
