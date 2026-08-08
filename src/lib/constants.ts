@@ -1,6 +1,5 @@
 import type {
   AttendanceRejectionReason,
-  AttendanceStatus,
   CompanyRole,
   CompanySize,
   ContractType,
@@ -15,6 +14,7 @@ import type {
   SystemRole,
   WeekdayNumber,
 } from "@/lib/types/domain";
+import type { AttendanceDisplayStatus } from "@/lib/attendance/display-status";
 
 /* -------------------------------------------------------------------------- */
 /* Thuong hieu & cau hinh chung                                                */
@@ -77,7 +77,11 @@ export const GENDER_LABEL: Record<Gender, string> = {
   other: "Khác",
 };
 
-export const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {
+/**
+ * `working` la trang thai CHI TON TAI O TANG HIEN THI — khong co gia tri tuong
+ * ung trong cot `attendance_records.status`. Xem `display-status.ts`.
+ */
+export const ATTENDANCE_STATUS_LABEL: Record<AttendanceDisplayStatus, string> = {
   on_time: "Đúng giờ",
   late: "Đi muộn",
   early_leave: "Về sớm",
@@ -85,9 +89,13 @@ export const ATTENDANCE_STATUS_LABEL: Record<AttendanceStatus, string> = {
   leave_paid: "Nghỉ phép",
   leave_unpaid: "Nghỉ không phép",
   day_off: "Ngày nghỉ",
+  working: "Đang làm việc",
 };
 
-export const ATTENDANCE_STATUS_TONE: Record<AttendanceStatus, SemanticTone> = {
+export const ATTENDANCE_STATUS_TONE: Record<
+  AttendanceDisplayStatus,
+  SemanticTone
+> = {
   on_time: "success",
   late: "warning",
   early_leave: "warning",
@@ -95,6 +103,9 @@ export const ATTENDANCE_STATUS_TONE: Record<AttendanceStatus, SemanticTone> = {
   leave_paid: "info",
   leave_unpaid: "danger",
   day_off: "neutral",
+  // `brand` chu khong phai `success`: ngay chua khep lai thi chua co ket luan
+  // nao de mung. Mau thuong hieu doc ra la "dang dien ra".
+  working: "brand",
 };
 
 export const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
@@ -1016,7 +1027,7 @@ export const ADMIN_ATTENDANCE_LABEL = {
 } as const;
 
 /** Ký hiệu một ngày trong lưới tháng — CHỮ trước, màu chỉ là lớp thứ hai. */
-export const ATTENDANCE_GRID_SYMBOL: Record<AttendanceStatus, string> = {
+export const ATTENDANCE_GRID_SYMBOL: Record<AttendanceDisplayStatus, string> = {
   on_time: "✓",
   late: "M",
   early_leave: "S",
@@ -1024,6 +1035,9 @@ export const ATTENDANCE_GRID_SYMBOL: Record<AttendanceStatus, string> = {
   leave_paid: "P",
   leave_unpaid: "K",
   day_off: "·",
+  // Ba cham: ngay chua khep lai. Khac "!" (thieu gio ra) — mot cai la viec dang
+  // dien ra, cai kia la mot ngay hong can nguoi sua.
+  working: "…",
 };
 
 /**

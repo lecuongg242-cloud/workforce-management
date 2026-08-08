@@ -36,6 +36,7 @@ import {
   shiftBreakInfoById,
   type AttendanceDay,
 } from "@/lib/attendance/day";
+import { displayAttendanceStatus } from "@/lib/attendance/display-status";
 import type {
   AttendanceDayClassification,
   AttendanceStatus,
@@ -53,7 +54,14 @@ const dotClass: Record<AttendanceStatus, string> = {
   day_off: "bg-neutral-border",
 };
 
-export function HistoryView({ month: initialMonth }: { month: string }): React.ReactElement {
+export function HistoryView({
+  month: initialMonth,
+  today,
+}: {
+  month: string;
+  /** "YYYY-MM-DD" theo dong ho MAY CHU — xem `display-status.ts`. */
+  today: string;
+}): React.ReactElement {
   const session = useAuthenticatedSession();
   const employeeId = session.user.employeeId;
   const [month, setMonth] = React.useState(initialMonth);
@@ -216,6 +224,7 @@ export function HistoryView({ month: initialMonth }: { month: string }): React.R
                     day={day}
                     shiftName={shiftNames[day.shiftId] ?? "—"}
                     classification={classificationByDate.get(day.date)}
+                    today={today}
                   />
                 ))}
               </ul>
@@ -231,10 +240,13 @@ function AttendanceItem({
   day,
   shiftName,
   classification,
+  today,
 }: {
   day: AttendanceDay;
   shiftName: string;
   classification: AttendanceDayClassification | undefined;
+  /** "YYYY-MM-DD" theo dong ho MAY CHU. */
+  today: string;
 }): React.ReactElement {
   const weekday = getWeekday(day.date);
 
@@ -251,7 +263,19 @@ function AttendanceItem({
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <StatusBadge kind="attendance" value={day.status} size="sm" />
+          <StatusBadge
+            kind="attendance"
+            value={displayAttendanceStatus({
+              status: day.status,
+              // `lastCheckOut` la `null` khi luot cuoi cua ngay chua tan ca —
+              // dung dieu kien "chua cham ra" o muc CA NGAY.
+              checkIn: day.firstCheckIn,
+              checkOut: day.lastCheckOut,
+              date: day.date,
+              today,
+            })}
+            size="sm"
+          />
           {/* Loai ngay hien bang NHAN CHU, khong phai mau — va chi hien khi
               KHAC ngay thuong, de dong ngay binh thuong khong bi them nhieu. */}
           {classification && classification.dayType !== "weekday" ? (

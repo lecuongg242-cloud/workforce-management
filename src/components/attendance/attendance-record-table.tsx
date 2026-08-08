@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { displayAttendanceStatus } from "@/lib/attendance/display-status";
 import { ADMIN_ATTENDANCE_LABEL } from "@/lib/constants";
 import { formatDate, formatDurationShort, formatTime } from "@/lib/format";
 import type { AttendanceRecord, Employee } from "@/lib/types/domain";
@@ -31,6 +32,7 @@ export function AttendanceRecordTable({
   records,
   employeeById,
   shiftNameById,
+  today,
   onOpenRecord,
 }: {
   records: AttendanceRecord[];
@@ -41,6 +43,9 @@ export function AttendanceRecordTable({
    * su, nen mot ngay cu van mang ca cu.
    */
   shiftNameById: Map<string, string>;
+  /** "YYYY-MM-DD" theo dong ho MAY CHU — de phan biet "đang làm việc" voi
+   *  "thiếu giờ ra". Xem `display-status.ts`. */
+  today: string;
   onOpenRecord: (recordId: string) => void;
 }): React.ReactElement {
   return (
@@ -96,7 +101,17 @@ export function AttendanceRecordTable({
                   {shiftNameById.get(record.shiftId) ?? "—"}
                 </TableCell>
                 <TableCell>
-                  <StatusBadge kind="attendance" value={record.status} size="sm" />
+                  <StatusBadge
+                    kind="attendance"
+                    value={displayAttendanceStatus({
+                      status: record.status,
+                      checkIn: record.checkIn,
+                      checkOut: record.checkOut,
+                      date: record.date,
+                      today,
+                    })}
+                    size="sm"
+                  />
                 </TableCell>
                 <TableCell className="max-w-[14rem] truncate text-ink-secondary">
                   {record.location}

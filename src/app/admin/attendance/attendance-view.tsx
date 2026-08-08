@@ -367,6 +367,7 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
               <AttendanceMonthGrid
                 month={month}
                 rows={gridRows}
+                today={today}
                 onOpenRecord={setOpenRecordId}
               />
             </TabsContent>
@@ -376,6 +377,7 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
                 records={visibleRecords}
                 employeeById={employeeById}
                 shiftNameById={shiftNameById}
+                today={today}
                 onOpenRecord={setOpenRecordId}
               />
             </TabsContent>

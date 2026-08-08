@@ -83,6 +83,7 @@ import { getMonthlySummary, listAttendance } from "@/lib/data/attendance";
 import { listAttendancePhotos } from "@/lib/data/attendance-photos";
 import { listDepartments } from "@/lib/data/departments";
 import { getEmployee, listAllEmployees, updateEmployee } from "@/lib/data/employees";
+import { displayAttendanceStatus } from "@/lib/attendance/display-status";
 import { createEmployeeAccount } from "@/lib/data/mutations/accounts";
 import {
   applyShiftRealign,
@@ -463,7 +464,13 @@ export function EmployeeDetailView({
                       </span>
                       <StatusBadge
                         kind="attendance"
-                        value={record.status}
+                        value={displayAttendanceStatus({
+                          status: record.status,
+                          checkIn: record.checkIn,
+                          checkOut: record.checkOut,
+                          date: record.date,
+                          today,
+                        })}
                         size="sm"
                       />
                     </li>
@@ -590,7 +597,13 @@ export function EmployeeDetailView({
                         <TableCell>
                           <StatusBadge
                             kind="attendance"
-                            value={record.status}
+                            value={displayAttendanceStatus({
+                              status: record.status,
+                              checkIn: record.checkIn,
+                              checkOut: record.checkOut,
+                              date: record.date,
+                              today,
+                            })}
                             size="sm"
                           />
                         </TableCell>

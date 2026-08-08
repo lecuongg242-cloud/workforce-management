@@ -4,6 +4,7 @@ import {
   Ban,
   CalendarOff,
   CheckCircle2,
+  CircleDashed,
   CircleDot,
   Clock,
   LogOut,
@@ -26,8 +27,8 @@ import {
   SHIFT_STATUS_TONE,
   type SemanticTone,
 } from "@/lib/constants";
+import type { AttendanceDisplayStatus } from "@/lib/attendance/display-status";
 import type {
-  AttendanceStatus,
   DepartmentStatus,
   EmployeeStatus,
   RequestStatus,
@@ -56,7 +57,7 @@ const employeeIcon: Record<EmployeeStatus, LucideIcon> = {
   pending_invite: MailQuestion,
 };
 
-const attendanceIcon: Record<AttendanceStatus, LucideIcon> = {
+const attendanceIcon: Record<AttendanceDisplayStatus, LucideIcon> = {
   on_time: CheckCircle2,
   late: Clock,
   early_leave: LogOut,
@@ -64,6 +65,8 @@ const attendanceIcon: Record<AttendanceStatus, LucideIcon> = {
   leave_paid: Palmtree,
   leave_unpaid: Ban,
   day_off: CalendarOff,
+  // Vong tron dang chay — mot ngay chua khep lai, khong phai mot ket luan.
+  working: CircleDashed,
 };
 
 const requestIcon: Record<RequestStatus, LucideIcon> = {
@@ -76,7 +79,7 @@ export type StatusBadgeProps =
   | { kind: "employee"; value: EmployeeStatus; size?: BadgeSize; className?: string }
   | {
       kind: "attendance";
-      value: AttendanceStatus;
+      value: AttendanceDisplayStatus;
       size?: BadgeSize;
       className?: string;
     }

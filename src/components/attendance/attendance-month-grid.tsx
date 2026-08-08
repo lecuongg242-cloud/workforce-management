@@ -13,7 +13,11 @@ import {
 import { isoWeekday } from "@/lib/attendance/classification";
 import { formatDate, formatNumber, listMonthDates } from "@/lib/format";
 import type { AttendanceDay } from "@/lib/attendance/day";
-import type { AttendanceStatus, Employee } from "@/lib/types/domain";
+import {
+  displayAttendanceStatus,
+  type AttendanceDisplayStatus,
+} from "@/lib/attendance/display-status";
+import type { Employee } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
 /**
@@ -39,10 +43,11 @@ const toneClass: Record<SemanticTone, string> = {
 };
 
 /** Cac trang thai xuat hien trong chu giai, theo thu tu doc de hieu. */
-const LEGEND_STATUSES: AttendanceStatus[] = [
+const LEGEND_STATUSES: AttendanceDisplayStatus[] = [
   "on_time",
   "late",
   "early_leave",
+  "working",
   "missing_checkout",
   "leave_paid",
   "leave_unpaid",
@@ -58,11 +63,14 @@ export interface GridRow {
 export function AttendanceMonthGrid({
   month,
   rows,
+  today,
   onOpenRecord,
 }: {
   /** "YYYY-MM" */
   month: string;
   rows: GridRow[];
+  /** "YYYY-MM-DD" theo dong ho MAY CHU — xem `display-status.ts`. */
+  today: string;
   /** Mo bang chung cua mot luot cham cong; `null` khi ngay do khong co luot nao. */
   onOpenRecord: (recordId: string) => void;
 }): React.ReactElement {
@@ -137,16 +145,25 @@ export function AttendanceMonthGrid({
                     );
                   }
 
-                  const label = ATTENDANCE_STATUS_LABEL[day.status];
+                  // Trang thai HIEN THI, khong phai `day.status` tho: mot ngay
+                  // chua cham ra khong phai "Đúng giờ" — xem `display-status.ts`.
+                  const shown = displayAttendanceStatus({
+                    status: day.status,
+                    checkIn: day.firstCheckIn,
+                    checkOut: day.lastCheckOut,
+                    date: day.date,
+                    today,
+                  });
+                  const label = ATTENDANCE_STATUS_LABEL[shown];
                   const firstPunchId = day.punches[0]?.id ?? null;
                   const cell = (
                     <span
                       className={cn(
                         "inline-flex size-6 items-center justify-center rounded-[6px] text-[11px] font-semibold",
-                        toneClass[ATTENDANCE_STATUS_TONE[day.status]],
+                        toneClass[ATTENDANCE_STATUS_TONE[shown]],
                       )}
                     >
-                      {ATTENDANCE_GRID_SYMBOL[day.status]}
+                      {ATTENDANCE_GRID_SYMBOL[shown]}
                     </span>
                   );
 
