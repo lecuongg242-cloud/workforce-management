@@ -44,6 +44,7 @@ function classification(
     overtimeNightMinutes: 0,
     convertedOvertimeHours: 0,
     missingMultiplierKeys: [],
+    punches: [],
     workModeInputMissing: false,
     ...overrides,
   };
@@ -277,5 +278,133 @@ describe("sumDailyPay", () => {
     // Chi ngay hoan tat gop vao: 500.000
     expect(total.dayTotal).toBe(500_000);
     expect(total.missing).toEqual([]);
+  });
+});
+
+/**
+ * TIEN TANG CA THEO LUOT.
+ *
+ * Bat bien duy nhat khong duoc pha: TONG CAC LUOT BANG DUNG `overtimePay` cua
+ * ngay. Mot the ngay ma cac dong con khong cong lai thanh dong tong la mot the
+ * khong ai tin, va nguoi doc se cho rang ho bi tra thieu.
+ */
+describe("computeDailyPay — chia tiền tăng ca theo lượt", () => {
+  /** Mot luot trong ban phan loai: chi ba con so ma phep chia dung toi. */
+  function punch(overtimeMinutes: number, convertedOvertimeHours: number) {
+    return {
+      regularMinutes: 0,
+      overtimeMinutes,
+      overtimeNightMinutes: 0,
+      convertedOvertimeHours,
+    };
+  }
+
+  it("20. tổng tiền các lượt BẰNG ĐÚNG tiền tăng ca của ngày", () => {
+    // Ba luot 15/21/561 phut, he so ngay thuong x1.5 -> quy doi lan luot
+    // 0,38 / 0,53 / 14,03 gio (lam tron hai chu so, dung nhu `convertedOvertimeHours`).
+    const result = day({
+      classification: classification({
+        overtimeMinutes: 597,
+        convertedOvertimeHours: 14.93, // 597 x 1.5 / 60
+        punches: [punch(15, 0.38), punch(21, 0.53), punch(561, 14.03)],
+      }),
+    });
+
+    // 62.500 x 14,93 = 933.125
+    expect(result.overtimePay).toBe(933_125);
+    expect(result.punches.map((item) => item.overtimeMinutes)).toEqual([
+      15, 21, 561,
+    ]);
+    expect(
+      result.punches.reduce((sum, item) => sum + (item.overtimePay ?? 0), 0),
+    ).toBe(933_125);
+  });
+
+  it("21. lượt làm ĐÊM được chia nhiều hơn lượt cùng số phút làm ngày", () => {
+    // Hai luot cung 120 phut. Luot sau nam tron trong khung dem nen gio quy
+    // doi cua no lon hon (x1.5 + phu cap 0.3 = x1.8 so voi x1.5).
+    const result = day({
+      classification: classification({
+        overtimeMinutes: 240,
+        convertedOvertimeHours: 6.6, // (240x1.5 + 120x0.3) / 60
+        punches: [punch(120, 3), punch(120, 3.6)],
+      }),
+    });
+
+    const [dayShift, nightShift] = result.punches;
+    expect(nightShift.overtimePay).toBeGreaterThan(dayShift.overtimePay as number);
+    // Ty le dung bang ty le gio quy doi: 3.6 / 3 = 1,2.
+    expect(
+      (nightShift.overtimePay as number) / (dayShift.overtimePay as number),
+    ).toBeCloseTo(1.2, 5);
+  });
+
+  it("22. có MỨC TĂNG CA RIÊNG -> chia theo giờ THÔ, không theo giờ quy đổi", () => {
+    // Muc rieng thay cho toan bo he so, nen phu cap dem KHONG duoc ap. Hai luot
+    // cung 120 phut phai nhan tien BANG NHAU du gio quy doi cua chung khac nhau.
+    const result = day({
+      classification: classification({
+        overtimeMinutes: 240,
+        convertedOvertimeHours: 6.6,
+        punches: [punch(120, 3), punch(120, 3.6)],
+      }),
+      overtimeRate: { valueType: "fixed_hourly", value: 80_000 },
+    });
+
+    // 4 gio x 80.000 = 320.000
+    expect(result.overtimePay).toBe(320_000);
+    expect(result.punches.map((item) => item.overtimePay)).toEqual([
+      160_000, 160_000,
+    ]);
+  });
+
+  it("23. ngày KHÔNG tăng ca -> mọi lượt 0 đồng, và vẫn có mặt đủ", () => {
+    const result = day({
+      classification: classification({
+        punches: [punch(0, 0), punch(0, 0)],
+      }),
+    });
+
+    expect(result.punches.map((item) => item.overtimePay)).toEqual([0, 0]);
+  });
+
+  it("24. thiếu hệ số -> tiền của lượt là `null`, TUYỆT ĐỐI không phải 0 (D-26)", () => {
+    const result = day({
+      classification: classification({
+        overtimeMinutes: 120,
+        convertedOvertimeHours: null,
+        missingMultiplierKeys: ["weekday"],
+        punches: [punch(60, 0), punch(60, 0)],
+      }),
+    });
+
+    expect(result.overtimePay).toBeNull();
+    expect(result.punches.map((item) => item.overtimePay)).toEqual([null, null]);
+  });
+
+  it("25. ngày ĐANG DỞ không có lượt nào mang tiền — con số chưa tồn tại", () => {
+    const result = day({
+      hasOpenPunch: true,
+      classification: classification({
+        overtimeMinutes: 120,
+        punches: [punch(120, 3)],
+      }),
+    });
+
+    expect(result.state).toBe("in_progress");
+    expect(result.punches).toEqual([]);
+  });
+
+  it("26. kỳ đã chốt (bản chụp không có lượt) -> mảng rỗng, không phải một lượt bịa ra", () => {
+    const result = day({
+      classification: classification({
+        overtimeMinutes: 120,
+        convertedOvertimeHours: 3,
+        punches: [],
+      }),
+    });
+
+    expect(result.overtimePay).toBe(187_500); // 62.500 x 3
+    expect(result.punches).toEqual([]);
   });
 });

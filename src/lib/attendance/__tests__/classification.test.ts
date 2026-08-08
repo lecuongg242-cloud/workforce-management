@@ -7,6 +7,7 @@ import {
   nightMinutes,
   overtimeMinutes,
   overtimeNightMinutes,
+  splitPunchOvertime,
   toWorkSegments,
 } from "@/lib/attendance/classification";
 import type { WeekdayNumber } from "@/lib/types/domain";
@@ -318,5 +319,99 @@ describe("convertedOvertimeHours — cộng dồn hai lớp (D-28a)", () => {
     expect(Number(((halfNight.hours as number) - (onlyDay.hours as number)).toFixed(2))).toBe(
       0.6,
     );
+  });
+});
+
+/**
+ * TACH TANG CA THEO LUOT.
+ *
+ * Bai quan trong nhat cua nhom nay la bai doi chieu: tong cac luot phai bang
+ * dung con so cua ca ngay. Neu no lech, mot the ngay se hien ba dong khong
+ * cong lai thanh dong thu tu — va nguoi doc khong con ly do tin dong nao.
+ */
+describe("splitPunchOvertime — phần tăng ca của từng lượt", () => {
+  // Ngay trong anh chup cua nguoi dung: ca linh hoat 2 gio, ba luot.
+  const threePunches = toWorkSegments([
+    { checkIn: "09:14", checkOut: "11:29" }, // 135 phut
+    { checkIn: "11:29", checkOut: "11:50" }, // 21 phut
+    { checkIn: "11:50", checkOut: "21:11" }, // 561 phut
+  ]);
+
+  it("1. tăng ca là phần CUỐI ngày, nên nó ăn ngược từ lượt cuối lên", () => {
+    // Tong 717 phut, ca 120 phut -> tang ca 597 phut.
+    // Luot 3 (561) va luot 2 (21) vao het; luot 1 gop 597-561-21 = 15 phut.
+    const split = splitPunchOvertime({
+      segments: threePunches,
+      overtimeMinutes: 597,
+      nightStart: "22:00",
+      nightEnd: "06:00",
+    });
+
+    expect(split.map((item) => item.overtimeMinutes)).toEqual([15, 21, 561]);
+    expect(split.map((item) => item.regularMinutes)).toEqual([120, 0, 0]);
+  });
+
+  it("2. tổng các lượt BẰNG ĐÚNG số phút tăng ca của ngày", () => {
+    const split = splitPunchOvertime({
+      segments: threePunches,
+      overtimeMinutes: 597,
+      nightStart: "22:00",
+      nightEnd: "06:00",
+    });
+
+    expect(split.reduce((sum, item) => sum + item.overtimeMinutes, 0)).toBe(597);
+    // Va tong hai phan cua moi luot bang dung do dai luot do.
+    expect(
+      split.map((item) => item.regularMinutes + item.overtimeMinutes),
+    ).toEqual([135, 21, 561]);
+  });
+
+  it("3. phút đêm của các lượt cộng lại bằng `overtimeNightMinutes` của ngày", () => {
+    // Luot cuoi keo toi 21:11 nen chua cham khung dem; noi rong ra 23:30 de co
+    // phan dem that su.
+    const segments = toWorkSegments([
+      { checkIn: "09:14", checkOut: "11:29" },
+      { checkIn: "11:50", checkOut: "23:30" },
+    ]);
+    const overtime = 600;
+    const split = splitPunchOvertime({
+      segments,
+      overtimeMinutes: overtime,
+      nightStart: "22:00",
+      nightEnd: "06:00",
+    });
+
+    expect(split.reduce((sum, item) => sum + item.overtimeNightMinutes, 0)).toBe(
+      overtimeNightMinutes({
+        segments,
+        overtimeMinutes: overtime,
+        nightStart: "22:00",
+        nightEnd: "06:00",
+      }),
+    );
+  });
+
+  it("4. ngày KHÔNG tăng ca -> mọi lượt đều 0, không âm", () => {
+    const split = splitPunchOvertime({
+      segments: threePunches,
+      overtimeMinutes: 0,
+      nightStart: "22:00",
+      nightEnd: "06:00",
+    });
+
+    expect(split.every((item) => item.overtimeMinutes === 0)).toBe(true);
+    expect(split.map((item) => item.regularMinutes)).toEqual([135, 21, 561]);
+  });
+
+  it("5. ngày lễ (TOÀN BỘ giờ là tăng ca) -> không lượt nào còn giờ trong ca", () => {
+    const split = splitPunchOvertime({
+      segments: threePunches,
+      overtimeMinutes: 717,
+      nightStart: "22:00",
+      nightEnd: "06:00",
+    });
+
+    expect(split.map((item) => item.regularMinutes)).toEqual([0, 0, 0]);
+    expect(split.map((item) => item.overtimeMinutes)).toEqual([135, 21, 561]);
   });
 });

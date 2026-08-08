@@ -41,6 +41,18 @@ export const payrollDayLineSchema = z.object({
   overtimePay: z.number().nullable(),
   hourAdjustment: z.number().nullable(),
   dayTotal: z.number().nullable(),
+  // Tien tang ca theo LUOT. `.default([])` chu khong `.optional()`: ky DA CHOT
+  // khong co du lieu nay (ban chup luu theo ngay), va man hinh nen nhan mot
+  // mang rong thay vi phai xu ly them mot truong `undefined`.
+  punches: z
+    .array(
+      z.object({
+        index: z.number().int(),
+        overtimeMinutes: z.number().int(),
+        overtimePay: z.number().nullable(),
+      }),
+    )
+    .default([]),
   missing: z.array(z.string()),
 });
 

@@ -221,14 +221,6 @@ export function PayslipDetailView({
                 label="Giờ tăng ca"
                 value={formatDurationShort(data.overtimeMinutes)}
               />
-              <Row
-                label="Giờ tăng ca quy đổi"
-                value={
-                  data.convertedOvertimeHours === null
-                    ? "—"
-                    : `${formatNumber(data.convertedOvertimeHours)} giờ`
-                }
-              />
             </dl>
             <p className="mt-3 text-[12px] text-ink-muted">
               {data.status === "closed"

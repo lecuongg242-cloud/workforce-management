@@ -207,12 +207,36 @@ export function overtimeMinutes({
 }
 
 /**
- * Phan phut tang ca NAM TRONG khung gio dem.
+ * PHAN TANG CA CUA TUNG DOAN, giu nguyen chi so cua `segments`.
  *
  * Tang ca duoc coi la phan CUOI cua thoi gian lam viec trong ngay — nguoi ta
  * o lai lam them sau khi da lam du ca, khong phai lam them trong luc dang lam
- * ca. Vi vay ham nay cat lay `overtimeMinutes` phut CUOI CUNG cua chuoi doan
- * roi moi giao voi khung dem.
+ * ca. Vi vay ham nay cat lay `overtime` phut CUOI CUNG cua chuoi doan, di
+ * nguoc tu doan cuoi; doan nao khong dinh gi toi phan duoi cung tra `null`.
+ *
+ * DAY LA DINH NGHIA DUY NHAT cua "phut nao la phut tang ca". Ca phep tinh phut
+ * tang ca ban dem lan phep chia tien tang ca theo luot deu doc tu day, nen
+ * khong the co chuyen mot phut duoc tinh la tang ca o phep nay va khong o phep
+ * kia.
+ */
+function overtimeTail(
+  segments: readonly WorkSegment[],
+  overtime: number,
+): (WorkSegment | null)[] {
+  const tail: (WorkSegment | null)[] = segments.map(() => null);
+  let remaining = overtime;
+  for (let index = segments.length - 1; index >= 0 && remaining > 0; index -= 1) {
+    const segment = segments[index];
+    const length = segment.end - segment.start;
+    const take = Math.min(length, remaining);
+    tail[index] = { start: segment.end - take, end: segment.end };
+    remaining -= take;
+  }
+  return tail;
+}
+
+/**
+ * Phan phut tang ca NAM TRONG khung gio dem.
  *
  * VI SAO KHONG DUNG `Math.min(nightMinutes, overtimeMinutes)`: mot ca dem
  * 22:00-06:00 lam den 08:00 co 480 phut dem nhung phan tang ca (06:00-08:00)
@@ -232,18 +256,61 @@ export function overtimeNightMinutes({
 }): number {
   if (overtime <= 0) return 0;
 
-  // Cat lay `overtime` phut cuoi cung cua chuoi doan, di nguoc tu doan cuoi.
-  const tail: WorkSegment[] = [];
-  let remaining = overtime;
-  for (let index = segments.length - 1; index >= 0 && remaining > 0; index -= 1) {
-    const segment = segments[index];
-    const length = segment.end - segment.start;
-    const take = Math.min(length, remaining);
-    tail.unshift({ start: segment.end - take, end: segment.end });
-    remaining -= take;
-  }
-
+  const tail = overtimeTail(segments, overtime).filter(
+    (part): part is WorkSegment => part !== null,
+  );
   return nightMinutes({ segments: tail, nightStart, nightEnd });
+}
+
+/** Phan tang ca cua MOT luot cham cong. */
+export interface PunchOvertimeSplit {
+  /** Phut cua luot KHONG phai tang ca. */
+  regularMinutes: number;
+  overtimeMinutes: number;
+  /** Phan tang ca cua luot nay roi vao khung gio dem. */
+  overtimeNightMinutes: number;
+}
+
+/**
+ * Tach TUNG DOAN thanh phan trong ca va phan tang ca.
+ *
+ * Tra ve mot phan tu cho MOI doan, dung thu tu — noi goi anh xa nguoc ve luot
+ * cua minh bang chi so. Tong `overtimeMinutes` cua ket qua bang dung tham so
+ * `overtimeMinutes` truyen vao (tru khi tong do dai cac doan con nho hon no,
+ * luc ay lay het), va tong `overtimeNightMinutes` bang dung
+ * `overtimeNightMinutes()` cua cung mot ngay — hai ham dung chung `overtimeTail`.
+ *
+ * LUU Y VE GIO NGHI: `overtimeMinutes` cua mot ngay duoc tinh tu so phut DA TRU
+ * gio nghi, con cac doan o day la THO. Nen `regularMinutes` cong lai co the lon
+ * hon so gio duoc tinh cong cua ngay dung bang so phut nghi. Phan tang ca thi
+ * khong bi anh huong — no la phan cuoi, va gio nghi khong bao gio nam o cuoi
+ * ngay. Day cung la ly do chi PHAN TANG CA duoc dung de chia tien.
+ */
+export function splitPunchOvertime({
+  segments,
+  overtimeMinutes: overtime,
+  nightStart,
+  nightEnd,
+}: {
+  segments: readonly WorkSegment[];
+  overtimeMinutes: number;
+  nightStart: string;
+  nightEnd: string;
+}): PunchOvertimeSplit[] {
+  const tail = overtime > 0 ? overtimeTail(segments, overtime) : segments.map(() => null);
+
+  return segments.map((segment, index) => {
+    const part = tail[index];
+    const overtimeOfPunch = part === null ? 0 : part.end - part.start;
+    return {
+      regularMinutes: segment.end - segment.start - overtimeOfPunch,
+      overtimeMinutes: overtimeOfPunch,
+      overtimeNightMinutes:
+        part === null
+          ? 0
+          : nightMinutes({ segments: [part], nightStart, nightEnd }),
+    };
+  });
 }
 
 /* -------------------------------------------------------------------------- */

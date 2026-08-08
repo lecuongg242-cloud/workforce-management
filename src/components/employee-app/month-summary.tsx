@@ -1,17 +1,18 @@
 import * as React from "react";
 
-import { OVERTIME_DISCLAIMER, OVERTIME_DISPLAY_LABEL } from "@/lib/constants";
+import { OVERTIME_DISPLAY_LABEL } from "@/lib/constants";
 import { formatDurationShort, formatMonthLabel, formatNumber } from "@/lib/format";
 import type { MonthlySummary } from "@/lib/types/domain";
+import { cn } from "@/lib/utils";
 
 /**
- * Bon o tong hop cong trong thang, cong hai o tang ca khi duong doc co mang
- * so lieu quy doi (SET-04, plan 04-05).
+ * Bon o tong hop cong trong thang, cong mot o gio tang ca khi duong doc co
+ * mang so lieu do (SET-04, plan 04-05).
  *
- * QUY TAC KHONG DUOC PHA: khi `convertedOvertimeHours` la `null` (doanh
- * nghiep chua khai he so — D-26) thi o "Quy doi" hien "Chua khai he so", KHONG
- * hien so 0. So 0 noi voi nhan vien rang ho khong co gio tang ca nao, khac han
- * voi "he thong chua biet quy doi the nao".
+ * KHONG CON O "QUY DOI". Gio quy doi van duoc tinh va van la duong ra tien tang
+ * ca, nhung no la mot buoc TRUNG GIAN: nhan vien can biet minh tang ca bao
+ * nhieu gio, va bay nhieu gio do ra bao nhieu tien — con so o giua chi lam ho
+ * phai tu nhan. Phan tien nam o the tung ngay cua man Lich su.
  */
 export function MonthSummary({
   summary,
@@ -22,7 +23,6 @@ export function MonthSummary({
 }): React.ReactElement {
   const overtimeMinutes = summary.overtimeMinutes ?? 0;
   const hasOvertimeData = summary.overtimeMinutes !== undefined;
-  const converted = summary.convertedOvertimeHours;
 
   const items = [
     { label: "Ngày công", value: formatNumber(summary.workedDays) },
@@ -36,13 +36,6 @@ export function MonthSummary({
             value:
               overtimeMinutes > 0 ? formatDurationShort(overtimeMinutes) : "—",
           },
-          {
-            label: OVERTIME_DISPLAY_LABEL.overtimeConvertedLabel,
-            value:
-              converted === null || converted === undefined
-                ? OVERTIME_DISPLAY_LABEL.notDeclared
-                : `${formatNumber(converted)} giờ`,
-          },
         ]
       : []),
   ];
@@ -53,10 +46,18 @@ export function MonthSummary({
         {title ?? formatMonthLabel(summary.month)}
       </h2>
       <dl className="mt-3 grid grid-cols-2 gap-2.5">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <div
             key={item.label}
-            className="rounded-control border border-hairline bg-canvas-soft px-3 py-2.5"
+            className={cn(
+              "rounded-control border border-hairline bg-canvas-soft px-3 py-2.5",
+              // O LE CUOI CUNG chiem tron hang. So o thay doi theo duong doc
+              // (bon o, hoac nam o khi co so lieu tang ca), nen mot o mo coi o
+              // goc phai la truong hop CO THAT chu khong phai gia thiet — va no
+              // doc ra nhu mot cho bi thieu mat mot con so.
+              index === items.length - 1 && items.length % 2 === 1 &&
+                "col-span-2",
+            )}
           >
             <dt className="text-[11px] leading-tight text-ink-muted">
               {item.label}
@@ -67,13 +68,6 @@ export function MonthSummary({
           </div>
         ))}
       </dl>
-      {/* Gioi han D-28a noi bang chu ngay canh con so, khong de nguoi doc tu
-          suy ra: con so nay la SO LIEU CONG, chua phai can cu tra luong. */}
-      {hasOvertimeData ? (
-        <p className="mt-2.5 text-[11px] leading-snug text-ink-muted">
-          {OVERTIME_DISCLAIMER}
-        </p>
-      ) : null}
     </section>
   );
 }

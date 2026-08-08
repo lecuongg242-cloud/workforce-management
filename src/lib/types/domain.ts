@@ -753,6 +753,22 @@ export interface AttendanceDayClassification {
   /** `null` nghia la THIEU HE SO (D-26), khong phai "khong co tang ca". */
   convertedOvertimeHours: number | null;
   missingMultiplierKeys: OvertimeRuleKey[];
+  /**
+   * Phan tang ca cua TUNG LUOT, cung so luong va cung thu tu voi cac luot cua
+   * ngay do — noi goi ghep lai bang chi so. Luot chua tan ca la mot phan tu
+   * toan 0 chu khong bi bo di, neu khong moi luot sau no se lech mot bac.
+   */
+  punches: AttendancePunchClassification[];
+}
+
+/** Phan tang ca cua mot luot trong ngay. */
+export interface AttendancePunchClassification {
+  /** Phut cua luot KHONG phai tang ca. */
+  regularMinutes: number;
+  overtimeMinutes: number;
+  overtimeNightMinutes: number;
+  /** `null` khi thieu he so (D-26) — cung y nghia voi truong cung ten cua ngay. */
+  convertedOvertimeHours: number | null;
 }
 
 export interface MonthlySummary {
@@ -897,7 +913,28 @@ export interface PayrollDayLine {
   hourAdjustment: number | null;
   /** Tong ba con so tien DA LAM TRON o tren. */
   dayTotal: number | null;
+  /**
+   * Tien tang ca cua TUNG LUOT trong ngay; tong bang dung `overtimePay`.
+   *
+   * RONG o ky DA CHOT: ban chup `payroll_line_days` luu theo NGAY, khong co
+   * dong nao theo luot. Man hinh phai chiu duoc mang rong thay vi coi do la
+   * "ngay khong co tang ca".
+   *
+   * KHONG CO luong co ban theo luot, va do khong phai mot truong con thieu: o
+   * che do `shift`, luong co ban la tien cua mot NGAY CONG — mot khoan phang
+   * khong thuoc ve luot nao. Xem `DailyPunchPay` o `compute-daily.ts`.
+   */
+  punches: PayrollPunchPay[];
   missing: string[];
+}
+
+/** Tien tang ca cua mot luot trong mot dong luong theo ngay. */
+export interface PayrollPunchPay {
+  /** Chi so cua luot trong ngay, theo thu tu gio vao. */
+  index: number;
+  overtimeMinutes: number;
+  /** `null` khi tien tang ca cua ca ngay chua tinh duoc. */
+  overtimePay: number | null;
 }
 
 /** Mot khoan da quy ra tien trong mot dong luong. */

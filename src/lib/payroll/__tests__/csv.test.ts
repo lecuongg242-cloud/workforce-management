@@ -82,18 +82,17 @@ const COL = {
   totalHours: 5,
   overtimeHours: 6,
   overtimeNightHours: 7,
-  convertedHours: 8,
-  leaveDays: 9,
-  lateCount: 10,
-  basePay: 11,
-  overtimePay: 12,
-  hourAdjustment: 13,
-  allowance: 14,
-  deduction: 15,
-  netPay: 16,
+  leaveDays: 8,
+  lateCount: 9,
+  basePay: 10,
+  overtimePay: 11,
+  hourAdjustment: 12,
+  allowance: 13,
+  deduction: 14,
+  netPay: 15,
 } as const;
 
-const COLUMN_COUNT = 17;
+const COLUMN_COUNT = 16;
 
 describe("buildPayrollCsv — định dạng cho Excel vi-VN", () => {
   it("1. tách cột bằng dấu CHẤM PHẨY, không phải dấu phẩy", () => {
@@ -112,19 +111,19 @@ describe("buildPayrollCsv — định dạng cho Excel vi-VN", () => {
     // 10 080 phut = 168 gio (tron), 510 phut = 8,5 gio.
     expect(cells[COL.totalHours]).toBe("168");
     expect(cells[COL.overtimeHours]).toBe("8,5");
-    expect(cells[COL.convertedHours]).toBe("12,75");
     expect(csv).not.toContain("8.5");
   });
 
-  it("3. thiếu hệ số xuất thành CHỮ, không thành số 0 (D-26)", () => {
-    const csv = buildPayrollCsv(
-      prep([row({ convertedOvertimeHours: null, missingMultiplierKeys: ["holiday"] })]),
-    );
-    const cells = csv.split("\r\n")[1].split(";");
+  it("3. KHÔNG còn cột giờ quy đổi — số giờ tăng ca đi thẳng tới số tiền", () => {
+    const csv = buildPayrollCsv(prep([row()]));
+    const header = csv.split("\r\n")[0];
 
-    expect(cells[COL.convertedHours]).toBe("chưa khai hệ số");
-    // Mot o `0` trong tep gui cho ke toan la mot lo lang khong ai doc ra.
-    expect(cells[COL.convertedHours]).not.toBe("0");
+    expect(header).not.toContain("Giờ quy đổi");
+    // Con so quy doi VAN duoc tinh va van la duong ra tien tang ca — no chi
+    // khong con la mot cot ma nguoi nhan phai tu nhan tay.
+    expect(csv).not.toContain("12,75");
+    // Va D-26 khong mat theo cot do: xem bai 13.
+    expect(header).toContain("Giờ tăng ca");
   });
 
   it("4. giữ nguyên số dòng: một dòng tiêu đề + một dòng mỗi nhân viên", () => {

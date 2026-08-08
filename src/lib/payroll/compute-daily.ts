@@ -127,6 +127,24 @@ export interface DailyPayRates {
 /** Mot ngay (so lieu cong) cong voi phan gia cua ky. */
 export type DailyPayInput = DailyPaySource & DailyPayRates;
 
+/**
+ * TIEN TANG CA CUA MOT LUOT.
+ *
+ * CHI CO TIEN TANG CA, khong co luong co ban. O che do `shift` — che do moi
+ * doanh nghiep dang chay — luong co ban la tien cua MOT NGAY CONG, mot khoan
+ * phang khong tang theo so gio. Chia no cho ba luot la bia ra mot con so:
+ * khong co cau tra loi dung nao cho "luong co ban cua luot dai 21 phut". Tien
+ * tang ca thi nguoc lai — no ra tu chinh so phut cua luot do, nen chia duoc
+ * chinh xac den tung dong.
+ */
+export interface DailyPunchPay {
+  /** Chi so cua luot trong `day.punches` — de noi goi ghep lai khong phai doan. */
+  index: number;
+  overtimeMinutes: number;
+  /** `null` khi tien tang ca cua ca ngay chua tinh duoc. */
+  overtimePay: number | null;
+}
+
 export interface DailyPayLine {
   date: string;
   dayType: WorkDayType;
@@ -143,6 +161,12 @@ export interface DailyPayLine {
   hourAdjustment: number | null;
   /** Tong ba con so DA LAM TRON o tren. */
   dayTotal: number | null;
+  /**
+   * Tien tang ca cua tung luot. RONG khi ngay do khong co tang ca, va rong khi
+   * ban phan loai khong mang theo phan tach luot (ky da chot doc tu ban chup —
+   * xem `payroll_line_days`, no luu theo NGAY chu khong theo luot).
+   */
+  punches: DailyPunchPay[];
   missing: PayrollMissingInput[];
 }
 
@@ -157,6 +181,55 @@ export interface DailyPaySum {
 /** Lam tron TOI DONG, nua len — cung phep voi `compute.ts`. */
 function roundToDong(value: number): number {
   return Math.round(value);
+}
+
+/**
+ * Chia TIEN TANG CA CUA MOT NGAY ve tung luot theo trong so.
+ *
+ * HAI RANG BUOC, va rang buoc thu hai la ly do ham nay ton tai thay vi mot
+ * phep nhan viet thang o noi goi:
+ *
+ * (1) TONG CAC LUOT BANG DUNG TIEN CUA NGAY. Lam tron tung luot roi cong lai
+ *     gan nhu luon lech vai dong so voi con so cua ngay — va mot the ngay ma
+ *     ba dong con khong cong lai thanh dong thu tu la mot the khong ai tin.
+ *     Vi vay luot CUOI CUNG nhan phan con lai chu khong nhan phep nhan cua no.
+ *
+ * (2) TRONG SO KHONG DUOC LA SO PHUT THO khi co phu cap dem — xem chu thich
+ *     cua `PunchClassification`. Noi goi chon trong so cho khop voi CHINH cach
+ *     tien tang ca cua ngay duoc tinh ra.
+ *
+ * Tong trong so bang 0 (co tang ca nhung moi trong so deu 0) tra ve tien 0 cho
+ * moi luot — khong chia cho 0, va khong bo mat dong nao vi khi ay tien cua
+ * ngay cung bang 0.
+ */
+function allocateOvertimePay({
+  weights,
+  total,
+}: {
+  weights: readonly number[];
+  total: number;
+}): number[] {
+  const sum = weights.reduce((acc, weight) => acc + weight, 0);
+  if (sum <= 0) return weights.map(() => 0);
+
+  const allocated = weights.map((weight) => roundToDong((total * weight) / sum));
+  // Chi so cua luot cuoi CO trong so — dồn phan du vao mot luot khong tang ca
+  // se lam hien ra mot khoan tien ben canh chu "khong tang ca".
+  let lastIndex = -1;
+  for (let index = weights.length - 1; index >= 0; index -= 1) {
+    if (weights[index] > 0) {
+      lastIndex = index;
+      break;
+    }
+  }
+  if (lastIndex >= 0) {
+    const others = allocated.reduce(
+      (acc, value, index) => (index === lastIndex ? acc : acc + value),
+      0,
+    );
+    allocated[lastIndex] = total - others;
+  }
+  return allocated;
 }
 
 function stateOf({
@@ -210,6 +283,7 @@ export function computeDailyPay({
       overtimePay: null,
       hourAdjustment: null,
       dayTotal: null,
+      punches: [],
       missing: [],
     };
   }
@@ -285,12 +359,42 @@ export function computeDailyPay({
       ? null
       : basePay + overtimePay + hourAdjustment;
 
+  /* ------------------------------------------------------------------ */
+  /* Tien tang ca theo TUNG LUOT                                          */
+  /* ------------------------------------------------------------------ */
+  // TRONG SO PHAI KHOP VOI CHINH PHEP TINH O TREN, khong phai voi mot y niem
+  // chung ve "luot nay lam nhieu hon". Hai duong tinh tien tang ca dung hai dai
+  // luong khac nhau:
+  //
+  //   duong cu (khong co muc rieng) -> GIO QUY DOI, da mang he so loai ngay
+  //                                    va phu cap dem
+  //   co muc rieng                  -> GIO THO, vi muc rieng thay cho toan bo
+  //                                    he so (xem nhanh tinh `overtimePayExact`)
+  //
+  // Dung nham mot trong hai se chia lech giua cac luot dung o cho no quan trong
+  // nhat: mot nguoi lam dem se thay tien cua minh chay sang luot ban ngay.
+  const punchSources = classification.punches ?? [];
+  const weights = punchSources.map((punch) =>
+    overtimeRate === null ? (punch.convertedOvertimeHours ?? 0) : punch.overtimeMinutes,
+  );
+  const shares =
+    overtimePay === null
+      ? null
+      : allocateOvertimePay({ weights, total: overtimePay });
+
+  const punches: DailyPunchPay[] = punchSources.map((punch, index) => ({
+    index,
+    overtimeMinutes: punch.overtimeMinutes,
+    overtimePay: shares === null ? null : shares[index],
+  }));
+
   return {
     ...shared,
     basePay,
     overtimePay,
     hourAdjustment,
     dayTotal,
+    punches,
     missing: Array.from(missing),
   };
 }

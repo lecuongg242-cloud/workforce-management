@@ -799,6 +799,24 @@ export const PAYSLIP_DAILY_LABEL = {
 } as const;
 
 /**
+ * Khối TIỀN CỦA MỘT NGÀY tách theo từng khoản (`DayPayBreakdown`).
+ *
+ * Tách riêng khỏi `PAYSLIP_DAILY_LABEL` vì khối này còn dùng ở màn Lịch sử chấm
+ * công — một màn hình không nói gì về phiếu lương. Dùng chung một hằng số sẽ
+ * kéo cả nhãn "Tổng các ngày", "Chưa chốt lương" sang một chỗ chúng vô nghĩa.
+ *
+ * `inProgress` cố ý trùng chữ với `PAYSLIP_DAILY_LABEL.inProgress`: cùng một
+ * trạng thái thì phải đọc ra cùng một câu ở mọi màn hình.
+ */
+export const DAY_PAY_LABEL = {
+  basePay: "Lương cơ bản",
+  overtimePay: "Lương tăng ca",
+  hourAdjustment: "Chênh lệch giờ công",
+  dayTotal: "Cả ngày",
+  inProgress: "Đang diễn ra — chưa tính tiền",
+} as const;
+
+/**
  * Tab "Thông tin lương" ở hồ sơ nhân viên.
  *
  * `appendOnlyNote` là câu quan trọng nhất khối này: màn hình không có nút sửa
@@ -847,9 +865,9 @@ export const EMPLOYEE_OVERTIME_RATE_LABEL = {
   fieldEffectiveFrom: "Hiệu lực từ ngày",
   // Hệ quả PHẢI nói trước khi bấm lưu: mức riêng ăn trọn cả bốn loại ngày.
   scopeWarning:
-    "Mức này áp cho MỌI giờ tăng ca của người này — cả ngày thường, ngày nghỉ, ngày lễ và ca đêm — thay cho toàn bộ hệ số theo loại ngày của doanh nghiệp.",
+    "",
   legalNote:
-    "Điều 98 Bộ luật Lao động quy định tăng ca tối thiểu 150% ngày thường, 200% ngày nghỉ, 300% ngày lễ. Hệ thống không chặn con số thấp hơn, nhưng đây là điều thanh tra sẽ hỏi.",
+    "",
   retroWarning:
     "Ngày hiệu lực nằm trong quá khứ. Mức này sẽ áp cho cả những ngày đã qua kể từ ngày đó — hãy chắc chắn đó là điều bạn muốn.",
   cancel: "Huỷ",
@@ -1061,13 +1079,8 @@ export const PAYROLL_LABEL = {
   workedDaysColumn: "Ngày công",
   totalHoursColumn: "Giờ làm",
   overtimeColumn: "Giờ tăng ca",
-  convertedColumn: "Giờ quy đổi",
   leaveColumn: "Ngày nghỉ phép",
   lateColumn: "Lần đi muộn",
-  // D-26: thiếu hệ số trả `null`, không bao giờ ngầm lấy 1.0.
-  missingMultiplier: "chưa khai hệ số",
-  missingMultiplierHint:
-    "Doanh nghiệp chưa khai hệ số tăng ca cho loại ngày tương ứng, nên giờ quy đổi chưa tính được. Khai ở tab Tăng ca của trang Cài đặt.",
   emptyTitle: "Chưa có nhân viên nào để tổng hợp",
   emptyBody: "Tháng này chưa có nhân viên nào đang làm việc hoặc có bản ghi công.",
   // D-36/D-39 (plan 05-2-02). "Ngày công quy đổi" là một cột KHÁC với "Ngày
@@ -1117,7 +1130,8 @@ export const PAYROLL_LABEL = {
   detailBasisDaySuffix: "ngày công quy đổi",
   detailBaseLabel: "Lương gốc",
   // Người có mức tăng ca riêng: nói rõ tiền tăng ca ra từ đâu, vì cột "Giờ
-  // quy đổi" của họ vẫn là con số theo hệ số CHUNG của doanh nghiệp.
+  // tăng ca" của họ không đủ giải thích con số — số giờ giống mọi người mà
+  // tiền lại khác.
   detailOvertimeRateLabel: "Tăng ca tính theo mức riêng",
   detailOvertimeLabel: "Tiền tăng ca",
   detailHourAdjustmentLabel: "Cộng/trừ theo giờ thực tế",
@@ -1412,12 +1426,13 @@ export const SETTINGS_OVERTIME_LABEL = {
 } as const;
 
 /**
- * Câu giới hạn D-28, dùng chung ở mọi nơi hiển thị giờ quy đổi (tab Tăng ca,
- * màn hình chấm công của quản trị, tổng hợp tháng của nhân viên). Một hằng số
- * duy nhất để ba nơi không bao giờ nói ba câu khác nhau.
+ * Câu giới hạn D-28. Từ khi giờ quy đổi không còn hiện ở màn hình nào, câu này
+ * chỉ còn một nơi dùng — tab Tăng ca của trang Cài đặt, nơi hệ số được khai.
+ * Vẫn giữ là hằng số riêng: đây là giới hạn nghiệp vụ của cả hệ thống, không
+ * phải một dòng chữ của một tab, và nơi thứ hai cần nó sẽ còn xuất hiện.
  */
 export const OVERTIME_DISCLAIMER =
-  "Giờ quy đổi là số liệu công theo quy tắc doanh nghiệp đã khai, chưa phải căn cứ tính lương theo luật lao động.";
+  "Hệ số ở đây là quy tắc doanh nghiệp tự khai, chưa phải căn cứ tính lương theo luật lao động.";
 
 /** Nhãn ba loại ngày công (SET-04). Enum giữ tiếng Anh theo quy ước dự án. */
 export const WORK_DAY_TYPE_LABEL: Record<
@@ -1430,17 +1445,23 @@ export const WORK_DAY_TYPE_LABEL: Record<
 };
 
 /**
- * Hiển thị giờ tăng ca quy đổi (SET-04, plan 04-05).
+ * Hiển thị giờ tăng ca (SET-04, plan 04-05).
  *
- * `notDeclared` được dùng ở MỌI nơi hiển thị giờ quy đổi khi doanh nghiệp chưa
- * khai hệ số — không nơi nào được hiện số 0 thay cho nó. Số 0 nói với nhân
- * viên rằng họ không có giờ tăng ca nào, đó là một lời nói dối khác hẳn với
- * "hệ thống chưa biết quy đổi thế nào".
+ * GIỜ QUY ĐỔI KHÔNG CÒN HIỆN Ở BẤT KỲ MÀN HÌNH NÀO. Nó vẫn được tính và vẫn
+ * được lưu vào bản chốt lương — nó là đường ra tiền tăng ca — nhưng người đọc
+ * chỉ cần hai con số: bao nhiêu giờ tăng ca, và bấy nhiêu giờ ra bao nhiêu
+ * tiền. Một cột trung gian giữa hai con số đó chỉ làm người ta phải tự nhân.
+ *
+ * `regularLabel` và `overtimeRawLabel` luôn đi cặp: tổng của chúng bằng đúng
+ * tổng giờ làm của ngày, nên hiện một cái mà giấu cái kia sẽ làm người đọc
+ * tưởng một trong hai con số bị sai.
  */
 export const OVERTIME_DISPLAY_LABEL = {
+  regularLabel: "Trong ca",
+  /** Đứng một mình (ô tổng hợp tháng) — cần chữ "Giờ" để biết đơn vị. */
   overtimeRawLabel: "Giờ tăng ca",
-  overtimeConvertedLabel: "Quy đổi",
-  notDeclared: "Chưa khai hệ số",
+  /** Đi cặp với `regularLabel`, nơi đơn vị đã rõ từ vế bên cạnh. */
+  overtimeShortLabel: "Tăng ca",
   notDeclaredAction: "Khai hệ số tăng ca",
   nightPortionPrefix: "trong đó",
   nightPortionSuffix: "giờ đêm",

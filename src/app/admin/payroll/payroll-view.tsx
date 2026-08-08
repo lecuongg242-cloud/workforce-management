@@ -95,7 +95,6 @@ type SortKey =
   | "hourDelta"
   | "totalHours"
   | "overtime"
-  | "converted"
   | "leave"
   | "late"
   | "basePay"
@@ -115,7 +114,6 @@ const SORT_VALUE: Record<
   hourDelta: (row) => row.hourDeltaMinutes,
   totalHours: (row) => row.totalMinutes,
   overtime: (row) => row.overtimeMinutes,
-  converted: (row) => row.convertedOvertimeHours,
   leave: (row) => row.leaveDays,
   late: (row) => row.lateCount,
   basePay: (row) => row.basePay,
@@ -801,15 +799,6 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     {PAYROLL_LABEL.overtimeColumn}
                   </SortableHead>
                   <SortableHead
-                    sortKey="converted"
-                    sort={sort}
-                    onSort={setSort}
-                    align="center"
-                    defaultDirection="desc"
-                  >
-                    {PAYROLL_LABEL.convertedColumn}
-                  </SortableHead>
-                  <SortableHead
                     sortKey="leave"
                     sort={sort}
                     onSort={setSort}
@@ -932,29 +921,10 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
                     ) : null}
                     <CountCell value={toHours(row.totalMinutes)} />
                     <CountCell value={toHours(row.overtimeMinutes)} />
-                    <TableCell className="num text-right">
-                      {row.convertedOvertimeHours === null ? (
-                        // D-26: thieu he so tra `null`, KHONG BAO GIO ngam lay
-                        // 1.0 — mot con so bia ra o day se di thang vao bang
-                        // luong that.
-                        <span
-                          className="text-xs font-normal text-warning"
-                          title={PAYROLL_LABEL.missingMultiplierHint}
-                        >
-                          {PAYROLL_LABEL.missingMultiplier}
-                        </span>
-                      ) : (
-                        <span
-                          className={
-                            row.convertedOvertimeHours === 0
-                              ? "text-ink-muted"
-                              : "font-medium text-ink"
-                          }
-                        >
-                          {formatNumber(row.convertedOvertimeHours)}
-                        </span>
-                      )}
-                    </TableCell>
+                    {/* Khong con cot "Gio quy doi". Canh bao thieu he so KHONG
+                        mat theo no: o "Tien tang ca" cua dong do hien thang
+                        "chua khai he so tang ca" thay vi mot con so — D-26 van
+                        duoc gac, va gac o dung cho no thanh hai. */}
                     <CountCell value={row.leaveDays} />
                     {/* Di muon la NGOAI LE — no duoc phep dung mat lai, khac
                         voi cac cot dem con lai. */}

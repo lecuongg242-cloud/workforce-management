@@ -31,7 +31,6 @@ const HEADERS = [
   "Giờ làm",
   "Giờ tăng ca",
   "Giờ tăng ca đêm",
-  "Giờ quy đổi",
   PAYROLL_LABEL.leaveColumn,
   PAYROLL_LABEL.lateColumn,
   // PAY-01 (plan 05-2-04) — cac cot tien, them vao CUOI de moi cong thuc ma
@@ -109,12 +108,9 @@ export function buildPayrollCsv(prep: PayrollPrep): string {
         toDecimal(toHours(row.totalMinutes)),
         toDecimal(toHours(row.overtimeMinutes)),
         toDecimal(toHours(row.overtimeNightMinutes)),
-        // THIEU HE SO KHONG DUOC XUAT THANH 0 (D-26): mot o `0` trong tep gui
-        // cho ke toan la mot lo lang khong ai doc ra. O do mang chu, va nguoi
-        // nhan buoc phai hoi lai.
-        row.convertedOvertimeHours === null
-          ? escapeCsvCell(PAYROLL_LABEL.missingMultiplier)
-          : toDecimal(row.convertedOvertimeHours),
+        // Khong con cot "Gio quy doi". D-26 van duoc gac o cot "Tien tang ca":
+        // thieu he so thi o do mang CHU ("chua khai he so tang ca") chu khong
+        // mang so 0 — xem `moneyCell()`.
         String(row.leaveDays),
         String(row.lateCount),
         moneyCell(row.basePay, row.missing),

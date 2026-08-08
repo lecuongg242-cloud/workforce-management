@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { MonthSummary } from "@/components/employee-app/month-summary";
+import { DayPayBreakdown } from "@/components/payroll/day-pay-breakdown";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDataQuery } from "@/hooks/use-data-query";
@@ -23,12 +24,13 @@ import {
   listAttendance,
   listAttendanceClassification,
 } from "@/lib/data/attendance";
+import { getMyPayslip } from "@/lib/data/payslips";
 import { listShifts } from "@/lib/data/shifts";
 import {
   formatDate,
   formatDurationShort,
-  formatNumber,
   formatTime,
+  formatVnd,
   getWeekday,
 } from "@/lib/format";
 import {
@@ -40,6 +42,8 @@ import { displayAttendanceStatus } from "@/lib/attendance/display-status";
 import type {
   AttendanceDayClassification,
   AttendanceStatus,
+  PayrollDayLine,
+  PayrollPunchPay,
 } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -69,13 +73,27 @@ export function HistoryView({
 
   const { data, isLoading, error, reload } = useDataQuery(
     async () => {
-      const [records, summary, shifts, classifications] = await Promise.all([
-        listAttendance({ companyId: session.companyId, employeeId, month }),
-        getMonthlySummary(session.companyId, employeeId, month),
-        listShifts(session.companyId),
-        listAttendanceClassification(session.companyId, employeeId, month),
-      ]);
-      return { records, summary, shifts, classifications };
+      const [records, summary, shifts, classifications, payslip] =
+        await Promise.all([
+          listAttendance({ companyId: session.companyId, employeeId, month }),
+          getMonthlySummary(session.companyId, employeeId, month),
+          listShifts(session.companyId),
+          listAttendanceClassification(session.companyId, employeeId, month),
+          /**
+           * TIEN CUA TUNG NGAY, va no CO QUYEN THAT BAI.
+           *
+           * `can_view_payslip = false` tra 403 (`assertCanViewOwnPayslip`) —
+           * mot doanh nghiep phat phieu giay la chuyen binh thuong, khong phai
+           * loi. Ngay ca khi la loi that (mat mang), gio cong van la thu nguoi
+           * dung vao day de xem. Vi vay loi o day nuot lai thanh `null` va man
+           * hinh chi bo phan tien di, thay vi keo ca trang thanh mot o bao loi.
+           *
+           * Con so KHONG duoc tinh lai o day: day la dung nhung dong tien ma
+           * man Phieu luong hien, nen hai man hinh khong the noi hai con so.
+           */
+          getMyPayslip(month).catch(() => null),
+        ]);
+      return { records, summary, shifts, classifications, payslip };
     },
     [session.companyId, employeeId, month],
   );
@@ -109,6 +127,13 @@ export function HistoryView({
   const classificationByDate = React.useMemo(() => {
     const map = new Map<string, AttendanceDayClassification>();
     data?.classifications.forEach((item) => map.set(item.date, item));
+    return map;
+  }, [data]);
+
+  /** Tien theo ngay; rong khi khong lay duoc phieu (xem chu thich o truy van). */
+  const payByDate = React.useMemo(() => {
+    const map = new Map<string, PayrollDayLine>();
+    data?.payslip?.days.forEach((day) => map.set(day.date, day));
     return map;
   }, [data]);
 
@@ -224,6 +249,7 @@ export function HistoryView({
                     day={day}
                     shiftName={shiftNames[day.shiftId] ?? "—"}
                     classification={classificationByDate.get(day.date)}
+                    pay={payByDate.get(day.date)}
                     today={today}
                   />
                 ))}
@@ -240,15 +266,36 @@ function AttendanceItem({
   day,
   shiftName,
   classification,
+  pay,
   today,
 }: {
   day: AttendanceDay;
   shiftName: string;
   classification: AttendanceDayClassification | undefined;
+  /** `undefined` khi khong lay duoc phieu luong — khoi tien khong hien. */
+  pay: PayrollDayLine | undefined;
   /** "YYYY-MM-DD" theo dong ho MAY CHU. */
   today: string;
 }): React.ReactElement {
   const weekday = getWeekday(day.date);
+
+  // Phan gio KHONG phai tang ca. Tru tu chinh `workedMinutes` cua ban phan loai
+  // chu khong tu `day.workedMinutes`: hai so nay hom nay bang nhau (cung mot
+  // phep gop), va lay ca hai tu MOT nguon la cach dam bao rang neu mai kia
+  // chung khac nhau thi "Trong ca + Tang ca" van bang dung mot con so co that,
+  // thay vi mot hieu so cua hai phep tinh khac nhau.
+  const regularMinutes = classification
+    ? Math.max(classification.workedMinutes - classification.overtimeMinutes, 0)
+    : 0;
+
+  // Tra theo CHI SO LUOT chu khong theo thu tu mang: `pay.punches` chi mang
+  // nhung luot co gio, nen doc theo vi tri se gan tien cua luot nay cho luot
+  // khac ngay khi mot luot bi bo qua.
+  const payByPunchIndex = React.useMemo(() => {
+    const map = new Map<number, PayrollPunchPay>();
+    pay?.punches.forEach((item) => map.set(item.index, item));
+    return map;
+  }, [pay]);
 
   return (
     <li className="surface-card p-3.5">
@@ -298,11 +345,26 @@ function AttendanceItem({
         />
       </div>
 
-      {/* Gio tang ca: hien CA gio tho LAN gio quy doi (D-24). Thieu he so thi
-          noi thang la chua khai — khong bao gio hien so 0 thay cho no (D-26). */}
+      {/* TACH DOI SO GIO cua o "Tong gio" ben tren: bao nhieu la gio trong ca,
+          bao nhieu la tang ca. Khong hien gio QUY DOI — do la mot buoc trung
+          gian giua so gio va so tien, va ca hai dau da co mat ngay tren man
+          hinh nay.
+
+          Phan "Trong ca" bi an khi bang 0 (ngay le / ngay nghi co toan bo gio
+          la tang ca): mot o "Trong ca 0h00" khong noi them dieu gi ma dong chu
+          da dai gap doi. */}
       {classification && classification.overtimeMinutes > 0 ? (
         <p className="mt-2 text-[12px] text-ink-muted">
-          {OVERTIME_DISPLAY_LABEL.overtimeRawLabel}:{" "}
+          {regularMinutes > 0 ? (
+            <>
+              {OVERTIME_DISPLAY_LABEL.regularLabel}{" "}
+              <span className="num text-ink">
+                {formatDurationShort(regularMinutes)}
+              </span>
+              {" · "}
+            </>
+          ) : null}
+          {OVERTIME_DISPLAY_LABEL.overtimeShortLabel}{" "}
           <span className="num text-ink">
             {formatDurationShort(classification.overtimeMinutes)}
           </span>
@@ -316,39 +378,66 @@ function AttendanceItem({
               {OVERTIME_DISPLAY_LABEL.nightPortionSuffix})
             </>
           ) : null}
-          {" · "}
-          {OVERTIME_DISPLAY_LABEL.overtimeConvertedLabel}:{" "}
-          {classification.convertedOvertimeHours === null ? (
-            <span>{OVERTIME_DISPLAY_LABEL.notDeclared}</span>
-          ) : (
-            <span className="num text-ink">
-              {formatNumber(classification.convertedOvertimeHours)} giờ
-            </span>
-          )}
         </p>
       ) : null}
 
       {day.punches.length > 1 ? (
-        <ul className="mt-2 grid gap-1">
-          {day.punches.map((punch, index) => (
-            /* Luoi ba cot CO DINH — xem ghi chu cung van de o
-               `attendance-status-card.tsx`: cot co gian lam gio vao/gio ra
-               lech nhau giua cac dong. */
-            <li
-              key={punch.id}
-              className="num grid grid-cols-[3rem_6.5rem_1fr] items-center gap-2 px-0.5 text-[12px] text-ink-muted"
-            >
-              <span>Lượt {index + 1}</span>
-              <span className="whitespace-nowrap">
-                {formatTime(punch.checkIn)} → {formatTime(punch.checkOut)}
-              </span>
-              <span className="text-right">
-                {punch.workedMinutes > 0
-                  ? formatDurationShort(punch.workedMinutes)
-                  : "—"}
-              </span>
-            </li>
-          ))}
+        <ul className="mt-2 grid gap-1.5">
+          {day.punches.map((punch, index) => {
+            const split = classification?.punches?.[index];
+            const punchPay = payByPunchIndex.get(index);
+            return (
+              <li key={punch.id} className="px-0.5">
+                {/* Luoi ba cot CO DINH — xem ghi chu cung van de o
+                    `attendance-status-card.tsx`: cot co gian lam gio vao/gio
+                    ra lech nhau giua cac dong. */}
+                <div className="num grid grid-cols-[3rem_6.5rem_1fr] items-center gap-2 text-[12px] text-ink-muted">
+                  <span>Lượt {index + 1}</span>
+                  <span className="whitespace-nowrap">
+                    {formatTime(punch.checkIn)} → {formatTime(punch.checkOut)}
+                  </span>
+                  <span className="text-right">
+                    {punch.workedMinutes > 0
+                      ? formatDurationShort(punch.workedMinutes)
+                      : "—"}
+                  </span>
+                </div>
+
+                {/* DONG THU HAI chi xuat hien khi luot nay CO tang ca — do la
+                    luc con so cua no khac voi phan con lai cua ngay. Luot khong
+                    tang ca da duoc dong tren noi het.
+
+                    Tien co the vang mat (ky da chot khong luu theo luot) trong
+                    khi so gio van con: khi ay hien phan gio, khong hien mot
+                    dau gach ngang o cho tien — khong co con so nao bi thieu
+                    ca, chi la ky do khong luu theo luot. */}
+                {split && split.overtimeMinutes > 0 ? (
+                  <div className="mt-0.5 flex items-baseline justify-between gap-2 pl-[3.5rem] text-[12px] text-ink-muted">
+                    <span>
+                      {split.regularMinutes > 0 ? (
+                        <>
+                          {OVERTIME_DISPLAY_LABEL.regularLabel}{" "}
+                          <span className="num">
+                            {formatDurationShort(split.regularMinutes)}
+                          </span>
+                          {" · "}
+                        </>
+                      ) : null}
+                      {OVERTIME_DISPLAY_LABEL.overtimeShortLabel}{" "}
+                      <span className="num">
+                        {formatDurationShort(split.overtimeMinutes)}
+                      </span>
+                    </span>
+                    {punchPay?.overtimePay != null ? (
+                      <span className="num shrink-0 font-medium text-ink">
+                        {formatVnd(punchPay.overtimePay)}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       ) : null}
 
@@ -359,6 +448,11 @@ function AttendanceItem({
           Đã trừ {formatDurationShort(day.breakMinutes)} giờ nghỉ của ca.
         </p>
       ) : null}
+
+      {/* TIEN CUA NGAY — dat SAU phan gio vi no la ket luan cua nhung con so
+          ben tren, va TRUOC o canh bao bo sung cham cong: mot o canh bao chen
+          giua se cat doi mach "gio -> tien". */}
+      {pay ? <DayPayBreakdown day={pay} className="mt-3" /> : null}
 
       {day.needsSupplement ? (
         <div className="mt-3 flex items-center justify-between gap-2 rounded-control border border-warning-border bg-warning-soft px-3 py-2">

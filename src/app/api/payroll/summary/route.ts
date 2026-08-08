@@ -120,6 +120,9 @@ function toDayLine(row: RawDayRow): PayrollDayLine {
     overtimePay: Number(row.overtime_pay),
     hourAdjustment: Number(row.hour_adjustment),
     dayTotal: Number(row.day_total),
+    // Ban chup luu theo NGAY — khong co dong nao theo luot. Cung ly do voi
+    // `toDayFromSnapshot()` cua `GET /api/payslips/[month]`.
+    punches: [],
     // Mot ky chi chot duoc khi khong dong nao thieu du kien — mang nay luon
     // rong o ban chot, va do la mot bat bien chu khong phai su trung hop.
     missing: [],

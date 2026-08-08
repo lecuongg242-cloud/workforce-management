@@ -5,6 +5,7 @@ import {
   overtimeMinutes,
   overtimeNightMinutes,
   resolveMultiplier,
+  splitPunchOvertime,
   toWorkSegments,
   type WorkDayType,
 } from "@/lib/attendance/classification";
@@ -12,6 +13,7 @@ import type { AttendanceDay } from "@/lib/attendance/day";
 import { effectiveScheduledMinutes } from "@/lib/attendance/work-mode";
 import { loadCompanySettings } from "@/lib/settings/company-settings";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { PunchOvertimeSplit } from "@/lib/attendance/classification";
 import type { OvertimeRuleKey, WeekdayNumber, WorkMode } from "@/lib/types/domain";
 
 /**
@@ -33,6 +35,20 @@ import type { OvertimeRuleKey, WeekdayNumber, WorkMode } from "@/lib/types/domai
  * nghiep sua he so, trong khi khong test nao o cac plan truoc phat hien ra.
  */
 
+/**
+ * Mot luot, sau khi da ap he so cua doanh nghiep.
+ *
+ * `convertedOvertimeHours` co mat de chia TIEN tang ca theo luot. Chia theo so
+ * phut tho thi sai khi mot luot roi vao khung dem con luot kia thi khong: hai
+ * luot cung 60 phut nhung mot cai duoc cong phu cap dem, va chia deu se lay
+ * bot tien cua nguoi lam dem dua cho ca lam ngay. Con so nay da mang san phan
+ * chenh do.
+ */
+export interface PunchClassification extends PunchOvertimeSplit {
+  /** `null` khi thieu he so (D-26) — cung ly do voi truong cung ten cua ngay. */
+  convertedOvertimeHours: number | null;
+}
+
 export interface DayClassification {
   dayType: WorkDayType;
   /** Phut lam viec trong khung gio dem (ca ngay, khong chi phan tang ca). */
@@ -43,6 +59,15 @@ export interface DayClassification {
   convertedOvertimeHours: number | null;
   /** Cac khoa he so con thieu ma phut tuong ung lai lon hon 0. */
   missingMultiplierKeys: OvertimeRuleKey[];
+  /**
+   * PHAN TANG CA CUA TUNG LUOT, mot phan tu cho moi phan tu cua `day.punches`
+   * va DUNG THU TU DO — de noi goi ghep lai bang chi so ma khong phai doan.
+   *
+   * Luot CHUA TAN CA nhan mot phan tu toan 0: `toWorkSegments()` bo qua no (no
+   * chua co doan thoi gian nao), nhung bo luon phan tu o day se lam moi luot
+   * sau no lech mot bac va tien cua luot nay se hien ra o luot khac.
+   */
+  punches: PunchClassification[];
   /**
    * D-36a: `true` khi che do tinh cong dang ap KHONG xac dinh duoc mau so
    * (che do `daily_hours` ma doanh nghiep chua khai `standard_hours_per_day`).
@@ -223,6 +248,42 @@ export function classifyDay({
     multipliers: { [dayType]: dayMultiplier, night: nightPremium },
   });
 
+  // TUNG LUOT. `segments` chi chua cac luot DA TAN CA, theo dung thu tu cua
+  // `day.punches`; nen di song song hai mang bang MOT con tro thay vi tra cuu
+  // theo gio vao — hai luot cua cung mot ngay co the trung gio vao khi du lieu
+  // duoc bo sung tay, va mot phep tra cuu theo gio se ghep nham.
+  const splits = splitPunchOvertime({
+    segments,
+    overtimeMinutes: overtime,
+    nightStart: rules.nightStartTime,
+    nightEnd: rules.nightEndTime,
+  });
+  const emptySplit: PunchClassification = {
+    regularMinutes: 0,
+    overtimeMinutes: 0,
+    overtimeNightMinutes: 0,
+    convertedOvertimeHours: 0,
+  };
+  let segmentIndex = 0;
+  const punchSplits = day.punches.map((punch): PunchClassification => {
+    if (punch.checkOut === null) return emptySplit;
+    const split = splits[segmentIndex];
+    segmentIndex += 1;
+    if (!split) return emptySplit;
+    // CUNG mot phep quy doi voi ca ngay, chi khac dau vao — khong viet lai cong
+    // thuc D-28a o day. Mot ban sao thu hai cua no se song sot qua lan sua thu
+    // nhat cua ban goc, va khong test nao bat duoc dieu do.
+    return {
+      ...split,
+      convertedOvertimeHours: convertedOvertimeHours({
+        dayType,
+        overtimeMinutes: split.overtimeMinutes,
+        overtimeNightMinutes: split.overtimeNightMinutes,
+        multipliers: { [dayType]: dayMultiplier, night: nightPremium },
+      }).hours,
+    };
+  });
+
   return {
     dayType,
     // Phut dem cua CA NGAY (khong chi phan tang ca) — hien thi de nguoi doc
@@ -236,6 +297,7 @@ export function classifyDay({
     overtimeNightMinutes: overtimeNight,
     convertedOvertimeHours: converted.hours,
     missingMultiplierKeys: converted.missingKeys,
+    punches: punchSplits,
     workModeInputMissing: scheduled === null,
   };
 }

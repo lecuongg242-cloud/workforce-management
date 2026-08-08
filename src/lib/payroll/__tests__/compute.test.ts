@@ -100,6 +100,9 @@ function aggregateDay(summary: AggregateSummary): DailyPaySource {
       overtimeNightMinutes: 0,
       convertedOvertimeHours: summary.convertedOvertimeHours,
       missingMultiplierKeys: summary.missingMultiplierKeys,
+      // Bo kiem cua file nay noi ve TONG cua ky; phan chia theo luot co bo
+      // kiem rieng o `compute-daily.test.ts`.
+      punches: [],
       workModeInputMissing: summary.missingWorkModeInputs.length > 0,
     },
   };
@@ -679,6 +682,7 @@ describe("Tổng kỳ bằng đúng tổng các dòng ngày", () => {
         overtimeNightMinutes: 0,
         convertedOvertimeHours: 0,
         missingMultiplierKeys: [],
+        punches: [],
         workModeInputMissing: false,
       },
     };

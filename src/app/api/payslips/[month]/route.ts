@@ -103,6 +103,11 @@ function toDayFromSnapshot(row: RawDayRow): PayrollDayLine {
     overtimePay: Number(row.overtime_pay),
     hourAdjustment: Number(row.hour_adjustment),
     dayTotal: Number(row.day_total),
+    // BAN CHUP LUU THEO NGAY, khong co dong nao theo luot (`payroll_line_days`,
+    // migration 0030). Tra mang rong — man hinh se khong hien tien theo luot o
+    // ky da chot, thay vi hien mot con so suy nguoc ra tu tien cua ngay bang
+    // du lieu cham cong CO THE DA BI SUA sau khi chot.
+    punches: [],
     // Mot ky chi chot duoc khi khong dong nao thieu du kien — mang nay luon
     // rong o ban chot, va do la mot bat bien chu khong phai su trung hop.
     missing: [],

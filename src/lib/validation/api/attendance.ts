@@ -170,6 +170,19 @@ export const attendanceDayClassificationSchema = z.object({
   missingMultiplierKeys: z.array(
     z.enum(["weekday", "weekend", "holiday", "night"]),
   ),
+  /* Phan tang ca cua TUNG LUOT, cung thu tu voi cac luot cua ngay do.
+   * `.default([])` de moi noi dang doc schema nay khong vo khi phan hoi den
+   * tu mot phien ban cu — o duong tra ve hien tai no luon co mat. */
+  punches: z
+    .array(
+      z.object({
+        regularMinutes: z.number(),
+        overtimeMinutes: z.number(),
+        overtimeNightMinutes: z.number(),
+        convertedOvertimeHours: z.number().nullable(),
+      }),
+    )
+    .default([]),
 });
 
 export const attendanceClassificationListResponseSchema = z.array(
