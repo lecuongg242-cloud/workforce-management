@@ -11,7 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { formatDate, toIsoDate } from "@/lib/format";
+import { formatDate, pickedDateToIso } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,6 +25,7 @@ function isoToDate(iso: string): Date {
   const [year, month, day] = iso.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day, 12));
 }
+
 
 export function DateRangePicker({
   value,
@@ -65,14 +66,7 @@ export function DateRangePicker({
           selected={isoToDate(value)}
           onSelect={(date) => {
             if (!date) return;
-            // Chuan hoa ve dau ngay theo UTC roi doi sang chuoi ISO
-            onChange(
-              toIsoDate(
-                new Date(
-                  Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
-                ),
-              ),
-            );
+            onChange(pickedDateToIso(date));
             setOpen(false);
           }}
           autoFocus
@@ -173,8 +167,8 @@ export function DayRangeFilter({
               }
               // Chon mot dau thi khoang la DUNG ngay do, khong phai mot khoang
               // do dang: nguoi dung bam mot ngay va mong thay dung ngay ay.
-              const from = toIsoDate(next.from);
-              const to = next.to ? toIsoDate(next.to) : from;
+              const from = pickedDateToIso(next.from);
+              const to = next.to ? pickedDateToIso(next.to) : from;
               onChange({ from, to });
             }}
             autoFocus

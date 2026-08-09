@@ -252,11 +252,18 @@ function MonthPayCard({
 }): React.ReactElement {
   return (
     <section className="surface-card overflow-hidden">
-      <div className="p-4 text-center">
-        <p className="num display-md text-ink">
+      {/* CAU TRA LOI, dat truoc moi thu khac va to hon moi thu khac.
+          Nhan di TRUOC con so: mat cham vao chu nho truoc roi moi roi xuong
+          con so lon — nguoc lai thi nguoi doc gap mot con so chua biet la cua
+          cai gi. */}
+      <div className="bg-canvas-soft px-4 py-5 text-center">
+        <p className="eyebrow">Thực nhận</p>
+        {/* `font-bold` de len SAU `display-lg`: thang chu hien thi cua he
+            thong dat nen 300, va con so nay la ngoai le co chu dich — no la
+            cau tra loi cua ca man hinh. */}
+        <p className="num display-lg mt-1.5 font-bold text-brand">
           {payslip.netPay === null ? "—" : formatVnd(payslip.netPay)}
         </p>
-        <p className="mt-1 text-[13px] text-ink-muted">Thực nhận</p>
         <p className="num mt-2 text-[12px] text-ink-muted">
           {payslip.closedAt === null
             ? PAYSLIP_DAILY_LABEL.notClosedYet
@@ -337,9 +344,9 @@ function MonthPayCard({
           </>
         ) : null}
 
-        <div className="mt-1 flex items-start justify-between gap-3 border-t border-hairline pt-2.5">
+        <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-hairline pt-2.5">
           <dt className="shrink-0 font-medium text-ink">Thực nhận</dt>
-          <dd className="num text-right font-semibold text-ink">
+          <dd className="num text-right text-[17px] leading-none font-semibold text-brand">
             {payslip.netPay === null ? "—" : formatVnd(payslip.netPay)}
           </dd>
         </div>
@@ -450,15 +457,23 @@ function AttendanceItem({
         </div>
       </div>
 
-      {/* Gio vao/ra la cua LUOT DAU va LUOT CUOI; tong gio cong don moi luot. */}
+      {/* Gio vao/ra la cua LUOT DAU va LUOT CUOI; tong gio cong don moi luot.
+
+          "Tong gio" duoc danh dau `emphasis`: hai o dau la du kien tho, o thu
+          ba la ket qua cua chung. Ba o giong het nhau thi mat phai doc het ca
+          ba nhan moi biet o nao dang tra loi cau hoi cua minh. */}
       <div className="mt-3 grid grid-cols-3 gap-2">
         <MiniCell label="Giờ vào" value={formatTime(day.firstCheckIn)} />
         <MiniCell label="Giờ ra" value={formatTime(day.lastCheckOut)} />
+        {/* Chi to noi khi CO so gio. Mot o duoc lam noi bat ma ben trong la
+            dau gach ngang thi keo mat vao dung cho khong co gi de doc — ngay
+            nghi phep va ngay dang do deu roi vao truong hop do. */}
         <MiniCell
           label="Tổng giờ"
           value={
             day.workedMinutes > 0 ? formatDurationShort(day.workedMinutes) : "—"
           }
+          emphasis={day.workedMinutes > 0}
         />
       </div>
 
@@ -471,18 +486,18 @@ function AttendanceItem({
           la tang ca): mot o "Trong ca 0h00" khong noi them dieu gi ma dong chu
           da dai gap doi. */}
       {classification && classification.overtimeMinutes > 0 ? (
-        <p className="mt-2 text-[12px] text-ink-muted">
+        <p className="mt-2 px-0.5 text-[12px] text-ink-muted">
           {regularMinutes > 0 ? (
             <>
               {OVERTIME_DISPLAY_LABEL.regularLabel}{" "}
-              <span className="num text-ink">
+              <span className="num font-semibold text-ink">
                 {formatDurationShort(regularMinutes)}
               </span>
-              {" · "}
+              <span className="px-1.5 text-hairline">|</span>
             </>
           ) : null}
           {OVERTIME_DISPLAY_LABEL.overtimeShortLabel}{" "}
-          <span className="num text-ink">
+          <span className="num font-semibold text-ink">
             {formatDurationShort(classification.overtimeMinutes)}
           </span>
           {classification.overtimeNightMinutes > 0 ? (
@@ -510,10 +525,10 @@ function AttendanceItem({
                     ra lech nhau giua cac dong. */}
                 <div className="num grid grid-cols-[3rem_6.5rem_1fr] items-center gap-2 text-[12px] text-ink-muted">
                   <span>Lượt {index + 1}</span>
-                  <span className="whitespace-nowrap">
+                  <span className="whitespace-nowrap text-ink-secondary">
                     {formatTime(punch.checkIn)} → {formatTime(punch.checkOut)}
                   </span>
-                  <span className="text-right">
+                  <span className="text-right font-medium text-ink">
                     {punch.workedMinutes > 0
                       ? formatDurationShort(punch.workedMinutes)
                       : "—"}
@@ -545,8 +560,11 @@ function AttendanceItem({
                         {formatDurationShort(split.overtimeMinutes)}
                       </span>
                     </span>
+                    {/* Tien cua luot: MAU thuong hieu vi no la tien, nhung
+                        van 12px — no la mot phan cua "Luong tang ca" o khoi
+                        duoi, khong phai mot ket luan doc lap. */}
                     {punchPay?.overtimePay != null ? (
-                      <span className="num shrink-0 font-medium text-ink">
+                      <span className="num shrink-0 font-medium text-brand">
                         {formatVnd(punchPay.overtimePay)}
                       </span>
                     ) : null}
@@ -591,14 +609,36 @@ function AttendanceItem({
 function MiniCell({
   label,
   value,
+  emphasis = false,
 }: {
   label: string;
   value: string;
+  /** O mang KET QUA, khong phai du kien — vien dam hon va so to hon. */
+  emphasis?: boolean;
 }): React.ReactElement {
   return (
-    <div className="rounded-control border border-hairline bg-canvas-soft px-2.5 py-2">
-      <p className="text-[10px] leading-tight text-ink-muted">{label}</p>
-      <p className="num mt-0.5 text-[14px] leading-tight font-medium text-ink">
+    <div
+      className={cn(
+        "rounded-control border px-2.5 py-2",
+        emphasis
+          ? "border-brand-subdued bg-brand-wash"
+          : "border-hairline bg-canvas-soft",
+      )}
+    >
+      <p
+        className={cn(
+          "text-[10px] leading-tight",
+          emphasis ? "text-brand-deep" : "text-ink-muted",
+        )}
+      >
+        {label}
+      </p>
+      <p
+        className={cn(
+          "num mt-0.5 leading-tight font-medium text-ink",
+          emphasis ? "text-[15px] font-semibold" : "text-[14px]",
+        )}
+      >
         {value}
       </p>
     </div>

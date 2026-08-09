@@ -36,7 +36,7 @@ export function DayPayBreakdown({
     return (
       <p
         className={cn(
-          "border-t border-hairline pt-2.5 text-[12px] text-ink-muted",
+          "rounded-control bg-canvas-soft px-3 py-2.5 text-[12px] text-ink-muted",
           className,
         )}
       >
@@ -46,9 +46,12 @@ export function DayPayBreakdown({
   }
 
   return (
+    /* NEN MO NHAT thay cho mot duong ke: khoi tien la KET LUAN cua the ngay,
+       va mot mang nen tach no ra khoi phan gio giac ma mat khong phai doc chu
+       moi biet minh dang xem vung nao. */
     <dl
       className={cn(
-        "grid gap-1.5 border-t border-hairline pt-2.5 text-[12px]",
+        "grid gap-1.5 rounded-control bg-canvas-soft px-3 py-2.5 text-[12px]",
         className,
       )}
     >
@@ -79,15 +82,34 @@ function AmountRow({
   strong?: boolean;
 }): React.ReactElement {
   return (
-    <div className="flex items-start justify-between gap-3">
+    <div
+      className={cn(
+        "flex items-baseline justify-between gap-3",
+        strong && "mt-0.5 border-t border-hairline pt-2",
+      )}
+    >
       <dt className={cn("text-ink-muted", strong && "font-medium text-ink")}>
         {label}
       </dt>
+      {/* CON SO CUOI to hon va mang mau thuong hieu. Day la cau tra loi cua ca
+          the ngay; de no cung co cung mau voi hai dong cong o tren thi khong
+          co gi noi cho nguoi doc biet dong nao la ket luan.
+
+          Mau chi dung cho TIEN, khong dung cho gio — mot man hinh to mau moi
+          thu quan trong thi khong con thu nao quan trong. */}
       <dd
         className={cn(
-          "num shrink-0 text-right font-medium",
-          amount !== null && amount < 0 ? "text-danger" : "text-ink",
-          strong && "font-semibold",
+          "num shrink-0 text-right",
+          strong
+            ? "text-[17px] leading-none font-semibold"
+            : "text-[13px] font-medium",
+          amount === null
+            ? "text-ink-muted"
+            : amount < 0
+              ? "text-danger"
+              : strong
+                ? "text-brand"
+                : "text-ink",
         )}
       >
         {amount === null ? "—" : formatVnd(amount)}

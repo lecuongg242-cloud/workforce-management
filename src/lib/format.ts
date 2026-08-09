@@ -63,6 +63,23 @@ export function toIsoDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Ngay NGUOI DUNG BAM TREN LICH -> "YYYY-MM-DD".
+ *
+ * MOI BO CHON NGAY PHAI DI QUA HAM NAY. Bo lich (`react-day-picker`) tra ve
+ * nua dem theo GIO MAY, con `toIsoDate()` doc cac truong UTC. O mui gio duong
+ * — Viet Nam la UTC+7 — nua dem 09/08 chinh la `2026-08-08T17:00Z`, nen goi
+ * thang `toIsoDate()` se bien mung 9 thanh mung 8.
+ *
+ * Doc truong theo gio may roi dung lai bang `Date.UTC` giu nguyen dung o lich
+ * ma nguoi dung vua bam, o moi mui gio.
+ */
+export function pickedDateToIso(date: Date): string {
+  return toIsoDate(
+    new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())),
+  );
+}
+
 /** "2026-07" -> so ngay trong thang */
 export function daysInMonth(isoMonth: string): number {
   const [year, month] = isoMonth.split("-").map(Number);

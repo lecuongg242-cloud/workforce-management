@@ -43,9 +43,20 @@ export function MonthSummary({
       ? summary.regularMinutes
       : summary.totalMinutes - overtimeMinutes;
 
+  /**
+   * `strong` = o mang SO GIO, thu ma man hinh nay ton tai de noi.
+   *
+   * Bon o con lai la so dem — huu ich, nhung khong phai thu nguoi ta mo trang
+   * ra de xem. Cho ca sau o cung mot do dam thi mat khong biet dung o dau, va
+   * do dung la dieu dang duoc sua.
+   */
   const items = [
     { label: "Ngày công", value: formatNumber(summary.workedDays) },
-    { label: "Tổng giờ làm", value: formatDurationShort(summary.totalMinutes) },
+    {
+      label: "Tổng giờ làm",
+      value: formatDurationShort(summary.totalMinutes),
+      strong: true,
+    },
     ...(hasOvertimeData
       ? [
           {
@@ -54,11 +65,13 @@ export function MonthSummary({
               regularMinutes === null
                 ? "—"
                 : formatDurationShort(regularMinutes),
+            strong: true,
           },
           {
             label: OVERTIME_DISPLAY_LABEL.overtimeRawLabel,
             value:
               overtimeMinutes > 0 ? formatDurationShort(overtimeMinutes) : "—",
+            strong: true,
           },
         ]
       : []),
@@ -76,7 +89,10 @@ export function MonthSummary({
           <div
             key={item.label}
             className={cn(
-              "rounded-control border border-hairline bg-canvas-soft px-3 py-2.5",
+              "rounded-control border px-3 py-2.5",
+              item.strong
+                ? "border-hairline bg-canvas-soft"
+                : "border-transparent bg-canvas-soft/60",
               // O LE CUOI CUNG chiem tron hang. So o thay doi theo duong doc
               // (bon o, hoac nam o khi co so lieu tang ca), nen mot o mo coi o
               // goc phai la truong hop CO THAT chu khong phai gia thiet — va no
@@ -88,7 +104,14 @@ export function MonthSummary({
             <dt className="text-[11px] leading-tight text-ink-muted">
               {item.label}
             </dt>
-            <dd className="num mt-1 text-[17px] leading-tight font-medium text-ink">
+            <dd
+              className={cn(
+                "num mt-1 leading-tight",
+                item.strong
+                  ? "text-[19px] font-semibold text-ink"
+                  : "text-[15px] font-medium text-ink-secondary",
+              )}
+            >
               {item.value}
             </dd>
           </div>
