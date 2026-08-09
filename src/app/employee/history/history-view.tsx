@@ -4,7 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import { AlertTriangle, CalendarX2 } from "lucide-react";
 
-import { MonthStepper } from "@/components/common/date-range-picker";
+import {
+  DayRangeFilter,
+  MonthStepper,
+  type DayRange,
+} from "@/components/common/date-range-picker";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusBadge } from "@/components/common/status-badge";
@@ -15,9 +19,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDataQuery } from "@/hooks/use-data-query";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import {
+  DAY_PAY_LABEL,
   OVERTIME_DISPLAY_LABEL,
+  PAYSLIP_DAILY_LABEL,
+  PAY_RATE_UNIT_SUFFIX,
   WEEKDAY_LABEL,
   WORK_DAY_TYPE_LABEL,
+  describeMissingReason,
 } from "@/lib/constants";
 import {
   getMonthlySummary,
@@ -28,7 +36,9 @@ import { getMyPayslip } from "@/lib/data/payslips";
 import { listShifts } from "@/lib/data/shifts";
 import {
   formatDate,
+  formatDateTime,
   formatDurationShort,
+  formatNumber,
   formatTime,
   formatVnd,
   getWeekday,
@@ -41,22 +51,11 @@ import {
 import { displayAttendanceStatus } from "@/lib/attendance/display-status";
 import type {
   AttendanceDayClassification,
-  AttendanceStatus,
   PayrollDayLine,
   PayrollPunchPay,
+  PayslipDetail,
 } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
-
-/** Mau cham trang thai tren dai lich */
-const dotClass: Record<AttendanceStatus, string> = {
-  on_time: "bg-success",
-  late: "bg-warning",
-  early_leave: "bg-warning",
-  missing_checkout: "bg-danger",
-  leave_paid: "bg-info",
-  leave_unpaid: "bg-danger",
-  day_off: "bg-neutral-border",
-};
 
 export function HistoryView({
   month: initialMonth,
@@ -69,7 +68,7 @@ export function HistoryView({
   const session = useAuthenticatedSession();
   const employeeId = session.user.employeeId;
   const [month, setMonth] = React.useState(initialMonth);
-  const [selectedDate, setSelectedDate] = React.useState<string | null>(null);
+  const [range, setRange] = React.useState<DayRange | null>(null);
 
   const { data, isLoading, error, reload } = useDataQuery(
     async () => {
@@ -138,95 +137,58 @@ export function HistoryView({
   }, [data]);
 
   const visibleDays = React.useMemo(
-    () => (selectedDate ? days.filter((day) => day.date === selectedDate) : days),
-    [days, selectedDate],
+    () =>
+      range
+        ? days.filter((day) => day.date >= range.from && day.date <= range.to)
+        : days,
+    [days, range],
   );
 
-  // Doi thang thi bo chon ngay
+  // Doi thang thi bo loc ngay: mot khoang cua thang truoc se loc rong toan bo
+  // thang moi, va man hinh se trong nhu the thang do khong co ngay cong nao.
   React.useEffect(() => {
-    setSelectedDate(null);
+    setRange(null);
   }, [month]);
 
   return (
     <div className="grid gap-4">
       <header className="flex items-center justify-between gap-2">
-        <h1 className="display-md text-ink">Lịch sử chấm công</h1>
+        <h1 className="display-md text-ink">Bảng lương</h1>
       </header>
 
-      <div className="surface-card flex items-center justify-center p-2">
+      {/* MOT HANG DUY NHAT cho ca hai bo loc. Truoc day o day la mot dai ngay
+          cuon ngang: no ngon tron mot khoi cao 64px de lam dung viec ma cai nut
+          nay lam, va voi thang 31 ngay thi phan lon dai do nam ngoai man hinh. */}
+      <div className="surface-card flex items-center justify-between gap-2 p-2 pl-1">
         <MonthStepper month={month} onChange={setMonth} maxMonth={initialMonth} />
+        <DayRangeFilter month={month} value={range} onChange={setRange} />
       </div>
 
       {error ? (
         <ErrorState description={error} onRetry={reload} />
       ) : isLoading || !data ? (
         <>
-          <Skeleton className="h-20 w-full rounded-card" />
+          <Skeleton className="h-32 w-full rounded-card" />
           <Skeleton className="h-36 w-full rounded-card" />
           <Skeleton className="h-64 w-full rounded-card" />
         </>
       ) : (
         <>
-          {/* Dai lich cuon ngang */}
-          {days.length > 0 ? (
-            <section
-              aria-label="Chọn ngày để lọc"
-              className="no-scrollbar -mx-4 overflow-x-auto px-4"
-            >
-              <div className="flex gap-1.5">
-                {[...days]
-                  .sort((a, b) => (a.date < b.date ? -1 : 1))
-                  .map((day) => {
-                    const isSelected = selectedDate === day.date;
-                    const weekday = getWeekday(day.date);
-                    return (
-                      <button
-                        key={day.date}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() =>
-                          setSelectedDate(isSelected ? null : day.date)
-                        }
-                        className={cn(
-                          "flex min-h-[64px] w-12 shrink-0 flex-col items-center justify-center gap-1 rounded-control border transition-colors",
-                          isSelected
-                            ? "border-brand bg-brand-wash"
-                            : "border-hairline bg-white",
-                        )}
-                      >
-                        <span className="text-[10px] leading-none text-ink-muted">
-                          {WEEKDAY_LABEL[weekday]}
-                        </span>
-                        <span className="num text-[15px] leading-none font-medium text-ink">
-                          {day.date.slice(8)}
-                        </span>
-                        <span
-                          aria-hidden="true"
-                          className={cn(
-                            "size-1.5 rounded-full",
-                            dotClass[day.status],
-                          )}
-                        />
-                      </button>
-                    );
-                  })}
-              </div>
-            </section>
-          ) : null}
+          {/* TIEN TRUOC, CONG SAU — man hinh nay tra loi "thang nay toi duoc
+              bao nhieu" truoc, roi moi den "vi sao lai la con so do". Nguoc
+              lai se bat nguoi doc di qua ca bang cong truoc khi thay dieu ho
+              mo man hinh nay de xem. */}
+          {data.payslip ? <MonthPayCard payslip={data.payslip} /> : null}
 
           <MonthSummary summary={data.summary} title="Tổng hợp tháng" />
 
           <section>
             <div className="mb-2.5 flex items-center justify-between gap-2">
               <h2 className="heading-sm text-ink">
-                {selectedDate ? `Ngày ${formatDate(selectedDate)}` : "Theo ngày"}
+                {range ? "Ngày đã lọc" : "Theo ngày"}
               </h2>
-              {selectedDate ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSelectedDate(null)}
-                >
+              {range ? (
+                <Button variant="ghost" size="sm" onClick={() => setRange(null)}>
                   Xem cả tháng
                 </Button>
               ) : null}
@@ -236,8 +198,16 @@ export function HistoryView({
               <div className="surface-card">
                 <EmptyState
                   icon={CalendarX2}
-                  title="Chưa có dữ liệu chấm công"
-                  description="Tháng này chưa ghi nhận ngày công nào."
+                  title={
+                    range
+                      ? "Không có ngày công nào trong khoảng đã chọn"
+                      : "Chưa có dữ liệu chấm công"
+                  }
+                  description={
+                    range
+                      ? "Thử mở rộng khoảng ngày, hoặc xem cả tháng."
+                      : "Tháng này chưa ghi nhận ngày công nào."
+                  }
                   compact
                 />
               </div>
@@ -259,6 +229,153 @@ export function HistoryView({
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * TIEN CUA CA THANG — phan tu man Phieu luong chuyen sang khi hai man hinh gop
+ * lam mot.
+ *
+ * KHONG mang theo hai khoi "Chi tiet theo ngay" va "Cong cua ky" cua man cu:
+ * o day chung da co mat duoi dang the tung ngay va o "Tong hop thang", va mot
+ * ban sao thu hai cua cung con so chi tao co hoi cho hai cho noi khac nhau.
+ *
+ * MOI CON SO DEN TU SERVER. Man hinh khong cong lai, khong suy ra, khong lam
+ * tron gi ngoai viec dinh dang — ke ca `netPay`, von co the tinh lai tu cac
+ * thanh phan. Tinh lai o day la mo duong cho mot phieu tu mau thuan voi chinh
+ * no khi mot thanh phan doi cach luu.
+ */
+function MonthPayCard({
+  payslip,
+}: {
+  payslip: PayslipDetail;
+}): React.ReactElement {
+  return (
+    <section className="surface-card overflow-hidden">
+      <div className="p-4 text-center">
+        <p className="num display-md text-ink">
+          {payslip.netPay === null ? "—" : formatVnd(payslip.netPay)}
+        </p>
+        <p className="mt-1 text-[13px] text-ink-muted">Thực nhận</p>
+        <p className="num mt-2 text-[12px] text-ink-muted">
+          {payslip.closedAt === null
+            ? PAYSLIP_DAILY_LABEL.notClosedYet
+            : `Chốt ${formatDateTime(payslip.closedAt)}`}
+        </p>
+      </div>
+
+      {/* Thieu du kien -> noi RO thieu gi. Mot dau gach ngang khong giai thich
+          duoc se lam nguoi doc tuong he thong hong, trong khi that ra doanh
+          nghiep chi chua khai mot con so.
+
+          CHI ky DANG MO moi roi vao day duoc, va do la mot bat bien chu khong
+          phai mot phep thu du: `closePayroll()` tu choi chot khi con dong thieu
+          du kien, nen `ClosedPayslip` khong co truong `missing` nao ca. */}
+      {payslip.status === "provisional" && payslip.missing.length > 0 ? (
+        <div className="border-t border-hairline bg-warning-soft px-4 py-3">
+          <p className="text-[12px] font-medium text-ink">Chưa tính được, vì:</p>
+          <ul className="mt-1 grid gap-0.5 text-[12px] text-ink-secondary">
+            {payslip.missing.map((reason) => (
+              <li key={reason}>{describeMissingReason(reason)}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <dl className="grid gap-2.5 border-t border-hairline p-4 text-[13px]">
+        <MoneyRow
+          label={
+            payslip.payAmount === null || payslip.payUnit === null
+              ? DAY_PAY_LABEL.basePay
+              : `${DAY_PAY_LABEL.basePay} (${formatVnd(payslip.payAmount)}/${PAY_RATE_UNIT_SUFFIX[payslip.payUnit]})`
+          }
+          amount={payslip.basePay}
+        />
+        {payslip.overtimePay !== 0 ? (
+          <MoneyRow label={DAY_PAY_LABEL.overtimePay} amount={payslip.overtimePay} />
+        ) : null}
+        {payslip.hourAdjustment !== 0 ? (
+          <MoneyRow
+            label={DAY_PAY_LABEL.hourAdjustment}
+            amount={payslip.hourAdjustment}
+          />
+        ) : null}
+
+        {payslip.allowanceItems.length > 0 ? (
+          <>
+            <Divider label="Phụ cấp" />
+            {payslip.allowanceItems.map((item) => (
+              <MoneyRow
+                key={item.adjustmentId}
+                label={
+                  item.multiplier === 1
+                    ? item.name
+                    : `${item.name} × ${formatNumber(item.multiplier)}`
+                }
+                amount={item.amount}
+              />
+            ))}
+          </>
+        ) : null}
+
+        {payslip.deductionItems.length > 0 ? (
+          <>
+            <Divider label="Khấu trừ" />
+            {payslip.deductionItems.map((item) => (
+              <MoneyRow
+                key={item.adjustmentId}
+                label={
+                  item.multiplier === 1
+                    ? item.name
+                    : `${item.name} × ${formatNumber(item.multiplier)}`
+                }
+                // Khau tru luu la so DUONG o ban chot; dau tru la viec cua
+                // hien thi, khong phai cua du lieu.
+                amount={-item.amount}
+              />
+            ))}
+          </>
+        ) : null}
+
+        <div className="mt-1 flex items-start justify-between gap-3 border-t border-hairline pt-2.5">
+          <dt className="shrink-0 font-medium text-ink">Thực nhận</dt>
+          <dd className="num text-right font-semibold text-ink">
+            {payslip.netPay === null ? "—" : formatVnd(payslip.netPay)}
+          </dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function MoneyRow({
+  label,
+  amount,
+}: {
+  label: string;
+  /** `null` = chua tinh duoc; hien gach ngang, TUYET DOI khong hien 0. */
+  amount: number | null;
+}): React.ReactElement {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <dt className="min-w-0 flex-1 text-ink-secondary">{label}</dt>
+      <dd
+        className={cn(
+          "num shrink-0 text-right font-medium",
+          amount !== null && amount < 0 ? "text-danger" : "text-ink",
+        )}
+      >
+        {amount === null ? "—" : formatVnd(amount)}
+      </dd>
+    </div>
+  );
+}
+
+function Divider({ label }: { label: string }): React.ReactElement {
+  return (
+    <p className="mt-1 border-t border-hairline pt-2.5 text-[12px] font-medium uppercase tracking-wide text-ink-muted">
+      {label}
+    </p>
   );
 }
 

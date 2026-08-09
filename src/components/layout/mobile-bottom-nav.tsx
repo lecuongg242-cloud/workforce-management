@@ -54,9 +54,9 @@ export function MobileBottomNav(): React.ReactElement {
                   aria-hidden="true"
                   className={cn("size-5", isActive && "stroke-[2.2]")}
                 />
-                {/* `truncate` vi voi nam cot tren may 320px moi o chi con
-                    ~56px — "Phiếu lương" vua khit. Cat gon van doc duoc; tran
-                    ra ngoai thi lam lech ca thanh nav. */}
+                {/* `truncate` vi tren may 320px moi o con rat hep — voi bon
+                    cot la ~72px, voi nam cot chi ~56px. Cat gon van doc duoc;
+                    tran ra ngoai thi lam lech ca thanh nav. */}
                 <span className="w-full truncate text-center">{item.label}</span>
               </Link>
             </li>

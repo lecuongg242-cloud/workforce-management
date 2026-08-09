@@ -1,6 +1,7 @@
 import {
   classifyWorkDay,
   convertedOvertimeHours,
+  creditedMinutesPerPunch,
   nightMinutes as nightMinutesOf,
   overtimeMinutes,
   overtimeNightMinutes,
@@ -252,8 +253,20 @@ export function classifyDay({
   // `day.punches`; nen di song song hai mang bang MOT con tro thay vi tra cuu
   // theo gio vao — hai luot cua cung mot ngay co the trung gio vao khi du lieu
   // duoc bo sung tay, va mot phep tra cuu theo gio se ghep nham.
+  //
+  // SO PHUT LAY TU `punch.workedMinutes`, KHONG do tu `segment`. Do la chinh
+  // nhung con so cong lai thanh `day.workedMinutes`, nen "Trong ca"/"Tang ca"
+  // cua cac luot luon cong lai bang dung cua ngay — xem `PunchDuration`.
+  const closedPunches = day.punches.filter((punch) => punch.checkOut !== null);
+  const creditedMinutes = creditedMinutesPerPunch({
+    rawMinutes: closedPunches.map((punch) => punch.workedMinutes),
+    breakMinutes: day.breakMinutes,
+  });
   const splits = splitPunchOvertime({
-    segments,
+    punches: segments.map((segment, index) => ({
+      creditedMinutes: creditedMinutes[index] ?? 0,
+      segment,
+    })),
     overtimeMinutes: overtime,
     nightStart: rules.nightStartTime,
     nightEnd: rules.nightEndTime,

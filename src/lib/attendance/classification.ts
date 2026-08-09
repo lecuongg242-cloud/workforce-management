@@ -272,43 +272,134 @@ export interface PunchOvertimeSplit {
 }
 
 /**
- * Tach TUNG DOAN thanh phan trong ca va phan tang ca.
+ * Chia GIO NGHI CUA CA ve tung luot, theo ty le do dai.
  *
- * Tra ve mot phan tu cho MOI doan, dung thu tu — noi goi anh xa nguoc ve luot
- * cua minh bang chi so. Tong `overtimeMinutes` cua ket qua bang dung tham so
- * `overtimeMinutes` truyen vao (tru khi tong do dai cac doan con nho hon no,
- * luc ay lay het), va tong `overtimeNightMinutes` bang dung
- * `overtimeNightMinutes()` cua cung mot ngay — hai ham dung chung `overtimeTail`.
+ * Gio nghi duoc tru MOT LAN cho ca ngay (`day.ts`, migration 0014) nen no
+ * khong thuoc ve luot nao ca. Nhung neu khong chia no ra, tong "Trong ca" cua
+ * cac luot se lon hon "Trong ca" cua ngay dung bang so phut nghi — va the ngay
+ * lai hien hai con so khac nhau cho cung mot dai luong.
  *
- * LUU Y VE GIO NGHI: `overtimeMinutes` cua mot ngay duoc tinh tu so phut DA TRU
- * gio nghi, con cac doan o day la THO. Nen `regularMinutes` cong lai co the lon
- * hon so gio duoc tinh cong cua ngay dung bang so phut nghi. Phan tang ca thi
- * khong bi anh huong — no la phan cuoi, va gio nghi khong bao gio nam o cuoi
- * ngay. Day cung la ly do chi PHAN TANG CA duoc dung de chia tien.
+ * Chia theo TY LE do dai, cung tinh than voi `breakToDeductMinutes()` (tru
+ * theo ty le thoi gian co mat). Phan du sau khi lam tron duoc don vao cac luot
+ * co phan le lon nhat, nen tong LUON bang dung `breakMinutes` — khong bao gio
+ * mat hay du mot phut.
+ */
+export function creditedMinutesPerPunch({
+  rawMinutes,
+  breakMinutes,
+}: {
+  rawMinutes: readonly number[];
+  breakMinutes: number;
+}): number[] {
+  const total = rawMinutes.reduce((sum, minutes) => sum + minutes, 0);
+  if (breakMinutes <= 0 || total <= 0) return [...rawMinutes];
+
+  // Khong tru qua so phut dang co: mot luot am se lam moi phep tinh sau do vo
+  // nghia, va tong van phai bang `total - breakMinutes` (san 0).
+  const toDeduct = Math.min(breakMinutes, total);
+
+  const exact = rawMinutes.map((minutes) => (minutes / total) * toDeduct);
+  const floors = exact.map(Math.floor);
+  let leftover = toDeduct - floors.reduce((sum, value) => sum + value, 0);
+
+  // Don phan du vao cac luot co phan le lon nhat — phep chia lon nhat con lai.
+  const order = exact
+    .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+    .sort((a, b) => b.fraction - a.fraction);
+  const deducted = [...floors];
+  for (const item of order) {
+    if (leftover <= 0) break;
+    deducted[item.index] += 1;
+    leftover -= 1;
+  }
+
+  return rawMinutes.map((minutes, index) =>
+    Math.max(minutes - deducted[index], 0),
+  );
+}
+
+/** Mot luot da tan ca: so phut duoc tinh cong, va cho dung cua no tren dong ho. */
+export interface PunchDuration {
+  /**
+   * SO PHUT DUOC TINH CONG cua luot — `attendance_records.worked_minutes`, da
+   * tru phan gio nghi thuoc ve luot nay.
+   *
+   * KHONG duoc suy ra tu `segment`. Hai con so nay lech nhau that: gio hien
+   * thi la "HH:mm" (da cat giay) con so phut duoc luu tinh tu moc thoi gian
+   * day du, nen mot luot 11:50 -> 21:11 co the duoc ghi 562 phut trong khi hieu
+   * hai chuoi gio chi ra 561. Lay cai thu hai lam goc thi phan chenh don het
+   * vao luot DAU tien, va the ngay se hien "Trong ca 1h59" ngay duoi dong
+   * "Trong ca 2h00" cua chinh no.
+   */
+  creditedMinutes: number;
+  /** Vi tri tuyet doi cua luot — CHI dung de biet phan nao roi vao khung dem. */
+  segment: WorkSegment;
+}
+
+/**
+ * Tach TUNG LUOT thanh phan trong ca va phan tang ca.
+ *
+ * Tra ve mot phan tu cho MOI luot, dung thu tu. HAI TONG duoc bao dam:
+ *
+ *   sum(overtimeMinutes) = `overtimeMinutes` truyen vao
+ *   sum(regularMinutes)  = sum(creditedMinutes) - `overtimeMinutes`
+ *
+ * Nen khi noi goi truyen vao dung nhung con so lam nen `day.workedMinutes`,
+ * hai dong "Trong ca / Tang ca" cua ngay va cua cac luot LUON khop nhau. Do la
+ * toan bo ly do ham nay nhan `creditedMinutes` thay vi tu do do dai doan.
+ *
+ * `overtimeNightMinutes` van do doan tuyet doi quyet dinh — khung gio dem la
+ * mot khoang tren dong ho, khong suy ra duoc tu so phut.
  */
 export function splitPunchOvertime({
-  segments,
+  punches,
   overtimeMinutes: overtime,
   nightStart,
   nightEnd,
 }: {
-  segments: readonly WorkSegment[];
+  punches: readonly PunchDuration[];
   overtimeMinutes: number;
   nightStart: string;
   nightEnd: string;
 }): PunchOvertimeSplit[] {
-  const tail = overtime > 0 ? overtimeTail(segments, overtime) : segments.map(() => null);
+  // Cat `overtime` phut CUOI CUNG, di nguoc tu luot cuoi — cung quy tac voi
+  // `overtimeTail()`, chi khac la do bang so phut duoc tinh cong chu khong bang
+  // do dai doan.
+  const overtimeOfPunch = punches.map(() => 0);
+  let remaining = overtime;
+  for (let index = punches.length - 1; index >= 0 && remaining > 0; index -= 1) {
+    const take = Math.min(punches[index].creditedMinutes, remaining);
+    overtimeOfPunch[index] = take;
+    remaining -= take;
+  }
 
-  return segments.map((segment, index) => {
-    const part = tail[index];
-    const overtimeOfPunch = part === null ? 0 : part.end - part.start;
+  return punches.map((punch, index) => {
+    const overtimeMinutesOfPunch = overtimeOfPunch[index];
+    if (overtimeMinutesOfPunch <= 0) {
+      return {
+        regularMinutes: punch.creditedMinutes,
+        overtimeMinutes: 0,
+        overtimeNightMinutes: 0,
+      };
+    }
+
+    // Phan tang ca la phan CUOI cua luot. Kep o do dai doan phong truong hop
+    // so phut duoc luu lon hon khoang thoi gian tren dong ho (du lieu bo sung
+    // tay co the nhu vay) — khong de mot doan tu keo dai ra ngoai chinh no.
+    const length = punch.segment.end - punch.segment.start;
+    const tail: WorkSegment = {
+      start: punch.segment.end - Math.min(overtimeMinutesOfPunch, length),
+      end: punch.segment.end,
+    };
+
     return {
-      regularMinutes: segment.end - segment.start - overtimeOfPunch,
-      overtimeMinutes: overtimeOfPunch,
-      overtimeNightMinutes:
-        part === null
-          ? 0
-          : nightMinutes({ segments: [part], nightStart, nightEnd }),
+      regularMinutes: punch.creditedMinutes - overtimeMinutesOfPunch,
+      overtimeMinutes: overtimeMinutesOfPunch,
+      overtimeNightMinutes: nightMinutes({
+        segments: [tail],
+        nightStart,
+        nightEnd,
+      }),
     };
   });
 }

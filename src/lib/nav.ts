@@ -58,9 +58,11 @@ export interface EmployeeNavItem {
  */
 export const EMPLOYEE_NAV_ITEMS: EmployeeNavItem[] = [
   { label: "Trang chủ", href: "/employee", icon: Home },
-  { label: "Lịch sử", href: "/employee/history", icon: CalendarClock },
+  // Cham cong VA tien cua thang nam chung mot man hinh: cung mot thang cong,
+  // nhin tu hai phia. Tach lam hai muc nav thi nguoi doc phai nho minh dang o
+  // ben nao va bam qua lai de doi chieu mot con so voi chinh no.
+  { label: "Bảng lương", href: "/employee/history", icon: Receipt },
   { label: "Yêu cầu", href: "/employee/requests", icon: ClipboardList },
-  { label: "Phiếu lương", href: "/employee/payslips", icon: Receipt },
   { label: "Cá nhân", href: "/employee/profile", icon: User },
 ];
 
