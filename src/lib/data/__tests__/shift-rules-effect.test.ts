@@ -50,10 +50,55 @@ const EMP_A = "emp-04-02-a";
 const EMP_B = "emp-04-02-b";
 const TEST_EMPLOYEE_IDS = [EMP_A, EMP_B];
 
-/** So phut nhan vien den muon so voi gio bat dau ca theo ke hoach. */
+/**
+ * So phut nhan vien den muon so voi gio bat dau ca theo ke hoach — gia tri
+ * MONG MUON. Con so THAT duoc chot o `beforeAll` qua `resolveTiming()`, vi no
+ * con phu thuoc gio chay test (xem giai thich o do).
+ */
 const LATE_BY_MINUTES = 20;
-const TOLERANCE_BEFORE = 30; // > 20 -> khong tinh muon
-const TOLERANCE_AFTER = 5; // < 20 -> tinh muon ~15 phut
+
+/**
+ * Chot ba con so thoi gian cua ca test tu "so phut da troi qua ke tu nua dem".
+ *
+ * VI SAO KHONG DUNG THANG `now - 20 phut`:
+ * `checkIn()` do muon bang `now` tru `tf_local_instant(tf_work_date(now),
+ * shift.start_time)`, ma `tf_work_date` chi la NGAY LICH theo mui gio VN
+ * (`0003_enums_time.sql:67-73`) — no khong lui ngay cho ca qua dem. Nen khi
+ * test chay trong ~20 phut dau sau nua dem, `now - 20` am, `minutesToHms`
+ * cuon vong thanh 23:4x, va `end_time < start_time` lam cot sinh `overnight`
+ * bat true. Luc do gio bat dau ca theo ke hoach duoc giai ra la 23:4x TOI NAY
+ * — mot moc trong TUONG LAI — nen so phut muon am, bi kep ve 0, va ban ghi ra
+ * `on_time` thay vi `late`.
+ *
+ * Do la mot loi cua chinh fixture nay, khong phai cua san pham: no do TAT
+ * DINH trong khoang 00:00-00:19 moi dem. Sua bang cach lay do muon KHONG BAO
+ * GIO vuot qua so phut da troi qua trong ngay, de ca luon nam gon trong mot
+ * ngay lich.
+ */
+function resolveTiming(nowTotalMinutes: number): {
+  lateBy: number;
+  toleranceBefore: number;
+  toleranceAfter: number;
+} {
+  if (nowTotalMinutes < 2) {
+    // 00:00 va 00:01 — khong the dung mot ca bat dau truoc do ma van cung
+    // ngay. Nem loi RO RANG thay vi bo qua im lang: mot test tu tat di la mot
+    // khoang trong khong ai nhin thay.
+    throw new Error(
+      "Test này không chạy được trong hai phút đầu sau nửa đêm (giờ VN) — " +
+        "không tồn tại giờ bắt đầu ca nào vừa trước hiện tại vừa cùng ngày lịch. " +
+        "Chạy lại sau 00:02.",
+    );
+  }
+  const lateBy = Math.min(LATE_BY_MINUTES, nowTotalMinutes);
+  return {
+    lateBy,
+    // Luon LON HON do muon -> khong tinh muon.
+    toleranceBefore: lateBy + 10,
+    // Luon NHO HON do muon -> tinh muon dung (lateBy - toleranceAfter) phut.
+    toleranceAfter: Math.max(0, lateBy - 15),
+  };
+}
 
 const FAKE_JPEG_BYTES = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
 
@@ -106,6 +151,8 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
   let recordAId = "";
   /** Ban chup dong cua nhan vien A NGAY SAU khi cham cong, truoc moi thay doi quy tac. */
   let recordASnapshot: Record<string, unknown> | null = null;
+  /** Chot o `beforeAll` — xem `resolveTiming()`. */
+  let timing: ReturnType<typeof resolveTiming>;
 
   function ownerSession(employeeId: string | null = null) {
     return {
@@ -151,18 +198,21 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     const { hour, minute } = vnHourMinute(new Date(nowIsoRaw as string));
     const nowTotalMinutes = hour * 60 + minute;
 
-    // Ca bat dau LATE_BY_MINUTES phut TRUOC hien tai va keo dai 8 tieng: moi
+    timing = resolveTiming(nowTotalMinutes);
+
+    // Ca bat dau `timing.lateBy` phut TRUOC hien tai va keo dai 8 tieng: moi
     // lan cham cong trong test nay deu muon dung ngan ay phut so voi ke hoach,
-    // bat ke test chay vao gio nao trong ngay.
+    // bat ke test chay vao gio nao trong ngay — ke ca ngay sau nua dem, noi
+    // `lateBy` tu thu nho lai de ca khong wrap sang hom truoc.
     const { error: shiftError } = await admin.from("shifts").insert({
       id: SHIFT_ID,
       company_id: COMPANY_ID,
       name: "Test ca ân hạn (04-02)",
       code: "T0402LATE",
-      start_time: minutesToHms(nowTotalMinutes - LATE_BY_MINUTES),
-      end_time: minutesToHms(nowTotalMinutes - LATE_BY_MINUTES + 8 * 60),
+      start_time: minutesToHms(nowTotalMinutes - timing.lateBy),
+      end_time: minutesToHms(nowTotalMinutes - timing.lateBy + 8 * 60),
       break_minutes: 0,
-      late_tolerance_minutes: TOLERANCE_BEFORE,
+      late_tolerance_minutes: timing.toleranceBefore,
       working_days: [1, 2, 3, 4, 5, 6, 7],
       status: "active",
     });
@@ -246,7 +296,7 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
   });
 
   it("2. [tiêu chí 1] siết ân hạn xuống 5 phút -> lần chấm KẾ TIẾP đã tính muộn, không có bước áp dụng nào ở giữa", async () => {
-    await updateShift(SHIFT_ID, { lateToleranceMinutes: TOLERANCE_AFTER });
+    await updateShift(SHIFT_ID, { lateToleranceMinutes: timing.toleranceAfter });
 
     const record = await checkIn(EMP_B, makeEvidence());
 
@@ -254,10 +304,10 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     // ~15 phut (20 den muon - 5 an han); cho +-1 phut vi tf_worked_minutes lam
     // tron epoch va hai lan cham cach nhau vai giay.
     expect(record.lateMinutes).toBeGreaterThanOrEqual(
-      LATE_BY_MINUTES - TOLERANCE_AFTER - 1,
+      timing.lateBy - timing.toleranceAfter - 1,
     );
     expect(record.lateMinutes).toBeLessThanOrEqual(
-      LATE_BY_MINUTES - TOLERANCE_AFTER + 1,
+      timing.lateBy - timing.toleranceAfter + 1,
     );
   });
 
@@ -295,5 +345,47 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     expect(second.id).not.toBe(recordAId);
     expect(second.lateMinutes).toBe(0);
     expect(second.status).toBe("on_time");
+  });
+});
+
+/**
+ * Test THUAN (khong cham database) cho chinh `resolveTiming()`.
+ *
+ * Ton tai vi bo test o tren chi di qua nhanh "sau nua dem" neu tinh co duoc
+ * chay trong ~20 phut do — tuc bang chung cho ban sua se KHONG xuat hien o
+ * 98,6% cac lan chay. Khoi nay kiem cung mot bat bien o moi phut trong ngay,
+ * bat ke dong ho luc chay.
+ */
+describe("resolveTiming — ca test không bao giờ được wrap qua nửa đêm", () => {
+  it("giờ bình thường: giữ nguyên 20 phút muộn, ân hạn 30 rồi 5 như thiết kế gốc", () => {
+    for (const nowTotalMinutes of [20, 60, 480, 1439]) {
+      const timing = resolveTiming(nowTotalMinutes);
+      expect(timing.lateBy).toBe(20);
+      expect(timing.toleranceBefore).toBe(30);
+      expect(timing.toleranceAfter).toBe(5);
+    }
+  });
+
+  it("ngay sau nửa đêm: thu nhỏ độ muộn để giờ bắt đầu ca không âm", () => {
+    for (let nowTotalMinutes = 2; nowTotalMinutes < 20; nowTotalMinutes += 1) {
+      const timing = resolveTiming(nowTotalMinutes);
+      // Bat bien 1: gio bat dau ca luon cung ngay lich (khong am -> khong wrap
+      // -> cot sinh `overnight` khong bat).
+      expect(nowTotalMinutes - timing.lateBy).toBeGreaterThanOrEqual(0);
+      // Bat bien 2: an han TRUOC luon lon hon do muon -> on_time.
+      expect(timing.toleranceBefore).toBeGreaterThan(timing.lateBy);
+      // Bat bien 3: an han SAU luon nho hon do muon -> late, va so phut muon
+      // ghi nhan duoc phai LON HON 0, neu khong test 2 mat y nghia.
+      expect(timing.toleranceAfter).toBeLessThan(timing.lateBy);
+      expect(timing.lateBy - timing.toleranceAfter).toBeGreaterThan(0);
+    }
+  });
+
+  it("hai phút đầu sau nửa đêm: ném lỗi rõ ràng thay vì bỏ qua im lặng", () => {
+    for (const nowTotalMinutes of [0, 1]) {
+      expect(() => resolveTiming(nowTotalMinutes)).toThrow(
+        "hai phút đầu sau nửa đêm",
+      );
+    }
   });
 });
