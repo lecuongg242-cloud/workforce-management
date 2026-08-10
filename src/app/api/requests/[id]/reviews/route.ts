@@ -5,6 +5,7 @@ import {
   NoActiveCompanyError,
   NoMembershipError,
   UnauthenticatedError,
+  canReadCompanyData,
   getSessionContext,
 } from "@/lib/auth/session-context";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -67,7 +68,7 @@ export async function GET(
       return NextResponse.json(requestReviewListResponseSchema.parse([]));
     }
 
-    const isAdminRole = role === "owner" || role === "admin";
+    const isAdminRole = canReadCompanyData(role);
     if (!isAdminRole && requestRow.employee_id !== sessionEmployeeId) {
       throw new ForbiddenError();
     }

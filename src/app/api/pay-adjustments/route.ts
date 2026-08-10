@@ -6,7 +6,7 @@ import {
   NoMembershipError,
   UnauthenticatedError,
   getSessionContext,
-  requireRole,
+  canReadCompanyData,
 } from "@/lib/auth/session-context";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
@@ -36,7 +36,7 @@ const SCOPE_COLUMNS = "id, company_id, adjustment_id, mode, scope_type, scope_va
 export async function GET(): Promise<NextResponse> {
   try {
     const { companyId, role } = await getSessionContext();
-    requireRole(role, ["owner", "admin"]);
+    if (!canReadCompanyData(role)) throw new ForbiddenError();
 
     const supabase = await createServerSupabase();
 

@@ -6,7 +6,7 @@ import {
   NoMembershipError,
   UnauthenticatedError,
   getSessionContext,
-  requireRole,
+  canReadCompanyData,
 } from "@/lib/auth/session-context";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
@@ -38,7 +38,7 @@ const PAY_RATE_COLUMNS =
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const { companyId, role } = await getSessionContext();
-    requireRole(role, ["owner", "admin"]);
+    if (!canReadCompanyData(role)) throw new ForbiddenError();
 
     const url = new URL(request.url);
     const parsedQuery = payRateQuerySchema.safeParse(

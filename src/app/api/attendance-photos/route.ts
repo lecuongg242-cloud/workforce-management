@@ -6,7 +6,7 @@ import {
   NoMembershipError,
   UnauthenticatedError,
   getSessionContext,
-  requireRole,
+  canReadCompanyData,
 } from "@/lib/auth/session-context";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
@@ -38,7 +38,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     const { companyId, role } = await getSessionContext();
 
     // ATT-04: chi quan tri (owner/admin) doc sieu du lieu anh cham cong.
-    requireRole(role, ["owner", "admin"]);
+    if (!canReadCompanyData(role)) throw new ForbiddenError();
 
     const url = new URL(request.url);
     const rawQuery = Object.fromEntries(url.searchParams.entries());

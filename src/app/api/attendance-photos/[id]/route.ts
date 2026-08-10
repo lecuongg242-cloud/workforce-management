@@ -4,7 +4,7 @@ import {
   NoMembershipError,
   UnauthenticatedError,
   getSessionContext,
-  requireRole,
+  canReadCompanyData,
 } from "@/lib/auth/session-context";
 import { ATTENDANCE_PHOTO_BUCKET } from "@/lib/storage/attendance-photos";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -64,7 +64,7 @@ export async function GET(
     }
 
     // ATT-04: chi quan tri (owner/admin) xem lai anh cham cong.
-    requireRole(role, ["owner", "admin"]);
+    if (!canReadCompanyData(role)) throw new ForbiddenError();
 
     // Dong ton tai nhung KHONG co tep anh (lan cham trong nguong cho phep,
     // migration 0032). Tra 404 voi CUNG thong diep nhu tren: route nay chi

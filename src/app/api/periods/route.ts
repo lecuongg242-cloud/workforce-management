@@ -6,7 +6,7 @@ import {
   NoMembershipError,
   UnauthenticatedError,
   getSessionContext,
-  requireRole,
+  canReadCompanyData,
 } from "@/lib/auth/session-context";
 import { getServerToday } from "@/lib/today";
 import { shiftMonth } from "@/lib/format";
@@ -48,7 +48,7 @@ function monthBounds(month: string): { start: string; end: string; nextStart: st
 export async function GET(): Promise<NextResponse> {
   try {
     const { companyId, role } = await getSessionContext();
-    requireRole(role, ["owner", "admin"]);
+    if (!canReadCompanyData(role)) throw new ForbiddenError();
 
     const today = await getServerToday();
     const currentMonth = today.slice(0, 7);

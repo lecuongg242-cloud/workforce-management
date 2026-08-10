@@ -6,7 +6,7 @@ import {
   NoMembershipError,
   UnauthenticatedError,
   getSessionContext,
-  requireRole,
+  canReadCompanyData,
 } from "@/lib/auth/session-context";
 import {
   geocodeListResponseSchema,
@@ -56,7 +56,7 @@ const SEARCH_PARAMS = {
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const { role } = await getSessionContext();
-    requireRole(role, ["owner", "admin"]);
+    if (!canReadCompanyData(role)) throw new ForbiddenError();
 
     const url = new URL(request.url);
     const parsed = geocodeQuerySchema.safeParse({ q: url.searchParams.get("q") ?? "" });

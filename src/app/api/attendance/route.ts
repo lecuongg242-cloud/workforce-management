@@ -5,6 +5,7 @@ import {
   NoActiveCompanyError,
   NoMembershipError,
   UnauthenticatedError,
+  canReadCompanyData,
   getSessionContext,
 } from "@/lib/auth/session-context";
 import { shiftMonth } from "@/lib/format";
@@ -49,7 +50,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     const rawQuery = Object.fromEntries(url.searchParams.entries());
     const queryParams = attendanceQuerySchema.parse(rawQuery);
 
-    const isAdminRole = role === "owner" || role === "admin";
+    const isAdminRole = canReadCompanyData(role);
     if (
       !isAdminRole &&
       queryParams.employeeId &&

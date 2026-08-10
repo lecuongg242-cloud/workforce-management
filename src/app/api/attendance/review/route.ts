@@ -6,7 +6,7 @@ import {
   NoMembershipError,
   UnauthenticatedError,
   getSessionContext,
-  requireRole,
+  canReadCompanyData,
 } from "@/lib/auth/session-context";
 import {
   isOutsideShiftWindow,
@@ -243,7 +243,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     // ATT-07: chi quan tri (owner/admin) doc duoc danh sach nay — no gop toa
     // do va khoang cach cua nhieu nhan vien trong mot phan hoi.
-    requireRole(role, ["owner", "admin"]);
+    if (!canReadCompanyData(role)) throw new ForbiddenError();
 
     const url = new URL(request.url);
     const rawQuery = Object.fromEntries(url.searchParams.entries());

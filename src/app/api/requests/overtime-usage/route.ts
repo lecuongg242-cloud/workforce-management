@@ -5,6 +5,7 @@ import {
   NoActiveCompanyError,
   NoMembershipError,
   UnauthenticatedError,
+  canReadCompanyData,
   getSessionContext,
 } from "@/lib/auth/session-context";
 import {
@@ -67,7 +68,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     // va cong no o ca hai ve se lam canh bao bao vuot gap doi.
     const excludeRequestId = url.searchParams.get("excludeRequestId");
 
-    const isAdminRole = role === "owner" || role === "admin";
+    const isAdminRole = canReadCompanyData(role);
     if (!isAdminRole && queryParams.employeeId !== sessionEmployeeId) {
       throw new ForbiddenError();
     }
