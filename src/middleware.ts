@@ -15,7 +15,7 @@ export interface GateResult {
   to?: string;
 }
 
-const PROTECTED_PREFIXES = ["/admin", "/employee"];
+const PROTECTED_PREFIXES = ["/admin", "/employee", "/platform"];
 const CHANGE_PASSWORD_PATH = "/doi-mat-khau";
 
 /**
