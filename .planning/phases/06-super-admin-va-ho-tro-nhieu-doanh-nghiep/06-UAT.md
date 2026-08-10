@@ -31,8 +31,9 @@ Mục thứ ba là mục quan trọng nhất — nó nói rõ ranh giới giữa
   **0 dòng**; và một assertion khoá **đúng tập tên cột** trả về, để ai thêm một cột dữ
   liệu nghiệp vụ vào hàm sẽ đỏ ở đó trước.
 
-**Còn thiếu:** chưa ai nhìn bảng này trên trình duyệt. Bốn cột (số nhân viên, hoạt
-động gần nhất, kỳ đang mở, hai nút hành động) mới chỉ được kiểm ở tầng dữ liệu.
+**Còn thiếu: không còn.** Đã nhìn trên trình duyệt 2026-08-10 — Ngọc Phát 6 nhân
+viên / hoạt động 09/08 lúc 02:37 / kỳ 2026-08; Bình Minh 12 nhân viên. Phát hiện kèm:
+danh sách lẫn hàng chục doanh nghiệp fixture cũ, dọn bằng `npm run db:seed`.
 
 ---
 
@@ -53,10 +54,16 @@ Mục thứ ba là mục quan trọng nhất — nó nói rõ ranh giới giữa
 - `platform-sessions.test.ts` (7/7): mở phiên đặt cookie `tf_active_company`; mở phiên
   vào doanh nghiệp khác thì cookie đổi theo.
 
-**Còn thiếu:** **banner hỗ trợ chưa ai nhìn bằng mắt.** Đây là vế "màn hình luôn hiển
-thị rõ" của chính tiêu chí này, và nó là thứ duy nhất trong phase không có cách nào
-kiểm bằng máy. Cần nhìn: nền hổ phách, đúng tên doanh nghiệp, số phút còn lại giảm
-dần, và nút *Đóng phiên* hoạt động.
+**Còn thiếu: không còn.** Banner đã nhìn bằng mắt 2026-08-10: nền hổ phách, đúng tên
+đầy đủ "Công ty TNHH Thương mại Ngọc Phát", đếm ngược chạy thật (60 → 50 phút), nút
+*Đóng phiên* đưa về `/platform`. Sidebar ghi vai trò "Phiên hỗ trợ".
+
+**Chính buổi nhìn này bắt được lỗi nặng nhất của phase:** ban đầu banner hiện mã thô
+`cty-01` và sidebar kẹt "Đang tải…", vì `GET /api/companies` trả `[]` cho phiên hỗ
+trợ — nhánh support nằm nhầm trong `catch (NoMembershipError)`, mà từ khi có D-51 thì
+lỗi đó không còn được ném nữa. **Lỗi tương tác giữa Task 4 và Task 6; cả hai task đều
+xanh khi đứng riêng, và cả 772 test lẫn e2e đều không bắt được** — vì không chỗ nào
+khẳng định về *tên* doanh nghiệp. Đã sửa (`ef410c5`) và thêm 2 test hồi quy.
 
 ---
 
@@ -79,8 +86,14 @@ chính audit nghiệp vụ mà `audit_log` sinh ra để phục vụ.
 - `support_sessions` **không có policy `delete`** — nhật ký không xoá được. Có
   assertion pgTAP cho điều này (`20_support_sessions.sql` #8).
 
-**Còn thiếu:** `/platform/log` chưa ai nhìn trên trình duyệt. Ba nhãn trạng thái
-(`Đang mở` / `Đã đóng` / `Hết hạn`) mới chỉ đúng ở tầng dữ liệu.
+**Còn thiếu: không còn.** Đã nhìn 2026-08-10: dòng phiên mở lúc 16:26, hết hạn 17:26
+(đúng 60 phút), lý do nguyên văn "Ticket #418 — khách báo sai giờ tăng ca tháng 8",
+trạng thái chuyển `Đang mở` → `Đã đóng`.
+
+**Buổi nhìn này bắt thêm một lỗi:** cột Doanh nghiệp tụt về mã thô `cty-01` **ngay khi
+đóng phiên** — route join `companies(name)` qua RLS, mà quyền đọc bảng đó lại đến từ
+chính phiên hỗ trợ. Nghĩa là **mọi dòng lịch sử đều mất tên**, đúng lúc một nhật ký
+cần đọc lại nhất. Đã đổi sang lấy tên qua `tf_platform_company_overview()` (`ef410c5`).
 
 ---
 
@@ -123,9 +136,18 @@ chính audit nghiệp vụ mà `audit_log` sinh ra để phục vụ.
 | `no-inline-admin-role.test.ts` | thêm `role === "owner"` vào `periods/route.ts` | **đỏ**, nêu đúng tên file; hoàn nguyên → xanh, `git status` sạch |
 | `canReadCompanyData` | thêm `"manager"` vào `READ_ROLES` | **đỏ** đúng một test; hoàn nguyên → 15/15 xanh, `git diff` rỗng |
 
-**Còn thiếu:** hộp thoại của hai đường ghi (`Cấp lại mật khẩu tạm`, `Cấp quyền chủ`)
-chưa ai bấm tay. Đặc biệt cần nhìn khối hiện mật khẩu tạm **một lần duy nhất** kèm câu
-"Mật khẩu này không hiện lại được — hãy chép ngay."
+**Đã bấm tay 2026-08-10 — vế "ghi bị chặn":** trong phiên hỗ trợ, bấm **thật** nút
+*Chuyển phòng ban* cho Chu Văn Lộc (Sản xuất → Kế toán), hai lần. Kết quả:
+`requireRole` ném `ForbiddenError` tại `bulkMoveDepartment` (thấy trong log server),
+dữ liệu **không đổi** (nhân viên vẫn ở "Sản xuất"), và toast hiện đúng nguyên văn
+`"Bạn không có quyền thực hiện thao tác này."` — phải bắt bằng `MutationObserver` vì
+toast tự tắt sau vài giây. Đây là xác nhận trực tiếp cho khẳng định trung tâm của
+D-52: **không sửa một dòng nào trong 16 file `mutations/*.ts` mà đường ghi vẫn đóng.**
+
+**Còn thiếu:** hai hộp thoại đường ghi trắng (*Cấp lại mật khẩu tạm*, *Cấp quyền chủ*)
+chưa bấm — chúng đổi mật khẩu và quyền của tài khoản thật trên dev nên không tự bấm.
+Đã phủ bằng 6/6 test tích hợp trên Auth và database thật, gồm cả khẳng định mật khẩu
+tạm không xuống `audit_log` và mật khẩu mới đăng nhập được thật.
 
 ---
 
@@ -135,7 +157,7 @@ chưa ai bấm tay. Đặc biệt cần nhìn khối hiện mật khẩu tạm *
 |---|---|
 | `npm run typecheck` | sạch |
 | `npm run lint` | 0 lỗi (1 cảnh báo có sẵn ở `scripts/tmp/setup-ngocphat.mjs`, ngoài phạm vi) |
-| `npm run test` | **70 file, 772/772 xanh** |
+| `npm run test` | **70 file, 774/774 xanh** |
 | `npm run check:assertions` | 306 (sàn 306) |
 | `npm run check:secrets` | OK — quét 93 file, không khoá bí mật nào |
 | `npm run test:e2e-support` | **TẤT CẢ ĐẠT** (17 khẳng định, HTTP thật) |
