@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Duyệt yêu cầu và chốt kỳ công** - Duyệt/từ chối có lý do, tác động đúng vào dữ liệu kỳ, lịch sử xử lý, thông báo, chốt kỳ có ghi vết (completed 2026-08-06)
 - [x] **Phase 5.1: Bảng công của quản trị và bàn giao cho kế toán** (INSERTED 2026-08-06) - Lưới tháng + danh sách lượt chấm công, bảng chuẩn bị lương xuất CSV (completed 2026-08-06)
 - [x] **Phase 5.2: Tính lương do doanh nghiệp tự cấu hình** (INSERTED 2026-08-06) - Ba chế độ tính công, mức lương có phiên bản, phụ cấp/khấu trừ có phạm vi, chốt lương kỳ
-- [ ] **Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp** - Danh sách toàn hệ thống, tra cứu sâu một doanh nghiệp, đường ghi riêng có kiểm soát
+- [x] **Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp** - Danh sách toàn hệ thống, tra cứu sâu một doanh nghiệp, đường ghi riêng có kiểm soát
 
 ## Phase Details
 
@@ -334,7 +334,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 5.2 → 6
 | 5. Duyệt yêu cầu và chốt kỳ công | 6/6 | Complete    | 2026-08-06 |
 | 5.1 Bảng công của quản trị (INSERTED) | — | Complete    | 2026-08-06 |
 | 5.2 Tính lương (INSERTED) | 6/6 | Complete    | 2026-08-06 |
-| 6. Super admin và hỗ trợ nhiều doanh nghiệp | 0/TBD | Not started | - |
+| 6. Super admin và hỗ trợ nhiều doanh nghiệp | 9/9 | Complete | 2026-08-10 |
 
 ## Requirement Coverage
 

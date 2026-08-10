@@ -26,7 +26,8 @@
     "test:e2e-approval": "node --env-file=.env.local scripts/e2e-approval.mjs",
     "test:e2e-payroll": "node --env-file=.env.local scripts/e2e-payroll.mjs",
     "seed:platform-admin": "node --env-file=.env.local scripts/seed-platform-admin.mjs",
-    "test:e2e-support-rls": "node --env-file=.env.local scripts/e2e-support-rls.mjs"
+    "test:e2e-support-rls": "node --env-file=.env.local scripts/e2e-support-rls.mjs",
+    "test:e2e-support": "node --env-file=.env.local scripts/e2e-support.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

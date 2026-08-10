@@ -4,11 +4,11 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 6
 current_phase_name: Super admin và hỗ trợ nhiều doanh nghiệp
-status: ready
-stopped_at: Phase 5.2 da thuc thi xong 6/6 plan; cho chu du an ky bien ban 05-2-UAT.md roi sang Phase 6
-last_updated: "2026-08-06T16:45:00.000Z"
-last_activity: 2026-08-06
-last_activity_desc: Thuc thi Phase 5.2 — 6/6 plan (05-2-01..05-2-06), migration 0022-0024, cong no-hardcoded-money, e2e-payroll
+status: complete
+stopped_at: Phase 6 da thuc thi xong 9/9 task tren nhanh phase-6-super-admin; cho chu du an bam tay 3 man hinh moi va ky 06-UAT.md
+last_updated: "2026-08-10T16:00:00.000Z"
+last_activity: 2026-08-10
+last_activity_desc: Thuc thi Phase 6 — 9/9 task, migration 0033-0036, phien ho tro co thoi han, khu /platform, cong no-inline-admin-role, e2e-support + e2e-support-rls
 progress:
   total_phases: 6
   completed_phases: 6
@@ -23,16 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-31)
 
 **Core value:** Doanh nghiệp tin được số liệu chấm công: mỗi bản ghi vào/ra là có thật, đúng nơi, đúng giờ — và không doanh nghiệp nào nhìn thấy dữ liệu của doanh nghiệp khác.
-**Current focus:** Phase 6 — super admin và hỗ trợ nhiều doanh nghiệp
+**Current focus:** Phase 6 đã thực thi xong — chờ chủ dự án bấm tay và ký `06-UAT.md`
 
 ## Current Position
 
-Phase: 5.2 — Tính lương do doanh nghiệp tự cấu hình (INSERTED) — **6/6 plan đã thực thi**
-Plan: kế tiếp là Phase 6 (chưa lập kế hoạch)
-Status: Phase 5.2 xong về mã và test; **biên bản `05-2-UAT.md` chưa có chữ ký chủ dự án**
-Last activity: 2026-08-06 — Thực thi Phase 5.2 (migration 0022–0024, 3 mô-đun thuần mới, cổng `no-hardcoded-money`, `e2e-payroll`)
+Phase: 6 — Super admin và hỗ trợ nhiều doanh nghiệp — **9/9 task đã thực thi**
+Plan: `docs/superpowers/plans/2026-08-10-phase-6-super-admin.md`
+Status: xong về mã và test trên nhánh `phase-6-super-admin`; **chưa merge**, và **biên bản `06-UAT.md` chưa có chữ ký chủ dự án**
+Last activity: 2026-08-10 — Thực thi Phase 6 (migration 0033–0036, `support_sessions` + `tf_has_support_access`, khu `/platform`, cổng `no-inline-admin-role`, `e2e-support` + `e2e-support-rls`)
 
-Progress: [██████████] 100% — Phase 1–5.2 đã thực thi xong
+Progress: [██████████] 100% — Phase 1–6 đã thực thi xong (toàn bộ 44 requirement của v1)
 
 ## Performance Metrics
 
@@ -224,6 +224,47 @@ Quyết định của Phase 5.1 (chèn 2026-08-06 theo yêu cầu chủ dự án
 - 05-06: hai migration của phase (0018, 0021) được làm **chạy lại được** (`drop … if exists` ở
   đầu) để sửa được tại chỗ khi chưa phát hành, thay vì để lại một file chỉ để vá một dòng
 
+Quyết định của Phase 6 (lập kế hoạch và thực thi 2026-08-10; chi tiết ở
+`docs/superpowers/specs/2026-08-10-phase-6-super-admin-design.md`):
+
+- D-49: quyền đọc xuyên doanh nghiệp suy từ một **phiên hỗ trợ có thời hạn**
+  (`support_sessions` + `tf_has_support_access()`), **không** suy từ danh tính. Một
+  policy `or tf_is_platform_admin()` gắn thẳng vào mọi bảng chính là "quyền vượt RLS
+  dùng chung" mà tiêu chí 4 của phase loại trừ. 60 phút, không có đường gia hạn
+- D-50: chỉ mở lệnh **`select`**; ba lệnh ghi giữ nguyên `tf_is_member` — đó là chỗ
+  tiêu chí 4 được thoả ở tầng database. **Đo lại khi thực thi:** 23 bảng chứ không
+  phải 22, và 4 bảng lương dùng khuôn `tf_is_company_admin` (0029/0030) chứ không
+  phải `tf_is_member`, nên phải chép nguyên biểu thức cũ rồi mới thêm nhánh
+- D-51: `AccessRole = CompanyRole | "support"`; `CompanyRole` giữ nguyên bốn giá trị
+  nên không ô chọn vai trò nào trong sản phẩm thấy `"support"`
+- D-52: hai vị ngữ — `canReadCompanyData()` cho 16 đường đọc, `requireRole()` giữ
+  nguyên ở 51 chỗ trong 16 file `mutations/*.ts`. Server Action ghi tự động từ chối
+  phiên hỗ trợ, **không phải sửa một dòng nào**; cổng `no-inline-admin-role` chặn
+  thói quen cũ quay lại
+- D-53: `AppUser.employeeId` nới thành `string | null`; thêm `useEmployeeSession()`
+- D-54: banner hỗ trợ dính đỉnh `/admin/*`; nút ghi **không ẩn** — ẩn ở 10 màn hình
+  là 10 chỗ để quên, còn thông điệp từ chối đến từ một chỗ duy nhất
+- D-55: một dòng audit cho mỗi **PHIÊN** (mở + đóng), không phải mỗi request. Thêm giá
+  trị enum `audit_action.'access'`
+- D-56: khu `/platform` + RPC `tf_platform_company_overview()` (chỉ trả số tổng hợp,
+  nên được phép nhìn xuyên doanh nghiệp mà không cần phiên); hai đường ghi trắng nằm
+  **ngoài** dữ liệu chấm công và lương
+
+Quyết định phát sinh **khi thực thi** Phase 6 (2026-08-10):
+
+- `getActiveSupportSession()` sống ở `session-context.ts` chứ không ở
+  `mutations/platform-sessions.ts`: `getSessionContext()` phải gọi nó, mà file kia đã
+  import ngược lại — để ở đó sẽ tạo một vòng phụ thuộc
+- `closeSupportSession()` phải ghi audit **TRƯỚC** rồi mới đặt `closed_at`: policy
+  `audit_log_insert_support` đòi `tf_has_support_access()`, mà hàm đó trả `false`
+  ngay khi `closed_at` được đặt — làm ngược thì dòng audit của việc đóng phiên
+  **không bao giờ ghi được**. Lỗi do chính test tích hợp bắt được, không phải suy diễn
+- `grantOwnerMembership()` ghi `audit_log.company_id = NULL` và đặt mã doanh nghiệp
+  vào `reason`: platform admin không là thành viên và không nhất thiết đang có phiên ở
+  đó, nên dòng audit "đúng cột" sẽ không bao giờ ghi được
+- `AccessRole` khai ở `domain.ts` chứ không ở `session-context.ts` như spec dự định —
+  `UserSession.role` cũng cần nó, và `domain.ts` không được import ngược lên tầng auth
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -232,6 +273,9 @@ None yet.
 
 ### Blockers/Concerns
 
+- **Phase 6 — `npm run test:db` vẫn chưa chạy được** (không có `psql`/`docker`/`supabase` CLI; kiểm lại trong phiên 2026-08-10). File pgTAP mới `20_support_sessions.sql` (**14 assertion**, sàn 292 → **306**) đã viết và đã vào cổng đếm nhưng **chưa chạy thật**. Khác ba phase trước: phase này thêm `scripts/e2e-support-rls.mjs` chạy **cùng những khẳng định đó** bằng phiên đăng nhập thật qua PostgREST (13/13), nên D-49/D-50 không phải khẳng định chỉ tồn tại trên giấy.
+- **Phase 6 — chủ dự án chưa bấm tay** qua ba màn hình mới (`/platform`, `/platform/log`, banner hỗ trợ trên `/admin/*`). Bốn thứ cần bấm được liệt kê ở `06-UAT.md` §Giới hạn đã biết mục 2. Đáng chú ý nhất là **banner hỗ trợ** — nó là vế "màn hình luôn hiển thị rõ đang xem doanh nghiệp nào" của chính tiêu chí 2, và là thứ duy nhất trong phase không kiểm bằng máy được.
+- **Phase 6 — nhánh `phase-6-super-admin` chưa merge vào `main`.**
 - **Không còn pending.** Khóa Supabase legacy trong `docs/env` (gồm `SUPABASE_SERVICE_ROLE_KEY`) vẫn ở dạng plaintext và khóa `service_role` legacy vẫn còn hiệu lực, bỏ qua toàn bộ RLS. Việc "thu hồi & cấp lại khóa legacy" đã bị **gỡ khỏi phạm vi ngày 2026-07-31** theo quyết định có chủ đích của chủ dự án (xem `.planning/REQUIREMENTS.md` §Out of Scope và `.planning/PROJECT.md` §Out of Scope) — không phải bị bỏ sót hay còn chờ xử lý. Rủi ro được ghi nhận và chấp nhận có ý thức, không chặn `/gsd-ship`. Vế còn lại của AUTH-06 (không khóa bí mật nào lọt xuống client bundle) đã hoàn thành và được xác minh (`npm run check:secrets`, plan 01-03).
 - Chưa có test tự động nào trong repo — hạ tầng test (pgTAP + Vitest) phải dựng ngay ở Phase 1
 - Nghiên cứu còn khoảng trống cần làm rõ khi lập kế hoạch Phase 3: độ phủ thiết bị cho `getUserMedia()` và độ chính xác GPS tại văn phòng thật; và Phase 5: mô hình duyệt một cấp có đủ cho doanh nghiệp pilot không

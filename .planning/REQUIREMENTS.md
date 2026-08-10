@@ -128,10 +128,10 @@ Yêu cầu cho milestone TimeFlow V2. Mỗi mục ánh xạ vào một phase tro
 
 ### Super admin (SADM)
 
-- [ ] **SADM-01**: Super admin xem được danh sách toàn bộ doanh nghiệp trên hệ thống và tình trạng cơ bản của từng nơi
-- [ ] **SADM-02**: Super admin xem sâu được dữ liệu của một doanh nghiệp cụ thể để hỗ trợ khách hàng
-- [ ] **SADM-03**: Mọi lần super admin truy cập dữ liệu của một doanh nghiệp đều ghi lại vào audit log
-- [ ] **SADM-04**: Quyền ghi của super admin đi qua một đường riêng có kiểm soát, không phải quyền vượt RLS dùng chung
+- [x] **SADM-01**: Super admin xem được danh sách toàn bộ doanh nghiệp trên hệ thống và tình trạng cơ bản của từng nơi
+- [x] **SADM-02**: Super admin xem sâu được dữ liệu của một doanh nghiệp cụ thể để hỗ trợ khách hàng
+- [x] **SADM-03**: Mọi lần super admin truy cập dữ liệu của một doanh nghiệp đều ghi lại vào audit log
+- [x] **SADM-04**: Quyền ghi của super admin đi qua một đường riêng có kiểm soát, không phải quyền vượt RLS dùng chung
 
 ## v2 Requirements
 
@@ -223,10 +223,10 @@ Phase nào phủ requirement nào. Xem `.planning/ROADMAP.md` để biết mục
 | PAY-01 | Phase 5.2 | Complete |
 | PAY-04 | Phase 5.2 | Complete |
 | PAY-06 | Phase 5.2 | Complete |
-| SADM-01 | Phase 6 | Pending |
-| SADM-02 | Phase 6 | Pending |
-| SADM-03 | Phase 6 | Pending |
-| SADM-04 | Phase 6 | Pending |
+| SADM-01 | Phase 6 | Complete |
+| SADM-02 | Phase 6 | Complete |
+| SADM-03 | Phase 6 | Complete |
+| SADM-04 | Phase 6 | Complete |
 
 **Coverage:**
 

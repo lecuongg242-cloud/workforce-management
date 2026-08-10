@@ -20,7 +20,11 @@ import { supportSessionLogResponseSchema } from "@/lib/validation/api/platform";
  */
 export const dynamic = "force-dynamic";
 
-export const SUPPORT_LOG_LIMIT = 200;
+// KHONG export: Next.js chi cho phep mot tap export co dinh tren Route
+// Handler (GET/POST/dynamic/...) va bat ky export nao khac deu lam
+// `.next/types` khong hop le — loi chi lo ra sau khi `next dev` sinh kieu
+// cho route nay, khong lo ra o lan typecheck trong.
+const SUPPORT_LOG_LIMIT = 200;
 
 interface SupportSessionJoinRow {
   id: string;
