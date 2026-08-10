@@ -3,6 +3,10 @@
 import * as React from "react";
 import { toast } from "sonner";
 
+import {
+  PlatformActionDialog,
+  type PlatformActionKind,
+} from "@/app/platform/platform-actions-dialog";
 import { DataTableSkeleton } from "@/components/common/data-table-skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
@@ -50,6 +54,14 @@ export function PlatformView(): React.ReactElement {
   const [reason, setReason] = React.useState("");
   const [isOpening, setIsOpening] = React.useState(false);
 
+  // Hai duong ghi trang cua SADM-04 — tach ra mot component rieng vi chung
+  // KHONG lien quan gi den phien ho tro: chung di qua Admin API, khong qua
+  // RLS, va khong doi mot phien nao dang mo.
+  const [actionKind, setActionKind] =
+    React.useState<PlatformActionKind | null>(null);
+  const [actionCompany, setActionCompany] =
+    React.useState<PlatformCompany | null>(null);
+
   const handleOpen = React.useCallback(async () => {
     if (!target) return;
     if (reason.trim().length === 0) {
@@ -77,14 +89,27 @@ export function PlatformView(): React.ReactElement {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-ink">
-          {SUPPORT_LABELS.companies}
-        </h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Toàn bộ doanh nghiệp trên hệ thống. Mở phiên hỗ trợ để xem sâu dữ
-          liệu của một nơi — mỗi lần mở đều được ghi vào nhật ký.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink">
+            {SUPPORT_LABELS.companies}
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            Toàn bộ doanh nghiệp trên hệ thống. Mở phiên hỗ trợ để xem sâu dữ
+            liệu của một nơi — mỗi lần mở đều được ghi vào nhật ký.
+          </p>
+        </div>
+        {/* Cap lai mat khau tam KHONG gan voi doanh nghiep nao — no la thao
+            tac cap tai khoan, nen no o day chu khong nam trong mot dong. */}
+        <Button
+          variant="outline"
+          onClick={() => {
+            setActionCompany(null);
+            setActionKind("reset-password");
+          }}
+        >
+          Cấp lại mật khẩu tạm
+        </Button>
       </div>
 
       {isLoading ? (
@@ -125,7 +150,7 @@ export function PlatformView(): React.ReactElement {
                   <TableCell className="text-ink-muted">
                     {company.openPeriodMonth ?? "—"}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="space-x-2 text-right whitespace-nowrap">
                     <Button
                       variant="outline"
                       size="sm"
@@ -135,6 +160,16 @@ export function PlatformView(): React.ReactElement {
                       }}
                     >
                       {SUPPORT_LABELS.openAction}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setActionCompany(company);
+                        setActionKind("grant-owner");
+                      }}
+                    >
+                      Cấp quyền chủ
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -188,6 +223,16 @@ export function PlatformView(): React.ReactElement {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PlatformActionDialog
+        kind={actionKind}
+        companyId={actionCompany?.id ?? null}
+        companyName={actionCompany?.name ?? null}
+        onClose={() => {
+          setActionKind(null);
+          setActionCompany(null);
+        }}
+      />
     </div>
   );
 }

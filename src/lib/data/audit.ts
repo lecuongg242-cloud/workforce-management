@@ -20,7 +20,13 @@ import { createServerSupabase } from "@/lib/supabase/server";
  */
 
 export interface AuditEntry {
-  companyId: string;
+  /**
+   * `null` cho cac thao tac o TANG NEN TANG cua super admin (SADM-04) —
+   * chung khong thuoc doanh nghiep nao. Cot da nullable tu 0005; duong ghi
+   * cho no la policy `audit_log_insert_platform` (0036). Moi thao tac nghiep
+   * vu con lai deu mang mot `companyId` that.
+   */
+  companyId: string | null;
   actorUserId: string;
   /**
    * `access` (Phase 6, D-55) la hanh dong thu tu: doi van hanh TimeFlow
