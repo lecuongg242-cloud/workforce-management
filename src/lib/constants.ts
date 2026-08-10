@@ -1,4 +1,5 @@
 import type {
+  AccessRole,
   AttendanceRejectionReason,
   CompanyRole,
   CompanySize,
@@ -234,6 +235,35 @@ export const COMPANY_ROLE_LABEL: Record<CompanyRole, string> = {
   manager: "Quản lý",
   employee: "Nhân viên",
 };
+
+/**
+ * Nhan cho vai tro TRUY CAP — dung o nhung cho hien thi vai tro hien hanh cua
+ * phien (sidebar, o chuyen doanh nghiep, trang chon doanh nghiep).
+ *
+ * TACH KHOI `COMPANY_ROLE_LABEL` co y (D-51): bang tren la nguon cho cac O
+ * CHON vai tro khi khai nhan vien, va `"support"` khong bao gio duoc phep
+ * hien ra o do — no khong phai vai tro ai gan duoc cho ai.
+ */
+export const ACCESS_ROLE_LABEL: Record<AccessRole, string> = {
+  ...COMPANY_ROLE_LABEL,
+  support: "Phiên hỗ trợ",
+};
+
+/** Nhan cua khu van hanh va phien ho tro (Phase 6). */
+export const SUPPORT_LABELS = {
+  viewing: "Đang xem",
+  session: "phiên hỗ trợ",
+  remaining: "còn",
+  expired: "đã hết hạn",
+  close: "Đóng phiên",
+  openAction: "Mở phiên hỗ trợ",
+  reasonLabel: "Lý do mở phiên",
+  reasonPlaceholder: "Ví dụ: Ticket #418 — khách báo sai giờ tăng ca",
+  reasonRequired: "Vui lòng nhập lý do mở phiên hỗ trợ.",
+  platformArea: "TimeFlow · Vận hành",
+  companies: "Doanh nghiệp",
+  log: "Nhật ký hỗ trợ",
+} as const;
 
 export const DEPARTMENT_STATUS_LABEL: Record<DepartmentStatus, string> = {
   active: "Đang hoạt động",

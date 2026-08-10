@@ -5,6 +5,7 @@ import {
   NoActiveCompanyError,
   NoMembershipError,
   UnauthenticatedError,
+  getActiveSupportSession,
   getSessionContext,
 } from "@/lib/auth/session-context";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -109,6 +110,53 @@ async function loadCompaniesForUser(userId: string): Promise<Company[]> {
   });
 }
 
+/**
+ * Doanh nghiep dang duoc mo bang mot phien ho tro, neu co (D-53 muc 2).
+ *
+ * `role: "support"` di kem trong hinh dang `Company` de giao dien phan biet
+ * duoc no voi mot membership that — day la LY DO `Company.role` mang kieu
+ * `AccessRole`. Phep doc duoi day di qua RLS binh thuong: no chi thanh cong
+ * vi `companies_select_member` da co nhanh `tf_has_support_access` (0034).
+ */
+async function loadSupportCompany(): Promise<Company | null> {
+  const support = await getActiveSupportSession();
+  if (!support) return null;
+
+  const supabase = await createServerSupabase();
+
+  const [{ data: company, error: companyError }, { count, error: countError }] =
+    await Promise.all([
+      supabase
+        .from("companies")
+        .select(
+          "id, name, code, industry, size, phone, address, accent, created_at",
+        )
+        .eq("id", support.companyId)
+        .maybeSingle(),
+      supabase
+        .from("employees")
+        .select("id", { count: "exact", head: true })
+        .eq("company_id", support.companyId),
+    ]);
+
+  if (companyError || countError || !company) return null;
+  const row = company as CompanyRow;
+
+  return {
+    id: row.id,
+    name: row.name,
+    code: row.code,
+    industry: row.industry,
+    size: row.size,
+    phone: row.phone,
+    address: row.address,
+    role: "support",
+    employeeCount: count ?? 0,
+    lastAccessedAt: row.created_at,
+    accent: row.accent,
+  } satisfies Company;
+}
+
 export async function GET(): Promise<NextResponse> {
   try {
     const context = await getSessionContext();
@@ -123,6 +171,16 @@ export async function GET(): Promise<NextResponse> {
       return NextResponse.json({ error: cause.message }, { status: 403 });
     }
     if (cause instanceof NoMembershipError) {
+      // Phien ho tro (D-51/D-53): platform admin khong co membership nao, nen
+      // nhanh tren tra ve mang rong — va `AdminShell` dung chinh danh sach nay
+      // de tim ten doanh nghiep hien hanh (admin-shell.tsx:36,50). Khong co
+      // nhanh nay thi sidebar va banner ho tro deu khong biet minh dang o dau.
+      const supportCompanies = await loadSupportCompany();
+      if (supportCompanies) {
+        return NextResponse.json(
+          companyListResponseSchema.parse([supportCompanies]),
+        );
+      }
       // Rong la du lieu hop le -- khong bao gio tra 404/500 cho "chua thuoc
       // doanh nghiep nao".
       return NextResponse.json([]);

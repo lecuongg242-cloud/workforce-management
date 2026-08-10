@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSession } from "@/lib/auth/session-provider";
-import { COMPANY_ROLE_LABEL } from "@/lib/constants";
+import { ACCESS_ROLE_LABEL } from "@/lib/constants";
 import { ADMIN_NAV_ITEMS } from "@/lib/nav";
 import type { Company } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
@@ -68,7 +68,7 @@ export function AdminSidebar({
               {company?.name ?? "Đang tải…"}
             </span>
             <span className="block truncate text-[11px] leading-tight text-white/55">
-              {company ? COMPANY_ROLE_LABEL[company.role] : "—"}
+              {company ? ACCESS_ROLE_LABEL[company.role] : "—"}
             </span>
           </span>
           <ChevronsUpDown aria-hidden="true" className="size-3.5 text-white/50" />

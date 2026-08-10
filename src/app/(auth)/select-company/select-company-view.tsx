@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDataQuery } from "@/hooks/use-data-query";
 import { redirectAfterSessionChange } from "@/lib/auth/post-auth-redirect";
 import { useSession } from "@/lib/auth/session-provider";
-import { COMPANY_ROLE_LABEL } from "@/lib/constants";
+import { ACCESS_ROLE_LABEL } from "@/lib/constants";
 import { listCompanies } from "@/lib/data/companies";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import type { Company } from "@/lib/types/domain";
@@ -103,7 +103,7 @@ export function SelectCompanyView(): React.ReactElement {
                 <div className="min-w-0 flex-1">
                   <h2 className="heading-sm truncate text-ink">{company.name}</h2>
                   <p className="mt-0.5 text-[13px] text-ink-muted">
-                    {COMPANY_ROLE_LABEL[company.role]}
+                    {ACCESS_ROLE_LABEL[company.role]}
                   </p>
                 </div>
               </div>

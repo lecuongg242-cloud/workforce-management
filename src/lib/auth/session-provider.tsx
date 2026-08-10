@@ -114,3 +114,23 @@ export function useAuthenticatedSession(): UserSession {
   }
   return session;
 }
+
+/**
+ * Phien cua mot NHAN VIEN that — `employeeId` chac chan khac null.
+ *
+ * `AppUser.employeeId` la `string | null` tu Phase 6 (D-53) vi mot phien ho
+ * tro cua platform admin khong co dong `employees` nao. Phien do khong bao
+ * gio vao duoc `/employee/*` (`homePathForRole` dua no toi `/admin/dashboard`),
+ * nen o day nem la dung: bien mot lop KIEU thanh mot loi to ro rang, thay vi
+ * de moi man hinh nhan vien tu xu ly `null` va hien mot bang rong.
+ */
+export function useEmployeeSession(): {
+  session: UserSession;
+  employeeId: string;
+} {
+  const session = useAuthenticatedSession();
+  if (session.user.employeeId === null) {
+    throw new Error("Màn hình này chỉ dùng được với tài khoản nhân viên.");
+  }
+  return { session, employeeId: session.user.employeeId };
+}

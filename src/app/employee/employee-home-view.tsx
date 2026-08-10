@@ -11,7 +11,7 @@ import type { PunchSubmitResult } from "@/components/employee-app/camera-sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentGreeting } from "@/hooks/use-current-greeting";
 import { useDataQuery } from "@/hooks/use-data-query";
-import { useAuthenticatedSession } from "@/lib/auth/session-provider";
+import { useEmployeeSession } from "@/lib/auth/session-provider";
 import {
   checkIn as checkInService,
   checkOut as checkOutService,
@@ -29,9 +29,8 @@ export function EmployeeHomeView({
 }: {
   today: string;
 }): React.ReactElement {
-  const session = useAuthenticatedSession();
+  const { session, employeeId } = useEmployeeSession();
   const { invalidate } = useDataStore();
-  const employeeId = session.user.employeeId;
   const [isPending, setIsPending] = React.useState(false);
   const [cameraOpen, setCameraOpen] = React.useState(false);
   /**

@@ -21,7 +21,7 @@ import { StatusBadge } from "@/components/common/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDataQuery } from "@/hooks/use-data-query";
 import {
-  useAuthenticatedSession,
+  useEmployeeSession,
   useSession,
 } from "@/lib/auth/session-provider";
 import { NOT_DECLARED } from "@/lib/constants";
@@ -32,20 +32,20 @@ import { getEmployee } from "@/lib/data/employees";
 import { listShifts } from "@/lib/data/shifts";
 
 export function ProfileView(): React.ReactElement {
-  const session = useAuthenticatedSession();
+  const { session, employeeId } = useEmployeeSession();
   const { signOut } = useSession();
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
 
   const { data, isLoading, error, reload } = useDataQuery(
     async () => {
       const [employee, departments, shifts] = await Promise.all([
-        getEmployee(session.user.employeeId),
+        getEmployee(employeeId),
         listDepartments(session.companyId),
         listShifts(session.companyId),
       ]);
       return { employee, departments, shifts };
     },
-    [session.user.employeeId, session.companyId],
+    [employeeId, session.companyId],
   );
 
   const employee = data?.employee ?? null;

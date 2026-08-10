@@ -17,6 +17,22 @@ export const companyRoleSchema = z.enum([
   "employee",
 ]);
 
+/**
+ * Vai tro TRUY CAP — `companyRoleSchema` cong them `"support"` (D-51).
+ *
+ * Chi dung cho hinh dang PHAN HOI cua `GET /api/companies`, noi mot doanh
+ * nghiep co the den tu mot phien ho tro thay vi mot membership. Moi cho khai
+ * bao vai tro cho MOT NGUOI (form nhan vien, moi lenh ghi membership) van
+ * dung `companyRoleSchema` — `"support"` khong bao gio ghi duoc vao database.
+ */
+export const accessRoleSchema = z.enum([
+  "owner",
+  "admin",
+  "manager",
+  "employee",
+  "support",
+]);
+
 export const companySizeSchema = z.enum([
   "1-10",
   "11-30",
@@ -40,7 +56,7 @@ export const companyRowSchema = z.object({
   size: companySizeSchema,
   phone: z.string(),
   address: z.string(),
-  role: companyRoleSchema,
+  role: accessRoleSchema,
   employeeCount: z.number(),
   lastAccessedAt: z.string(),
   accent: companyAccentSchema,

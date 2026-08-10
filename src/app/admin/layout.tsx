@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/layout/admin-shell";
 import {
   canAccessAdminArea,
+  getActiveSupportSession,
   getSessionContextOrNull,
 } from "@/lib/auth/session-context";
 
@@ -33,5 +34,17 @@ export default async function AdminLayout({
   if (!canAccessAdminArea(context.role)) {
     redirect("/employee");
   }
-  return <AdminShell>{children}</AdminShell>;
+
+  // Han cua phien ho tro doc o TANG SERVER roi truyen xuong (D-54). Banner la
+  // Client Component nen tu no khong hoi database duoc, va cho no goi mot
+  // Route Handler rieng chi de lay mot dau thoi gian la thua mot vong mang o
+  // moi lan dieu huong trong khu quan tri.
+  const supportExpiresAt =
+    context.role === "support"
+      ? ((await getActiveSupportSession())?.expiresAt ?? null)
+      : null;
+
+  return (
+    <AdminShell supportExpiresAt={supportExpiresAt}>{children}</AdminShell>
+  );
 }

@@ -17,7 +17,7 @@ import { DayPayBreakdown } from "@/components/payroll/day-pay-breakdown";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDataQuery } from "@/hooks/use-data-query";
-import { useAuthenticatedSession } from "@/lib/auth/session-provider";
+import { useEmployeeSession } from "@/lib/auth/session-provider";
 import {
   DAY_PAY_LABEL,
   OVERTIME_DISPLAY_LABEL,
@@ -65,8 +65,7 @@ export function HistoryView({
   /** "YYYY-MM-DD" theo dong ho MAY CHU — xem `display-status.ts`. */
   today: string;
 }): React.ReactElement {
-  const session = useAuthenticatedSession();
-  const employeeId = session.user.employeeId;
+  const { session, employeeId } = useEmployeeSession();
   const [month, setMonth] = React.useState(initialMonth);
   const [range, setRange] = React.useState<DayRange | null>(null);
 

@@ -313,7 +313,29 @@ export function homePathForRole(role: AccessRole): string {
  */
 export async function getClientSession(): Promise<UserSession | null> {
   const context = await getSessionContextOrNull();
-  if (!context || !context.employeeId) return null;
+  if (!context) return null;
+
+  // Phien ho tro khong co dong `employees` nao trong doanh nghiep dang xem
+  // (D-51). Tra `null` o day nghia la `AdminShell` ket o `AdminShellSkeleton`
+  // VINH VIEN — no chi render khi `status === "authenticated" && session`
+  // (admin-shell.tsx). Ten hien thi lay email cua chinh platform admin: day
+  // la nguoi van hanh TimeFlow, khong phai mot nhan vien co ho so.
+  if (context.role === "support") {
+    return {
+      user: {
+        id: context.userId,
+        fullName: context.email,
+        email: context.email,
+        avatarUrl: null,
+        employeeId: null,
+      },
+      companyId: context.companyId,
+      role: "support",
+      signedInAt: new Date().toISOString(),
+    };
+  }
+
+  if (!context.employeeId) return null;
 
   const supabase = await createServerSupabase();
   const { data: employeeRow, error } = await supabase

@@ -96,8 +96,14 @@ export interface Company {
   size: CompanySize;
   phone: string;
   address: string;
-  /** Vai tro cua nguoi dung dang dang nhap trong doanh nghiep nay */
-  role: CompanyRole;
+  /**
+   * Vai tro cua nguoi dung dang dang nhap trong doanh nghiep nay.
+   *
+   * `AccessRole` chu khong `CompanyRole`: `GET /api/companies` tra ve
+   * `"support"` cho doanh nghiep dang duoc mo bang mot phien ho tro (D-53),
+   * de giao dien phan biet duoc no voi mot membership that.
+   */
+  role: AccessRole;
   employeeCount: number;
   /** ISO date-time, vi du "2026-07-26T17:32:00+07:00" */
   lastAccessedAt: string;
@@ -677,8 +683,15 @@ export interface AppUser {
   fullName: string;
   email: string;
   avatarUrl: string | null;
-  /** Ma nhan vien tuong ung tren man hinh nhan vien */
-  employeeId: string;
+  /**
+   * Ma nhan vien tuong ung tren man hinh nhan vien.
+   *
+   * `null` trong DUNG MOT truong hop: phien ho tro cua platform admin (D-51,
+   * D-53) — nguoi do khong co dong `employees` nao trong doanh nghiep dang
+   * xem. Moi man hinh duoi `/employee/*` doi gia tri nay khac null va phai
+   * lay no qua `useEmployeeSession()`, khong doc thang tu `session.user`.
+   */
+  employeeId: string | null;
 }
 
 export interface UserSession {

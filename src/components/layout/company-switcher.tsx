@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { redirectAfterSessionChange } from "@/lib/auth/post-auth-redirect";
 import { useSession } from "@/lib/auth/session-provider";
-import { COMPANY_ROLE_LABEL } from "@/lib/constants";
+import { ACCESS_ROLE_LABEL } from "@/lib/constants";
 import type { Company } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +79,7 @@ export function CompanySwitcher({
                 {company.name}
               </span>
               <span className="block truncate text-[11px] leading-tight text-ink-muted">
-                {COMPANY_ROLE_LABEL[company.role]} · {company.employeeCount} nhân viên
+                {ACCESS_ROLE_LABEL[company.role]} · {company.employeeCount} nhân viên
               </span>
             </span>
             {company.id === currentCompanyId ? (

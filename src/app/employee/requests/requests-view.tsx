@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDataQuery } from "@/hooks/use-data-query";
-import { useAuthenticatedSession } from "@/lib/auth/session-provider";
+import { useEmployeeSession } from "@/lib/auth/session-provider";
 import { formatNumber } from "@/lib/format";
 import { listAllEmployees } from "@/lib/data/employees";
 import { createRequest, listRequests } from "@/lib/data/requests";
@@ -40,10 +40,9 @@ function isRequestType(value: string | null): value is RequestType {
 }
 
 export function RequestsView({ today }: { today: string }): React.ReactElement {
-  const session = useAuthenticatedSession();
+  const { session, employeeId } = useEmployeeSession();
   const searchParams = useSearchParams();
   const { invalidate } = useDataStore();
-  const employeeId = session.user.employeeId;
 
   const typeParam = searchParams.get("type");
   const defaultType = isRequestType(typeParam) ? typeParam : undefined;

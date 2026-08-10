@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { AdminTopbar } from "@/components/layout/admin-topbar";
+import { SupportBanner } from "@/components/layout/support-banner";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDataQuery } from "@/hooks/use-data-query";
@@ -21,8 +22,14 @@ import { listCompanies } from "@/lib/data/companies";
  */
 export function AdminShell({
   children,
+  supportExpiresAt = null,
 }: {
   children: React.ReactNode;
+  /**
+   * Han cua phien ho tro dang mo, do `src/app/admin/layout.tsx` doc o tang
+   * server va truyen xuong. `null` cho moi phien thanh vien binh thuong.
+   */
+  supportExpiresAt?: string | null;
 }): React.ReactElement {
   const router = useRouter();
   const { status, session, signOut } = useSession();
@@ -49,8 +56,21 @@ export function AdminShell({
   const currentCompany =
     companies?.find((company) => company.id === session.companyId) ?? null;
 
+  const isSupportSession = session.role === "support";
+
   return (
     <div className="min-h-dvh bg-canvas-soft">
+      {/* Tieu chi 2 cua Phase 6 (D-54): man hinh LUON noi ro dang xem doanh
+          nghiep nao. Dat NGOAI `lg:pl-sidebar` de banner trai het be ngang,
+          ke ca phan nam duoi sidebar — mot canh bao bi sidebar che mat mot
+          goc thi khong con la canh bao. */}
+      {isSupportSession && supportExpiresAt ? (
+        <SupportBanner
+          companyName={currentCompany?.name ?? session.companyId}
+          expiresAt={supportExpiresAt}
+        />
+      ) : null}
+
       {/* Sidebar co dinh tren man hinh rong */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-sidebar lg:block">
         <AdminSidebar company={currentCompany} onSignOut={handleSignOut} />
