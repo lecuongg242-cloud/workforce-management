@@ -22,7 +22,12 @@ import { createServerSupabase } from "@/lib/supabase/server";
 export interface AuditEntry {
   companyId: string;
   actorUserId: string;
-  action: "insert" | "update" | "delete";
+  /**
+   * `access` (Phase 6, D-55) la hanh dong thu tu: doi van hanh TimeFlow
+   * KHONG doi du lieu, ho DOC no — va chinh viec doc do la thu can ghi vet.
+   * Ba gia tri con lai giu nguyen nghia cu.
+   */
+  action: "insert" | "update" | "delete" | "access";
   entityTable: string;
   entityId: string;
   before: unknown;
