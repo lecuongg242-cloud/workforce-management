@@ -49,7 +49,15 @@ const notCheckedInItemSchema = z.object({
   employeeName: z.string(),
   departmentName: z.string(),
   avatarUrl: z.string().nullable(),
-  phone: z.string(),
+  /**
+   * `null` = CHUA KHAI so dien thoai (0028). Khong phai chuoi rong.
+   *
+   * Khai `z.string()` o day tung lam ca `GET /api/dashboard` tra 500 cho ca
+   * doanh nghiep chi vi MOT nhan vien de trong o nay — `departmentName` ben
+   * tren khong dinh vi no giai qua `Map.get(...) ?? "—"`, con truong nay thi
+   * di thang tu database ra.
+   */
+  phone: z.string().nullable(),
   shiftName: z.string(),
 });
 

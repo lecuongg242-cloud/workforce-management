@@ -22,14 +22,24 @@ import type { AttendanceChartPoint, AttendanceStatus, RequestType } from "@/lib/
  */
 export const dynamic = "force-dynamic";
 
+/**
+ * Hinh dang tho cua mot dong `employees` doc o day.
+ *
+ * `department_id` va `phone` PHAI la `| null`: migration 0028 cho sau cot
+ * cua bang nay thanh nullable. Khai thieu `| null` khong phai chuyen nho —
+ * du lieu tu Supabase duoc ep theo dung interface nay, nen mot cot khai sai
+ * lam TypeScript IM LANG ve dung cho se no o runtime. Do la ly do
+ * `notCheckedIn[].phone = null` di duoc toi tan `dashboardSummarySchema.parse()`
+ * va lam ca bang dieu khien tra 500.
+ */
 interface RawEmployeeRow {
   id: string;
   full_name: string;
   avatar_url: string | null;
   status: string;
-  department_id: string;
+  department_id: string | null;
   shift_id: string;
-  phone: string;
+  phone: string | null;
 }
 
 interface RawAttendanceRow {
@@ -162,6 +172,20 @@ export async function GET(request: Request): Promise<NextResponse> {
         row.name,
       ]),
     );
+    /**
+     * Ten phong ban de hien thi. `department_id` co the la `null` — chua xep
+     * phong ban (0028). Ca "chua xep" lan "xep vao mot phong ban da bi xoa"
+     * deu ra cung mot dau gach: man hinh chi can biet la khong co ten de hien.
+     *
+     * Truoc day hai cho goi thang `departmentName.get(employee.department_id)`.
+     * Runtime van dung (`Map.get(null)` tra `undefined` roi roi vao `?? "—"`),
+     * nhung lenh do sai KIEU — va no chi lo ra sau khi `RawEmployeeRow` duoc
+     * sua cho khop database. Do la mot ban sao nho cua chinh loi goc: kieu noi
+     * doi thi trinh bien dich khong giup duoc gi.
+     */
+    const departmentLabel = (id: string | null): string =>
+      id === null ? "—" : (departmentName.get(id) ?? "—");
+
     const shiftName = new Map(
       ((shiftsData ?? []) as Array<{ id: string; name: string }>).map((row) => [
         row.id,
@@ -193,7 +217,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         return {
           employeeId: record.employee_id,
           employeeName: employee?.full_name ?? "—",
-          departmentName: employee ? (departmentName.get(employee.department_id) ?? "—") : "—",
+          departmentName: employee ? departmentLabel(employee.department_id) : "—",
           avatarUrl: employee?.avatar_url ?? null,
           checkIn: toVnTime(record.check_in_at),
           status: record.status as AttendanceStatus,
@@ -217,7 +241,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       .map((employee) => ({
         employeeId: employee.id,
         employeeName: employee.full_name,
-        departmentName: departmentName.get(employee.department_id) ?? "—",
+        departmentName: departmentLabel(employee.department_id),
         avatarUrl: employee.avatar_url,
         phone: employee.phone,
         shiftName: shiftName.get(employee.shift_id) ?? "—",

@@ -52,28 +52,39 @@ export function NotCheckedInCard({
                   {item.departmentName} · {item.shiftName}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  asChild
-                  aria-label={`Gọi cho ${item.employeeName}`}
-                >
-                  <a href={`tel:${item.phone}`}>
-                    <Phone aria-hidden="true" />
-                  </a>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  asChild
-                  aria-label={`Nhắn tin cho ${item.employeeName}`}
-                >
-                  <a href={`sms:${item.phone}`}>
-                    <MessageSquare aria-hidden="true" />
-                  </a>
-                </Button>
-              </div>
+              {/* Chua khai so dien thoai (0028) thi KHONG dung hai nut nay.
+                  Dung chung se sinh ra `tel:null` — mot nut trong bam duoc
+                  nhung khong goi duoc ai, va nguoi dung chi biet dieu do sau
+                  khi da bam. Mot dong chu noi thang thi tra loi ngay duoc cau
+                  hoi "sao khong goi duoc". */}
+              {item.phone === null ? (
+                <span className="shrink-0 text-xs text-ink-muted">
+                  Chưa có số điện thoại
+                </span>
+              ) : (
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    asChild
+                    aria-label={`Gọi cho ${item.employeeName}`}
+                  >
+                    <a href={`tel:${item.phone}`}>
+                      <Phone aria-hidden="true" />
+                    </a>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    asChild
+                    aria-label={`Nhắn tin cho ${item.employeeName}`}
+                  >
+                    <a href={`sms:${item.phone}`}>
+                      <MessageSquare aria-hidden="true" />
+                    </a>
+                  </Button>
+                </div>
+              )}
             </li>
           ))}
         </ul>

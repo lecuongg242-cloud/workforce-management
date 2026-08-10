@@ -793,7 +793,8 @@ export interface DashboardSummary {
     employeeName: string;
     departmentName: string;
     avatarUrl: string | null;
-    phone: string;
+    /** `null` = chua khai so dien thoai (0028) — khong goi/nhan tin duoc. */
+    phone: string | null;
     shiftName: string;
   }>;
 }
