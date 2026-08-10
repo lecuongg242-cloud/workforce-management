@@ -27,3 +27,4 @@
 \ir 17_pay_adjustments.sql
 \ir 18_payroll_runs.sql
 \ir 19_payslip_rls.sql
+\ir 20_support_sessions.sql

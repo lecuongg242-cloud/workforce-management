@@ -37,8 +37,8 @@ Server Action (không sửa file mutation nào).
   theo `auth.uid()` bên trong, **không** nhận tham số người dùng (threat T-01-03).
 - `supabase/tests/*.sql` **không bao giờ** được đưa vào `supabase/migrations/`
   (threat T-01-04).
-- Sàn assertion pgTAP hiện tại là **283** (`npm run check:assertions`) — phase này nâng
-  lên **297**.
+- Sàn assertion pgTAP hiện tại là **292** (`npm run check:assertions`) — phase này nâng
+  lên **306**.
 - Hằng số `SUPPORT_SESSION_MINUTES = 60` là hạ tầng vận hành TimeFlow, **không** rơi
   vào phạm vi cổng `no-hardcoded-work-rules` / `no-hardcoded-money`.
 - Commit sau mỗi task. Tiền tố `feat:` / `test:` / `fix:` theo lệ của repo.
@@ -82,7 +82,7 @@ Server Action (không sửa file mutation nào).
 | `src/app/api/companies/route.ts` | nhánh trả doanh nghiệp đang có phiên hỗ trợ |
 | `src/components/layout/admin-shell.tsx` | gắn `SupportBanner` |
 | `supabase/tests/run-all.sql` | thêm `\ir 20_support_sessions.sql` |
-| `scripts/check-pgtap-assertions.mjs` | sàn 283 → 297 |
+| `scripts/check-pgtap-assertions.mjs` | sàn 292 → 306 |
 | `package.json` | thêm script `test:e2e-support` |
 | `.planning/ROADMAP.md`, `.planning/STATE.md`, `.planning/REQUIREMENTS.md` | đánh dấu SADM-01…04 |
 
@@ -94,7 +94,7 @@ Server Action (không sửa file mutation nào).
 - Create: `supabase/migrations/0033_support_sessions.sql`
 - Create: `supabase/tests/20_support_sessions.sql`
 - Modify: `supabase/tests/run-all.sql`
-- Modify: `scripts/check-pgtap-assertions.mjs` (sàn 283 → 291)
+- Modify: `scripts/check-pgtap-assertions.mjs` (sàn 292 → 300)
 
 **Interfaces:**
 - Produces: bảng `support_sessions(id, platform_admin_id, company_id, reason, opened_at, expires_at, closed_at)`; hàm `public.tf_has_support_access(p_company_id text) returns boolean`; giá trị enum `audit_action.'access'`; policy `audit_log_insert_support`. Task 2 mở RLS đọc dựa trên hàm này; Task 3 ghi vào bảng này.
@@ -357,7 +357,7 @@ không sửa một dòng nào**.
 
 - [ ] **Step 5: Nâng sàn assertion**
 
-Trong `scripts/check-pgtap-assertions.mjs`, đổi sàn `283` thành `291`.
+Trong `scripts/check-pgtap-assertions.mjs`, đổi sàn `292` thành `300`.
 
 Chạy: `npm run check:assertions`
 Expected: PASS
@@ -376,7 +376,7 @@ git commit -m "feat: bang support_sessions va tf_has_support_access (D-49)"
 **Files:**
 - Create: `supabase/migrations/0034_support_read_access.sql`
 - Modify: `supabase/tests/20_support_sessions.sql` (thêm 6 assertion, `plan(8)` → `plan(14)`)
-- Modify: `scripts/check-pgtap-assertions.mjs` (sàn 291 → 297)
+- Modify: `scripts/check-pgtap-assertions.mjs` (sàn 300 → 306)
 
 **Interfaces:**
 - Consumes: `public.tf_has_support_access(text)` từ Task 1.
@@ -584,7 +584,7 @@ Expected: PASS — xanh trở lại, `git status` sạch.
 
 - [ ] **Step 7: Nâng sàn assertion và commit**
 
-Trong `scripts/check-pgtap-assertions.mjs`, đổi sàn `291` thành `297`.
+Trong `scripts/check-pgtap-assertions.mjs`, đổi sàn `300` thành `306`.
 
 ```bash
 npm run check:assertions
