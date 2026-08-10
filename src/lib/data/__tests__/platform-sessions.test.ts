@@ -232,6 +232,39 @@ describe("Vòng đời phiên hỗ trợ (D-49, D-55)", () => {
     expect(await getActiveSupportSession()).toBeNull();
   });
 
+  it("GET /api/companies trả doanh nghiệp đang có phiên — hồi quy của lỗi banner hiện mã thô", async () => {
+    // Lỗi thật, chỉ một lần bấm tay mới lộ ra: nhánh support ban đầu nằm
+    // trong `catch (NoMembershipError)` của route, nhưng từ khi
+    // getSessionContext() có nhánh "support" (D-51) nó KHÔNG còn ném lỗi đó
+    // nữa. Route chạy thẳng xuống loadCompaniesForUser() → mảng rỗng →
+    // sidebar kẹt "Đang tải…" và banner hỗ trợ hiện `cty-01` thay vì tên
+    // doanh nghiệp — đúng cái tiêu chí 2 của phase đòi hỏi.
+    await actAs(asPlatformAdmin);
+    await openSupportSession(COMPANY_ID, "Ticket #420");
+
+    const { GET } = await import("@/app/api/companies/route");
+    const body = (await (await GET()).json()) as Array<{
+      id: string;
+      name: string;
+      role: string;
+    }>;
+
+    expect(body).toHaveLength(1);
+    expect(body[0].id).toBe(COMPANY_ID);
+    expect(body[0].role).toBe("support");
+    // Cot loi: phai co TEN THAT, khong phai ma doanh nghiep.
+    expect(body[0].name.length).toBeGreaterThan(0);
+    expect(body[0].name).not.toBe(COMPANY_ID);
+
+    await closeSupportSession();
+  });
+
+  it("GET /api/companies trả rỗng khi platform admin CHƯA mở phiên", async () => {
+    await actAs(asPlatformAdmin);
+    const { GET } = await import("@/app/api/companies/route");
+    expect(await (await GET()).json()).toEqual([]);
+  });
+
   it("mở phiên vào doanh nghiệp khác thì cookie đổi theo — phiên chỉ mở đúng một nơi", async () => {
     await actAs(asPlatformAdmin);
     await openSupportSession(OTHER_COMPANY_ID, "Ticket #419");

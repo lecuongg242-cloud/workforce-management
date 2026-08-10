@@ -160,6 +160,23 @@ async function loadSupportCompany(): Promise<Company | null> {
 export async function GET(): Promise<NextResponse> {
   try {
     const context = await getSessionContext();
+
+    // Phien ho tro phai duoc bat O DAY, khong o nhanh `catch` ben duoi.
+    //
+    // Ban dau nhanh nay nam trong `catch (NoMembershipError)` — sai, va chi
+    // mot lan bam tay moi lo ra: tu khi `getSessionContext()` co nhanh
+    // `support` (D-51), no KHONG con nem `NoMembershipError` cho platform
+    // admin dang co phien nua. Loi goi chay thang xuong
+    // `loadCompaniesForUser()`, ham do doc `memberships` va tra mang rong,
+    // nen sidebar ket o "Dang tai…" va banner ho tro hien ma `cty-01` thay vi
+    // ten doanh nghiep — dung cai ma tieu chi 2 cua phase doi hoi.
+    if (context.role === "support") {
+      const supportCompany = await loadSupportCompany();
+      return NextResponse.json(
+        companyListResponseSchema.parse(supportCompany ? [supportCompany] : []),
+      );
+    }
+
     const companies = await loadCompaniesForUser(context.userId);
     const parsed = companyListResponseSchema.parse(companies);
     return NextResponse.json(parsed);
@@ -171,18 +188,9 @@ export async function GET(): Promise<NextResponse> {
       return NextResponse.json({ error: cause.message }, { status: 403 });
     }
     if (cause instanceof NoMembershipError) {
-      // Phien ho tro (D-51/D-53): platform admin khong co membership nao, nen
-      // nhanh tren tra ve mang rong — va `AdminShell` dung chinh danh sach nay
-      // de tim ten doanh nghiep hien hanh (admin-shell.tsx:36,50). Khong co
-      // nhanh nay thi sidebar va banner ho tro deu khong biet minh dang o dau.
-      const supportCompanies = await loadSupportCompany();
-      if (supportCompanies) {
-        return NextResponse.json(
-          companyListResponseSchema.parse([supportCompanies]),
-        );
-      }
       // Rong la du lieu hop le -- khong bao gio tra 404/500 cho "chua thuoc
-      // doanh nghiep nao".
+      // doanh nghiep nao". Platform admin CHUA mo phien roi vao dung nhanh
+      // nay, va mang rong la cau tra loi dung cho ho.
       return NextResponse.json([]);
     }
     if (cause instanceof NoActiveCompanyError) {

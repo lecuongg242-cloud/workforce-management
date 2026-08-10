@@ -26,14 +26,38 @@ export const dynamic = "force-dynamic";
 // cho route nay, khong lo ra o lan typecheck trong.
 const SUPPORT_LOG_LIMIT = 200;
 
-interface SupportSessionJoinRow {
+interface SupportSessionRow {
   id: string;
   company_id: string;
   reason: string;
   opened_at: string;
   expires_at: string;
   closed_at: string | null;
-  companies: { name: string } | null;
+}
+
+/**
+ * Ban do ma doanh nghiep -> ten, lay tu RPC tong hop.
+ *
+ * KHONG dung `.select("…, companies(name)")`: phep join do di qua RLS cua
+ * bang `companies`, ma quyen doc bang do cua platform admin lai den tu CHINH
+ * phien ho tro. He qua — do mot lan bam tay bat duoc — la nhat ky hien ten
+ * doanh nghiep khi phien con mo, roi tut ve ma tho `cty-01` ngay khi dong
+ * phien. Tuc la MOI dong lich su deu mat ten, dung luc nhat ky can doc lai
+ * nhat.
+ *
+ * `tf_platform_company_overview()` (0035) tra ten cho platform admin ma
+ * khong doi phien nao — no chi tra so tong hop nen duoc phep vay (D-56).
+ */
+async function loadCompanyNames(
+  supabase: Awaited<ReturnType<typeof createServerSupabase>>,
+): Promise<Map<string, string>> {
+  const { data, error } = await supabase.rpc("tf_platform_company_overview");
+  if (error) return new Map();
+  const rows = (data ?? []) as Array<{
+    company_id: string;
+    company_name: string;
+  }>;
+  return new Map(rows.map((row) => [row.company_id, row.company_name]));
 }
 
 export async function GET(): Promise<NextResponse> {
@@ -41,24 +65,29 @@ export async function GET(): Promise<NextResponse> {
     await requirePlatformAdmin();
 
     const supabase = await createServerSupabase();
-    const { data, error } = await supabase
-      .from("support_sessions")
-      .select("id, company_id, reason, opened_at, expires_at, closed_at, companies(name)")
-      .order("opened_at", { ascending: false })
-      .limit(SUPPORT_LOG_LIMIT);
+
+    const [{ data, error }, companyNames] = await Promise.all([
+      supabase
+        .from("support_sessions")
+        .select("id, company_id, reason, opened_at, expires_at, closed_at")
+        .order("opened_at", { ascending: false })
+        .limit(SUPPORT_LOG_LIMIT),
+      loadCompanyNames(supabase),
+    ]);
 
     if (error) {
       throw new Error("Không thể tải nhật ký phiên hỗ trợ.");
     }
 
-    const rows = (data ?? []) as unknown as SupportSessionJoinRow[];
+    const rows = (data ?? []) as SupportSessionRow[];
     const parsed = supportSessionLogResponseSchema.parse(
       rows.map((row) => ({
         id: row.id,
         companyId: row.company_id,
-        // Doanh nghiep da bi xoa thi FK `on delete cascade` cung xoa dong nay,
-        // nen nhanh `?? company_id` chi la luoi cho truong hop join hut.
-        companyName: row.companies?.name ?? row.company_id,
+        // `?? company_id` chi la luoi cuoi: doanh nghiep bi xoa thi FK
+        // `on delete cascade` cung xoa dong nay, nen tren thuc te khong roi
+        // vao nhanh do.
+        companyName: companyNames.get(row.company_id) ?? row.company_id,
         reason: row.reason,
         openedAt: row.opened_at,
         expiresAt: row.expires_at,
