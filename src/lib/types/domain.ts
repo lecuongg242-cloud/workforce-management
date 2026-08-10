@@ -61,6 +61,17 @@ export type SystemRole = "owner" | "admin" | "manager" | "employee";
 
 export type CompanyRole = "owner" | "admin" | "manager" | "employee";
 
+/**
+ * Vai tro TRUY CAP — khac vai tro DOANH NGHIEP (D-51, Phase 6).
+ *
+ * `"support"` KHONG phai mot gia tri ai gan duoc cho ai: no la trang thai cua
+ * mot PHIEN HO TRO dang mo cua platform admin. Vi vay `CompanyRole` o tren
+ * giu nguyen dung bon gia tri, va `COMPANY_ROLE_LABEL`, `SYSTEM_ROLE_OPTIONS`,
+ * form khai vai tro nhan vien deu KHONG biet `"support"` ton tai — them no
+ * vao `CompanyRole` se lam no hien ra trong moi o chon vai tro cua san pham.
+ */
+export type AccessRole = CompanyRole | "support";
+
 export type DepartmentStatus = "active" | "inactive";
 
 export type ShiftStatus = "active" | "archived";
@@ -673,7 +684,12 @@ export interface AppUser {
 export interface UserSession {
   user: AppUser;
   companyId: string;
-  role: CompanyRole;
+  /**
+   * `AccessRole` chu khong `CompanyRole`: mot phien ho tro cua platform admin
+   * cung render khu `/admin` (D-54), va giao dien phai phan biet duoc no de
+   * dung banner canh bao — xem `SupportBanner`.
+   */
+  role: AccessRole;
   /** ISO date-time */
   signedInAt: string;
 }

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 
 import { createServerSupabase } from "@/lib/supabase/server";
-import type { CompanyRole, UserSession } from "@/lib/types/domain";
+import type { AccessRole, CompanyRole, UserSession } from "@/lib/types/domain";
 
 /**
  * Diem chan danh tinh DUY NHAT phia server (D-12a). Moi Route Handler va moi
@@ -47,11 +47,13 @@ export class ForbiddenError extends Error {
   }
 }
 
+export type { AccessRole };
+
 export interface SessionContext {
   userId: string;
   email: string;
   companyId: string;
-  role: CompanyRole;
+  role: AccessRole;
   employeeId: string | null;
   isPlatformAdmin: boolean;
   mustChangePassword: boolean;
@@ -79,6 +81,61 @@ export async function getAuthenticatedUser(): Promise<{
   const claims = data?.claims;
   if (!claims) throw new UnauthenticatedError();
   return { userId: claims.sub, email: claims.email ?? "" };
+}
+
+export interface ActiveSupportSession {
+  id: string;
+  companyId: string;
+  /** ISO date-time */
+  expiresAt: string;
+}
+
+/**
+ * Phien ho tro con hieu luc cua NGUOI DANG GOI, neu co (D-49).
+ *
+ * Ham nay song o day — chu khong o `mutations/platform-sessions.ts` cung ba
+ * ham ghi — vi `getSessionContext()` ben duoi phai goi no, va `platform-
+ * sessions.ts` thi da import nguoc lai file nay. De o kia se tao mot vong
+ * phu thuoc, thu ma `.planning/codebase/ARCHITECTURE.md` ghi ro la khong co
+ * trong repo nay.
+ *
+ * Tra `null` — khong nem — khi chua dang nhap: ham nam tren duong doc cua MOI
+ * nguoi dung.
+ *
+ * Bo loc `platform_admin_id` nam O DAY chu khong pho mac cho RLS. Policy
+ * `support_sessions_select_admin_or_member` (0033) CO Y cho thanh vien doanh
+ * nghiep doc dong cua nguoi khac — do la tinh nang "khach xem duoc ai da vao
+ * du lieu cua minh". Thieu bo loc nay thi mot thanh vien se nham phien cua
+ * nguoi khac la phien cua chinh minh.
+ */
+export async function getActiveSupportSession(): Promise<ActiveSupportSession | null> {
+  let userId: string;
+  try {
+    userId = (await getAuthenticatedUser()).userId;
+  } catch {
+    return null;
+  }
+
+  const supabase = await createServerSupabase();
+
+  const { data, error } = await supabase
+    .from("support_sessions")
+    .select("id, company_id, expires_at")
+    .eq("platform_admin_id", userId)
+    .is("closed_at", null)
+    .gt("expires_at", new Date().toISOString())
+    .order("opened_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const row = data as { id: string; company_id: string; expires_at: string };
+  return {
+    id: row.id,
+    companyId: row.company_id,
+    expiresAt: row.expires_at,
+  };
 }
 
 export async function getSessionContext(): Promise<SessionContext> {
@@ -109,7 +166,33 @@ export async function getSessionContext(): Promise<SessionContext> {
   }
 
   const rows = (memberships ?? []) as MembershipRow[];
-  if (rows.length === 0) throw new NoMembershipError();
+
+  // Nhanh DUY NHAT ma Phase 6 them vao diem chan danh tinh (D-51): khong
+  // membership nao, nhung dang co mot phien ho tro con han khop cookie doanh
+  // nghiep hien hanh.
+  //
+  // Dat SAU phep doc `memberships` la co y: mot platform admin tinh co CO
+  // membership van di duong thanh vien binh thuong — quyen ho tro khong bao
+  // gio de len quyen that cua chinh ho.
+  //
+  // Doi chieu `support.companyId === activeCompanyCookie` giu nguyen quy uoc
+  // D-12b: doanh nghiep hien hanh den tu cookie roi duoc doi chieu lai voi
+  // trang thai phia server, khong bao gio tu mot tham so client gui len.
+  if (rows.length === 0) {
+    const support = await getActiveSupportSession();
+    if (support && support.companyId === activeCompanyCookie) {
+      return {
+        userId,
+        email,
+        companyId: support.companyId,
+        role: "support",
+        employeeId: null,
+        isPlatformAdmin: true,
+        mustChangePassword: appMetadata.must_change_password === true,
+      };
+    }
+    throw new NoMembershipError();
+  }
 
   const fromCookie = activeCompanyCookie
     ? rows.find((row) => row.company_id === activeCompanyCookie)
@@ -173,10 +256,30 @@ export async function getSessionContextOrNull(): Promise<SessionContext | null> 
   }
 }
 
-export function requireRole(role: CompanyRole, allowed: CompanyRole[]): void {
-  if (!allowed.includes(role)) {
+/**
+ * Ranh gioi GHI. `allowed` co kieu `CompanyRole[]` chu KHONG phai
+ * `AccessRole[]` — co y: khong call site nao them duoc `"support"` vao danh
+ * sach cho phep, nen moi Server Action ghi tu dong tu choi phien ho tro ma
+ * khong phai sua mot dong nao trong 16 file `mutations/*.ts` (D-52).
+ */
+export function requireRole(role: AccessRole, allowed: CompanyRole[]): void {
+  if (!allowed.includes(role as CompanyRole)) {
     throw new ForbiddenError();
   }
+}
+
+/**
+ * Ranh gioi DOC du lieu cap doanh nghiep. Dung o MOI Route Handler duoi
+ * `src/app/api/`.
+ *
+ * KHAC `requireRole(role, ["owner","admin"])`: vi ngu do o lai nguyen ven o
+ * duong GHI, va chinh vi no khong biet `"support"` ma phien ho tro bi chan.
+ * Cho nao quen la cho do CHAN, khong phai cho do LOT — huong hong an toan.
+ */
+const READ_ROLES: AccessRole[] = ["owner", "admin", "support"];
+
+export function canReadCompanyData(role: AccessRole): boolean {
+  return READ_ROLES.includes(role);
 }
 
 /**
@@ -185,9 +288,9 @@ export function requireRole(role: CompanyRole, allowed: CompanyRole[]): void {
  * `manager` va `employee` chi doc duoc du lieu cua CHINH HO, nen man hinh
  * quan tri voi ho se rong hoac 403 — dua ho vao giao dien nhan vien moi dung.
  */
-export const ADMIN_AREA_ROLES: CompanyRole[] = ["owner", "admin"];
+export const ADMIN_AREA_ROLES: AccessRole[] = ["owner", "admin", "support"];
 
-export function canAccessAdminArea(role: CompanyRole): boolean {
+export function canAccessAdminArea(role: AccessRole): boolean {
   return ADMIN_AREA_ROLES.includes(role);
 }
 
@@ -197,7 +300,7 @@ export function canAccessAdminArea(role: CompanyRole): boolean {
  * phien deu di qua `/` (xem `src/app/page.tsx`) de server phan giai vai tro
  * mot lan roi moi re nhanh.
  */
-export function homePathForRole(role: CompanyRole): string {
+export function homePathForRole(role: AccessRole): string {
   return canAccessAdminArea(role) ? "/admin/dashboard" : "/employee";
 }
 

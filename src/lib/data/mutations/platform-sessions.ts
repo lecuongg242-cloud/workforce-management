@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { requirePlatformAdmin } from "@/lib/auth/platform";
 import {
   ACTIVE_COMPANY_COOKIE,
-  getAuthenticatedUser,
+  getActiveSupportSession,
 } from "@/lib/auth/session-context";
 import { logMutation } from "@/lib/data/audit";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -28,13 +28,6 @@ interface SupportSessionRow {
   id: string;
   company_id: string;
   expires_at: string;
-}
-
-export interface ActiveSupportSession {
-  id: string;
-  companyId: string;
-  /** ISO date-time */
-  expiresAt: string;
 }
 
 /** Do dai mot phien ho tro, tinh bang phut. */
@@ -156,46 +149,4 @@ export async function closeSupportSession(): Promise<void> {
   }
 
   cookieStore.delete(ACTIVE_COMPANY_COOKIE);
-}
-
-/**
- * Phien con hieu luc cua NGUOI DANG GOI, neu co.
- *
- * Tra `null` — khong nem — khi chua dang nhap: ham nay nam tren duong doc cua
- * MOI nguoi dung qua `getSessionContext()`.
- *
- * Bo loc `platform_admin_id` nam O DAY chu khong pho mac cho RLS. Policy
- * `support_sessions_select_admin_or_member` (0033) CO Y cho thanh vien doanh
- * nghiep doc dong cua nguoi khac — do la tinh nang "khach xem duoc ai da vao
- * du lieu cua minh". Thieu bo loc nay thi mot thanh vien se nham phien cua
- * nguoi khac la phien cua chinh minh.
- */
-export async function getActiveSupportSession(): Promise<ActiveSupportSession | null> {
-  let userId: string;
-  try {
-    userId = (await getAuthenticatedUser()).userId;
-  } catch {
-    return null;
-  }
-
-  const supabase = await createServerSupabase();
-
-  const { data, error } = await supabase
-    .from("support_sessions")
-    .select(SESSION_COLUMNS)
-    .eq("platform_admin_id", userId)
-    .is("closed_at", null)
-    .gt("expires_at", new Date().toISOString())
-    .order("opened_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  const row = data as SupportSessionRow;
-  return {
-    id: row.id,
-    companyId: row.company_id,
-    expiresAt: row.expires_at,
-  };
 }

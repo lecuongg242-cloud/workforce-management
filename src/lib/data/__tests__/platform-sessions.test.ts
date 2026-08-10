@@ -12,10 +12,12 @@ import { randomBytes } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { ForbiddenError } from "@/lib/auth/session-context";
+import {
+  ForbiddenError,
+  getActiveSupportSession,
+} from "@/lib/auth/session-context";
 import {
   closeSupportSession,
-  getActiveSupportSession,
   openSupportSession,
 } from "@/lib/data/mutations/platform-sessions";
 
