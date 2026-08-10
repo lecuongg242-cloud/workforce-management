@@ -10,7 +10,7 @@
 
 begin;
 
-select plan(8);
+select plan(14);
 
 /* ============================================================================
    1-2. Bang co mat, bat RLS
@@ -97,6 +97,70 @@ select throws_ok(
   '42501',
   null,
   'support_sessions: platform admin xoa nhat ky cua chinh minh bi tu choi'
+);
+
+select tf_test_logout();
+
+/* ============================================================================
+   9-14. Doc xuyen doanh nghiep qua phien ho tro (D-50)
+
+   Ba bang duoc chon vi seed.sql co du lieu THAT cho ca hai doanh nghiep
+   (employees 12 dong cty-02, departments 4 dong cty-02) — mot khang dinh
+   "= 0" tren bang von rong o cty-02 se xanh rong va khong chung minh gi.
+   ========================================================================= */
+
+-- Mo lai mot phien con han cho cty-01 (phien o muc 6 da bi cho het han).
+update support_sessions set expires_at = now() + interval '60 minutes'
+  where platform_admin_id = '00000000-0000-0000-0000-000000000004';
+
+select tf_test_login('00000000-0000-0000-0000-000000000004'::uuid);
+
+select ok(
+  (select count(*) from employees where company_id = 'cty-01') > 0,
+  'employees: platform admin trong phien doc duoc >0 dong cty-01'
+);
+
+select is(
+  (select count(*)::int from employees where company_id = 'cty-02'),
+  0,
+  'employees: platform admin trong phien cty-01 doc duoc 0 dong cty-02'
+);
+
+select ok(
+  (select count(*) from attendance_records where company_id = 'cty-01') > 0,
+  'attendance_records: platform admin trong phien doc duoc >0 dong cty-01'
+);
+
+select is(
+  (select count(*)::int from departments where company_id = 'cty-02'),
+  0,
+  'departments: platform admin trong phien cty-01 doc duoc 0 dong cty-02'
+);
+
+-- Cot loi cua tieu chi 4: DOC mo, GHI khong. Hai khang dinh duoi day la thu
+-- phan biet "phien ho tro" voi "quyen vuot RLS dung chung".
+select throws_ok(
+  $ins_sup$insert into holidays (company_id, holiday_date, name)
+    values ('cty-01', '2030-01-01', 'Phien ho tro khong duoc ghi')$ins_sup$,
+  '42501',
+  'new row violates row-level security policy for table "holidays"',
+  'holidays: platform admin trong phien GHI vao cty-01 bi tu choi — chi mo select'
+);
+
+-- UPDATE bi RLS chan KHONG nem loi — no chi khop 0 dong (khac INSERT, lenh
+-- do vi pham `with check` nen nem 42501). Vi vay phai DEM so dong bi sua.
+-- CTE ghi bat buoc nam o tang ngoai cung cua cau lenh, khong loi vao duoc
+-- mot sub-select ("WITH clause containing a data-modifying statement must be
+-- at the top level").
+with updated as (
+  update employees set full_name = 'Bi sua trom'
+    where company_id = 'cty-01'
+    returning 1
+)
+select is(
+  (select count(*)::int from updated),
+  0,
+  'employees: platform admin trong phien SUA cty-01 khong cham duoc dong nao'
 );
 
 select tf_test_logout();

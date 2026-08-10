@@ -18,7 +18,7 @@ mà **không** phá vỡ ranh giới cô lập đã dựng ở Phase 1.
 | `SessionContext.isPlatformAdmin` | **Đã có**, được tính mỗi lần gọi | `src/lib/auth/session-context.ts:137-147` |
 | Nơi dùng `isPlatformAdmin` | **0 chỗ** — cờ chết từ Phase 2 | grep toàn `src/` |
 | `audit_log.company_id` | **Đã nullable sẵn cho Phase 6** | `0005_v2_tables.sql:83-91` |
-| Policy `*_select_member` | **23 policy**, điều kiện duy nhất `tf_is_member(...)` | `grep` toàn `supabase/migrations/` |
+| Policy `select` đang sống | **23 bảng** cấp doanh nghiệp: 19 theo khuôn `tf_is_member`, 4 bảng lương theo khuôn `tf_is_company_admin` (0029/0030) | dựng lại từ toàn bộ lịch sử `create`/`drop policy`, không phải grep `create` |
 | `requireRole(role, ["owner","admin"])` trong `src/app/api/**` | **13 chỗ** | grep |
 | `isAdminRole = role === "owner" \|\| role === "admin"` tính inline | **7 chỗ** trong `src/app/api/**` | grep |
 | `requireRole` trong `src/lib/data/mutations/*.ts` | **51 chỗ / 16 file** | grep |
@@ -94,12 +94,22 @@ Ba lệnh `insert` / `update` / `delete` **không đổi một chữ**. Đây l�
 
 **Phạm vi chính xác:**
 
-- **Có đổi:** 22 bảng có `*_select_member` (`companies`, `memberships`, `departments`,
-  `employees`, `shifts`, `work_sites`, `attendance_records`, `attendance_photos`,
-  `holidays`, `overtime_rules`, `employee_overtime_rates`, `company_settings`,
-  `periods`, `work_requests`, `request_reviews`, `audit_log`, `pay_adjustments`,
-  `pay_adjustment_scopes`, `employee_pay_rates`, `payroll_runs`, `payroll_lines`,
-  `payroll_line_items`).
+- **Có đổi, khuôn chung (19 bảng):** `companies` (scope theo `id`), `memberships`,
+  `departments`, `employees`, `shifts`, `work_sites`, `attendance_records`,
+  `attendance_photos`, `holidays`, `overtime_rules`, `employee_overtime_rates`,
+  `company_settings`, `periods`, `work_requests`, `request_reviews`, `audit_log`,
+  `pay_adjustments`, `pay_adjustment_scopes`, `employee_pay_rates` — tất cả là
+  `*_select_member` với điều kiện duy nhất `tf_is_member(...)`.
+- **Có đổi, khuôn RIÊNG (4 bảng lương):** `payroll_runs`, `payroll_lines`,
+  `payroll_line_items`, `payroll_line_days`. **Đo lại 2026-08-10 khi thực thi Task 2:**
+  bốn bảng này KHÔNG dùng `tf_is_member`. Migration 0029 (PAY-05) đã thay ba policy
+  `*_select_member` bằng `*_select_scoped` với điều kiện **chặt hơn**
+  (`tf_is_company_admin` thay vì mọi thành viên) cộng một nhánh cho nhân viên xem
+  phiếu lương của chính mình; 0030 nhân bản khuôn đó cho bảng thứ tư. Vì
+  `alter policy ... using (...)` **thay thế** toàn bộ biểu thức, áp khuôn chung vào
+  đây sẽ âm thầm **nới** quyền đọc bảng lương từ "chỉ quản trị" thành "mọi thành
+  viên" — một lỗ hổng lặng lẽ, không phải một lỗi báo đỏ. Ba nhánh cũ được chép
+  nguyên văn, chỉ thêm đúng một dòng `or tf_has_support_access(company_id)`.
 - **Có đổi:** policy `storage.objects` của bucket `attendance-photos`
   (`0012_attendance_photo_storage_rls.sql`, dùng `tf_is_member` qua
   `split_part(name,'/',1)`) — không đổi thì ảnh chấm công 403 trong phiên hỗ trợ và
