@@ -20,6 +20,14 @@ import type {
 export { checkIn, checkOut } from "@/lib/data/mutations/attendance";
 
 /**
+ * `evaluatePunchLocation(location)` — buoc DO TRUOC cua man hinh cham cong:
+ * gui toa do, nhan ve "lan nay co phai chup anh khong". Mot phep DOC thuan
+ * tuy, khong ghi dong nao; cau tra loi cua no chi de giao dien biet co bat
+ * camera hay khong, con `checkIn`/`checkOut` van do lai tu dau.
+ */
+export { evaluatePunchLocation } from "@/lib/data/mutations/attendance";
+
+/**
  * Chu ky giu Y HET `src/lib/mock/service.ts` — call site chi doi dong import
  * (plan 02-08). `query.companyId` KHONG bao gio gui len server — pham vi
  * luon den tu `getSessionContext()` (D-12b).

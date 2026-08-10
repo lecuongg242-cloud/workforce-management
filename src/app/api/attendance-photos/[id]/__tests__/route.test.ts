@@ -187,4 +187,36 @@ describe("GET /api/attendance-photos/[id] (broker route, D-12c)", () => {
     const response = await GET(new Request("http://localhost/x"), fakeParams(photoId));
     expect(response.status).toBe(403);
   });
+
+  it("9. dong ton tai nhung KHONG co tep anh (cham trong nguong cho phep) -> 404 voi CUNG than phan hoi nhu id khong ton tai", async () => {
+    // Dong bang chung khong anh (migration 0032): co day du toa do, chi thieu
+    // storage_path. Route nay chi phat BYTE ANH — khong co byte nao thi 404,
+    // va khong duoc phan biet duoc voi mot id sai.
+    //
+    // Bo di storage_path cua CHINH dong test nay roi tra lai, thay vi them
+    // mot dong thu hai: `unique (attendance_record_id, kind)` chi cho dung hai
+    // dong tren att-01a va ca hai da co chu (seed giu 'check_in', dong test
+    // giu 'check_out').
+    const { error: nullError } = await admin
+      .from("attendance_photos")
+      .update({ storage_path: null })
+      .eq("id", photoId);
+    expect(nullError).toBeNull();
+
+    try {
+      vi.mocked(getSessionContext).mockResolvedValue(SESSION_CTY01_OWNER);
+      const response = await GET(new Request("http://localhost/x"), fakeParams(photoId));
+      expect(response.status).toBe(404);
+
+      const notFoundBody = await (
+        await GET(new Request("http://localhost/x"), fakeParams(nonExistentId))
+      ).text();
+      expect(await response.text()).toBe(notFoundBody);
+    } finally {
+      await admin
+        .from("attendance_photos")
+        .update({ storage_path: storagePath })
+        .eq("id", photoId);
+    }
+  });
 });

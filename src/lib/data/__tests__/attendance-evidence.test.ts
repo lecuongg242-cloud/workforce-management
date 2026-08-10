@@ -72,7 +72,17 @@ const EMP_OUTSIDE = "emp-03-04-outside";
 const EMP_NOCHECKIN = "emp-03-04-nocheckin";
 const EMP_ROLE = "emp-03-04-role";
 const EMP_FARIN = "emp-03-04-farin";
-const TEST_EMPLOYEE_IDS = [EMP_EVI, EMP_OUTSIDE, EMP_NOCHECKIN, EMP_ROLE, EMP_FARIN];
+const EMP_NEAR_NOPHOTO = "emp-03-04-nearnp";
+const EMP_FAR_NOPHOTO = "emp-03-04-farnp";
+const TEST_EMPLOYEE_IDS = [
+  EMP_EVI,
+  EMP_OUTSIDE,
+  EMP_NOCHECKIN,
+  EMP_ROLE,
+  EMP_FARIN,
+  EMP_NEAR_NOPHOTO,
+  EMP_FAR_NOPHOTO,
+];
 const NOCHECKIN_RECORD_ID = "att-03-04-nocheckin";
 
 /**
@@ -123,6 +133,11 @@ function makeEvidence(latitude: number, longitude: number): PunchEvidence {
     longitude,
     accuracyMeters: 8,
   };
+}
+
+/** Bang chung CHI CO TOA DO — hop le khi lan cham nam trong nguong cho phep. */
+function makeLocationOnly(latitude: number, longitude: number): PunchEvidence {
+  return { latitude, longitude, accuracyMeters: 8 };
 }
 
 describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi server tu quyet (03-04)", () => {
@@ -271,6 +286,8 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
       { id: EMP_NOCHECKIN, code: "T0304NOK", shift_id: NORMAL_SHIFT_ID },
       { id: EMP_ROLE, code: "T0304ROLE", shift_id: NEAR_SHIFT_ID },
       { id: EMP_FARIN, code: "T0304FARIN", shift_id: NEAR_SHIFT_ID },
+      { id: EMP_NEAR_NOPHOTO, code: "T0304NRNP", shift_id: NEAR_SHIFT_ID },
+      { id: EMP_FAR_NOPHOTO, code: "T0304FRNP", shift_id: NEAR_SHIFT_ID },
     ].map((row) => ({
       ...baseEmployee,
       id: row.id,
@@ -581,6 +598,115 @@ describe("checkIn/checkOut — bang chung ca hai dau ca, hai ly do tu choi serve
         .eq("attendance_record_id", roleRecordId)
         .eq("kind", "check_out");
       expect(count).toBe(0);
+    });
+  });
+
+  /**
+   * Trong tam cua thay doi "anh chi bat buoc khi o xa". Diem lam viec test nam
+   * DUNG tai toa do GAN (ban kinh 150m) va he so mac dinh cua doanh nghiep la
+   * 5 -> nguong ~750m: toa do GAN cach 0m nen khong can anh, toa do Ha Noi
+   * cach hon 1000km nen bat buoc phai co.
+   */
+  describe("Ảnh chỉ bắt buộc khi vượt ngưỡng cho phép", () => {
+    it("19. checkIn GẦN không kèm ảnh -> thành công, dòng bằng chứng vẫn giữ toạ độ và khoảng cách", async () => {
+      vi.mocked(getSessionContext).mockResolvedValue(ownerSession());
+      const result = await checkIn(
+        EMP_NEAR_NOPHOTO,
+        makeLocationOnly(NEAR_LAT, NEAR_LNG),
+      );
+
+      expect(result.checkIn).not.toBeNull();
+      expect(result.isOutsideRadius).toBe(false);
+
+      const { data, error } = await admin
+        .from("attendance_photos")
+        .select("storage_path, latitude, longitude, distance_meters, work_site_id")
+        .eq("attendance_record_id", result.id)
+        .eq("kind", "check_in")
+        .single();
+      expect(error).toBeNull();
+      const row = data as {
+        storage_path: string | null;
+        latitude: number;
+        longitude: number;
+        distance_meters: number | null;
+        work_site_id: string | null;
+      };
+
+      // Khong co tep anh...
+      expect(row.storage_path).toBeNull();
+      // ...nhung dau vet vi tri thi VAN CON DU. Day la ca ly do dong nay duoc
+      // ghi thay vi bo han.
+      expect(row.work_site_id).toBe(TEST_WORK_SITE_ID);
+      expect(row.distance_meters).not.toBeNull();
+      expect(Number(row.distance_meters)).toBeLessThan(150);
+      expect(Number(row.latitude)).toBeCloseTo(NEAR_LAT, 4);
+    });
+
+    it("20. checkIn XA không kèm ảnh -> missing_photo, KHÔNG dòng attendance_records nào được ghi", async () => {
+      vi.mocked(getSessionContext).mockResolvedValue(ownerSession());
+      let caught: unknown;
+      try {
+        await checkIn(EMP_FAR_NOPHOTO, makeLocationOnly(21.0285, 105.8542));
+      } catch (cause) {
+        caught = cause;
+      }
+      expect(caught).toBeInstanceOf(AttendanceRejectedError);
+      expect((caught as AttendanceRejectedError).reason).toBe("missing_photo");
+
+      // Phep do chay TRUOC khi ghi — mot lan bi tu choi khong duoc de lai ban
+      // ghi cham cong nao phai don.
+      const { count } = await admin
+        .from("attendance_records")
+        .select("id", { count: "exact", head: true })
+        .eq("employee_id", EMP_FAR_NOPHOTO);
+      expect(count).toBe(0);
+    });
+
+    it("21. checkOut GẦN không kèm ảnh -> thành công (đóng đúng lượt đã mở ở test 19)", async () => {
+      const { data: openRow } = await admin
+        .from("attendance_records")
+        .select("id")
+        .eq("employee_id", EMP_NEAR_NOPHOTO)
+        .is("check_out_at", null)
+        .single();
+      const recordId = (openRow as { id: string }).id;
+
+      vi.mocked(getSessionContext).mockResolvedValue(ownerSession());
+      const result = await checkOut(recordId, makeLocationOnly(NEAR_LAT, NEAR_LNG));
+      expect(result.checkOut).not.toBeNull();
+
+      const { data } = await admin
+        .from("attendance_photos")
+        .select("storage_path")
+        .eq("attendance_record_id", recordId)
+        .eq("kind", "check_out")
+        .single();
+      expect((data as { storage_path: string | null }).storage_path).toBeNull();
+    });
+
+    it("22. checkOut XA không kèm ảnh -> missing_photo và KHÔNG ghi đè check_out_at đang có", async () => {
+      vi.mocked(getSessionContext).mockResolvedValue(ownerSession());
+      const created = await checkIn(
+        EMP_FAR_NOPHOTO,
+        makeEvidence(NEAR_LAT, NEAR_LNG),
+      );
+
+      let caught: unknown;
+      try {
+        await checkOut(created.id, makeLocationOnly(21.0285, 105.8542));
+      } catch (cause) {
+        caught = cause;
+      }
+      expect(caught).toBeInstanceOf(AttendanceRejectedError);
+      expect((caught as AttendanceRejectedError).reason).toBe("missing_photo");
+
+      const { data } = await admin
+        .from("attendance_records")
+        .select("check_out_at")
+        .eq("id", created.id)
+        .single();
+      expect((data as { check_out_at: string | null }).check_out_at).toBeNull();
     });
   });
 

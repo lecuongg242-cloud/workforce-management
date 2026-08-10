@@ -455,6 +455,12 @@ export interface AttendancePhoto {
   kind: "check_in" | "check_out";
   /** ISO date-time, luon la tf_server_now() cua chinh lan goi (D-19/ATT-06) */
   capturedAt: string;
+  /**
+   * Dong bang chung nay co kem mot tep anh that hay khong (migration 0032).
+   * `false` nghia la lan cham do nam TRONG nguong cho phep nen khong bat chup
+   * — dong van giu du toa do, khoang cach va diem lam viec gan nhat.
+   */
+  hasPhoto: boolean;
   latitude: number;
   longitude: number;
   accuracyMeters: number | null;
@@ -465,12 +471,33 @@ export interface AttendancePhoto {
   reviewStatus: PhotoReviewStatus;
 }
 
-/** Nhung gi client gui kem khi cham cong — thu client TU KHAI, chua phai bang chung cho toi khi server tu do lai */
-export interface PunchEvidence {
-  photo: Blob;
+/**
+ * Toa do mot lan cham cong — thu client TU KHAI, chua phai bang chung cho toi
+ * khi server tu do lai. Dung MOT MINH o buoc do truoc (`evaluatePunchLocation`,
+ * truoc khi biet co phai bat camera hay khong).
+ */
+export interface PunchLocation {
   latitude: number;
   longitude: number;
   accuracyMeters: number;
+}
+
+/** Ket qua buoc do truoc — server tra loi "lan cham nay co phai chup anh khong" */
+export interface PunchLocationEvaluation {
+  /** `true` khi khoang cach vuot nguong cho phep, HOAC khi khong do duoc khoang cach */
+  requiresPhoto: boolean;
+  /** met, do server tinh qua tf_distance_meters() */
+  distanceMeters: number | null;
+  workSiteName: string | null;
+}
+
+/**
+ * Nhung gi client gui kem khi cham cong. `photo` la TUY CHON: chi lan cham
+ * vuot nguong cho phep moi phai kem anh, va chinh SERVER quyet dinh dieu do
+ * sau khi do lai khoang cach — xem `requiresPunchPhoto()`.
+ */
+export interface PunchEvidence extends PunchLocation {
+  photo?: Blob | null;
 }
 
 export interface WorkRequest {

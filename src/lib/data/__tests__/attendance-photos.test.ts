@@ -117,6 +117,9 @@ function rawPhotoRow(overrides: Record<string, unknown> = {}): Record<string, un
     work_site_id: "ws-01",
     distance_meters: 15.2,
     review_status: "pending",
+    // Duong dan THAT trong mien luu tru — dau vao cua schema, KHONG bao gio la
+    // dau ra (xem khang dinh o test 5).
+    storage_path: "cty-01/emp-01/photo-check-in-1.jpg",
     work_sites: { name: "Văn phòng chính" },
     ...overrides,
   };
@@ -201,12 +204,40 @@ describe("GET /api/attendance-photos (plan 03-05)", () => {
       workSiteName: "Văn phòng chính",
       distanceMeters: 15.2,
       reviewStatus: "pending",
+      hasPhoto: true,
     });
     for (const item of body) {
       for (const key of Object.keys(item)) {
         expect(key.toLowerCase()).not.toContain("url");
+        // `storage_path` di VAO schema de suy ra `hasPhoto` — no khong duoc
+        // di RA. Mot ky tu duong dan trong phan hoi la mot ro ri mien luu tru
+        // (T-03-05-04), du no khong ten la "url".
+        expect(key.toLowerCase()).not.toContain("storage");
+        expect(key.toLowerCase()).not.toContain("path");
       }
+      expect(JSON.stringify(item)).not.toContain("cty-01/emp-01");
     }
+  });
+
+  it("6b. dong bang chung KHONG co tep anh -> hasPhoto=false, sieu du lieu vi tri van day du", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(SESSION_CTY01_OWNER);
+    const chain = makeChain({
+      data: [rawPhotoRow({ storage_path: null })],
+      error: null,
+    });
+    vi.mocked(createServerSupabase).mockResolvedValue({
+      from: vi.fn(() => chain),
+    } as unknown as FakeServerClient);
+
+    const response = await GET(fakeGetRequest({ attendanceRecordId: "att-01a" }));
+    const body = (await response.json()) as Record<string, unknown>[];
+
+    expect(body[0]).toMatchObject({
+      hasPhoto: false,
+      latitude: 10.7823,
+      distanceMeters: 15.2,
+      workSiteName: "Văn phòng chính",
+    });
   });
 
   it("6. ban ghi khong co anh nao -> mang rong voi ma 200 (khong phai 404)", async () => {

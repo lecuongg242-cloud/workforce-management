@@ -87,6 +87,47 @@ export function isSuspiciousPunch(input: IsSuspiciousPunchInput): boolean {
 }
 
 /**
+ * LAN CHAM NAY CO PHAI CHUP ANH KHONG?
+ *
+ * Cung mot NGUONG voi `isSuspiciousPunch()` — bán kính cua diem lam viec gan
+ * nhat nhan boi so cau hinh cua chinh doanh nghiep — nhung KHONG PHAI cung mot
+ * ham, vi mot truong hop tra loi khac nhau CO CHU DICH:
+ *
+ *   THIEU PHEP DO (doanh nghiep chua khai diem lam viec nao, hoac khong do
+ *   duoc khoang cach) -> `isSuspiciousPunch` tra `false`, ham nay tra `true`.
+ *
+ * Thieu du lieu khong phai bang chung cua bat thuong (nen khong duoc dua ai vao
+ * danh sach "Can xem lai" chi vi the), nhung cung khong phai bang chung cua
+ * binh thuong (nen khong duoc mien bang chung). Hai cau hoi khac nhau, hai cau
+ * tra loi khac nhau — go bo su khac biet nay se bien "chua cau hinh diem lam
+ * viec" thanh mot duong mien anh cho toan doanh nghiep.
+ *
+ * `canCheckInRemotely` mien VO DIEU KIEN, dung nhu o `isSuspiciousPunch()`:
+ * giao dien nhan vien da hua voi ho rang ho duoc phep cham cong ngoai dia diem,
+ * va bat ho chup anh moi lan la trai chinh loi hua do.
+ *
+ * KHONG PHAI mot cong chan. Tra `true` chi co nghia "lan gui nay phai kem
+ * anh"; khoang cach van KHONG BAO GIO tu choi mot lan cham cong (D-20/D-20a).
+ */
+export function requiresPunchPhoto(input: IsSuspiciousPunchInput): boolean {
+  const {
+    distanceMeters,
+    radiusMeters,
+    canCheckInRemotely,
+    multiplier = SUSPICIOUS_DISTANCE_MULTIPLIER,
+  } = input;
+
+  if (canCheckInRemotely) return false;
+  // Ba nhanh "khong co gi de so sanh" — xem khoi chu thich tren: mac dinh o
+  // day la CAN ANH, nguoc voi mac dinh cua isSuspiciousPunch().
+  if (distanceMeters === null) return true;
+  if (radiusMeters === null || radiusMeters === 0) return true;
+  if (multiplier <= 0) return true;
+
+  return distanceMeters > radiusMeters * multiplier;
+}
+
+/**
  * Boi so khoang cach/ban kinh, lam tron toi MOT chu so thap phan — dung de
  * HIEN THI (vi du "gap 6.2 lan ban kinh"), khong dung de quyet dinh (quyet
  * dinh la viec cua `isSuspiciousPunch`, dung phep so sanh nguyen, khong qua

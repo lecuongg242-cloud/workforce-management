@@ -15,6 +15,7 @@ import { useAuthenticatedSession } from "@/lib/auth/session-provider";
 import {
   checkIn as checkInService,
   checkOut as checkOutService,
+  evaluatePunchLocation,
   listAttendance,
 } from "@/lib/data/attendance";
 import { getEmployee } from "@/lib/data/employees";
@@ -210,6 +211,7 @@ export function EmployeeHomeView({
       <CameraSheet
         open={cameraOpen}
         onOpenChange={handleCameraOpenChange}
+        onEvaluate={evaluatePunchLocation}
         onSubmit={handlePunchSubmit}
         punchKind={pendingCheckOutRecordId ? "check_out" : "check_in"}
       />

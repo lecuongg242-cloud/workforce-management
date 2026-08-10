@@ -5,13 +5,22 @@ import { randomUUID } from "node:crypto";
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
 import { periodGuardError } from "@/lib/attendance/period-guard";
 import { AttendanceRejectedError } from "@/lib/attendance/rejection";
+import { requiresPunchPhoto } from "@/lib/attendance/suspicious";
 import { logMutation } from "@/lib/data/audit";
 import { loadCompanySettings } from "@/lib/settings/company-settings";
 import { ATTENDANCE_PHOTO_BUCKET, buildAttendancePhotoPath } from "@/lib/storage/attendance-photos";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { attendanceRecordSchema } from "@/lib/validation/api/attendance";
-import { punchEvidenceSchema } from "@/lib/validation/api/attendance-photos";
-import type { AttendanceRecord, PunchEvidence } from "@/lib/types/domain";
+import {
+  punchEvidenceSchema,
+  punchLocationSchema,
+} from "@/lib/validation/api/attendance-photos";
+import type {
+  AttendanceRecord,
+  PunchEvidence,
+  PunchLocation,
+  PunchLocationEvaluation,
+} from "@/lib/types/domain";
 
 const ATTENDANCE_COLUMNS =
   "id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at, worked_minutes, late_minutes, early_leave_minutes, status, location, needs_supplement, note";
@@ -117,44 +126,47 @@ interface RawAttendancePhotoRow {
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createServerSupabase>>;
 
-interface WritePunchEvidenceInput {
+interface MeasurePunchLocationInput {
   supabase: ServerSupabaseClient;
   companyId: string;
   employeeId: string;
-  actorUserId: string;
-  attendanceRecordId: string;
-  kind: "check_in" | "check_out";
-  /** tf_server_now() cua CHINH lan goi nay -- KHONG dung lai gia tri cua lan cham truoc. */
-  nowIso: string;
-  punchEvidence: PunchEvidence;
+  location: PunchLocation;
 }
 
 /**
- * Ghi bang chung (anh + toa do + khoang cach do TAI CHO) cho MOT lan cham —
- * dung CHUNG cho ca `checkIn` (`kind: "check_in"`) lan `checkOut`
- * (`kind: "check_out"`, plan 03-04 Task 2) thay vi hai ham gan giong het
- * nhau (03-01 chi dung cho lan vao). Thu tu: doc `work_sites` dang hoat
- * dong -> do khoang cach TOI TUNG diem qua `tf_distance_meters()` -> giu
- * diem GAN NHAT -> tai anh len Storage -> doc-truoc-insert-hoac-update DUNG
- * MOT dong `attendance_photos` theo (`attendance_record_id`, `kind`) ->
- * `logMutation` rieng cho bang anh. KHONG CO NHANH NAO so sanh khoang cach
- * roi nem loi — ngoai ban kinh la mot ghi chu duoc chap nhan (D-20/D-20a),
- * khong phai dieu kien chan, o CA HAI phia goi ham nay.
- *
- * Goi ham nay tinh khoang cach DOC LAP moi lan — khong nhan mot gia tri
- * khoang cach da tinh san tu ben ngoai, nen gia tri cua lan vao khong bao
- * gio chep duoc sang lan ra (T-03-04-04).
+ * Ket qua phep do, giau hon `PunchEvidenceResult` hai truong chi co nghia o
+ * PHIA SERVER: dinh danh diem lam viec gan nhat (de ghi vao dong bang chung)
+ * va cau tra loi cho "lan nay co phai chup anh khong".
  */
-async function writePunchEvidence({
+interface PunchMeasurement extends PunchEvidenceResult {
+  workSiteId: string | null;
+  requiresPhoto: boolean;
+}
+
+/**
+ * DO khoang cach cua MOT lan cham toi diem lam viec gan nhat, va tra loi hai
+ * cau hoi khac nhau ve no: co bi DANH DAU dang ngo khong (`isOutsideRadius`,
+ * D-21) va co phai KEM ANH khong (`requiresPhoto`).
+ *
+ * Tach khoi phan ghi (truoc day cung nam trong `writePunchEvidence`) vi thu tu
+ * bat buoc doi nguoc lai: `checkIn`/`checkOut` phai biet CO CAN ANH KHONG
+ * *truoc khi* ghi dong `attendance_records`. Do sau khi ghi thi mot lan cham
+ * thieu anh se de lai mot dong cham cong roi moi bi tu choi.
+ *
+ * Doc `can_check_in_remotely` NGAY TAI DAY thay vi nhan qua tham so: ca hai
+ * noi goi deu can no, va mot trong hai (`checkOut`) khong doc bang `employees`
+ * cho viec gi khac — truyen tay se la mot co hoi de mot ngay nao do truyen
+ * sai.
+ *
+ * KHONG CO NHANH NAO NEM LOI THEO KHOANG CACH. Ngoai ban kinh la mot ghi chu
+ * duoc chap nhan (D-20/D-20a), khong phai dieu kien chan.
+ */
+async function measurePunchLocation({
   supabase,
   companyId,
   employeeId,
-  actorUserId,
-  attendanceRecordId,
-  kind,
-  nowIso,
-  punchEvidence,
-}: WritePunchEvidenceInput): Promise<PunchEvidenceResult> {
+  location,
+}: MeasurePunchLocationInput): Promise<PunchMeasurement> {
   const { data: workSiteRows, error: workSitesError } = await supabase
     .from("work_sites")
     .select("id, name, latitude, longitude, radius_meters")
@@ -172,8 +184,8 @@ async function writePunchEvidence({
     const { data: distance, error: distanceError } = await supabase.rpc(
       "tf_distance_meters",
       {
-        p_lat1: punchEvidence.latitude,
-        p_lng1: punchEvidence.longitude,
+        p_lat1: location.latitude,
+        p_lng1: location.longitude,
         p_lat2: site.latitude,
         p_lng2: site.longitude,
       },
@@ -188,6 +200,19 @@ async function writePunchEvidence({
       nearestWorkSiteRadiusMeters = site.radius_meters;
     }
   }
+
+  const { data: employeeFlagRow, error: employeeFlagError } = await supabase
+    .from("employees")
+    .select("can_check_in_remotely")
+    .eq("id", employeeId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (employeeFlagError) {
+    throw new Error("Không thể đọc cấu hình chấm công của nhân viên.");
+  }
+  const canCheckInRemotely =
+    (employeeFlagRow as { can_check_in_remotely: boolean } | null)
+      ?.can_check_in_remotely ?? false;
 
   // D-21: danh dau dang ngo khi khoang cach vuot NGUONG, khong phai vuot ban
   // kinh tran (D-20a: "trong ban kinh" tu dieu kien bat buoc thanh ghi chu).
@@ -206,28 +231,148 @@ async function writePunchEvidence({
     nearestDistanceMeters >
       nearestWorkSiteRadiusMeters * settings.suspiciousDistanceMultiplier;
 
+  return {
+    workSiteId: nearestWorkSiteId,
+    workSiteName: nearestWorkSiteName,
+    distanceMeters: nearestDistanceMeters,
+    isOutsideRadius,
+    // CUNG nguong voi isOutsideRadius, KHAC o mot cho: thieu phep do thi ham
+    // nay tra `true` (bat anh) trong khi isOutsideRadius la `false` (khong ket
+    // luan dang ngo). Xem khoi chu thich cua `requiresPunchPhoto()`.
+    requiresPhoto: requiresPunchPhoto({
+      distanceMeters: nearestDistanceMeters,
+      radiusMeters: nearestWorkSiteRadiusMeters,
+      canCheckInRemotely,
+      multiplier: settings.suspiciousDistanceMultiplier,
+    }),
+  };
+}
+
+/**
+ * BUOC DO TRUOC cua man hinh nhan vien: gui LEN toa do, nhan VE cau tra loi
+ * "lan cham nay co phai chup anh khong" — truoc khi bat camera, va truoc khi
+ * ghi bat ky dong nao.
+ *
+ * Day la mot phep DOC thuan tuy: khong ghi dong nao, khong cham Storage. Cau
+ * tra loi cua no la mot GOI Y cho giao dien, KHONG PHAI mot giay thong hanh —
+ * `checkIn`/`checkOut` do LAI tu dau bang chinh `measurePunchLocation()` va
+ * van tu choi neu can anh ma thieu anh. Mot client sua tay de bo qua buoc nay
+ * khong di xa hon duoc mot buoc nao.
+ */
+export async function evaluatePunchLocation(
+  location: PunchLocation,
+): Promise<PunchLocationEvaluation> {
+  const {
+    companyId,
+    role,
+    employeeId: sessionEmployeeId,
+  } = await getSessionContext();
+
+  // Loi THUONG, khong phai `AttendanceRejectedError`: ba ly do tu choi cua
+  // D-20b noi ve mot lan CHAM CONG bi tu choi, con day moi la buoc do truoc —
+  // chua co lan cham nao de tu choi. Giao dien doi xu voi no nhu "chua lay
+  // duoc vi tri" (chay lai ca luot), khong dan nguoi dung vao mot khoi "thieu
+  // anh" ma nut duy nhat cua no lai la chup lai khi camera con chua bat.
+  const parsed = punchLocationSchema.safeParse(location);
+  if (!parsed.success) {
+    throw new Error("Toạ độ không hợp lệ.");
+  }
+
+  // AUTH-03: chi do duoc cho CHINH MINH. Vai tro quan tri khong co ho so nhan
+  // vien gan kem thi khong co `can_check_in_remotely` nao de doc — do la mot
+  // phien khong cham cong duoc, khong phai mot phien duoc mien anh.
+  const isAdminRole = role === "owner" || role === "admin";
+  if (!sessionEmployeeId && !isAdminRole) {
+    throw new ForbiddenError();
+  }
+
+  const supabase = await createServerSupabase();
+  const measurement = await measurePunchLocation({
+    supabase,
+    companyId,
+    employeeId: sessionEmployeeId ?? "",
+    location: parsed.data,
+  });
+
+  return {
+    requiresPhoto: measurement.requiresPhoto,
+    distanceMeters: measurement.distanceMeters,
+    workSiteName: measurement.workSiteName,
+  };
+}
+
+interface WritePunchEvidenceInput {
+  supabase: ServerSupabaseClient;
+  companyId: string;
+  employeeId: string;
+  actorUserId: string;
+  attendanceRecordId: string;
+  kind: "check_in" | "check_out";
+  /** tf_server_now() cua CHINH lan goi nay -- KHONG dung lai gia tri cua lan cham truoc. */
+  nowIso: string;
+  punchEvidence: PunchEvidence;
+  /** Ket qua `measurePunchLocation()` cua CHINH lan goi nay — do lai o day se la phep do thu hai cua cung mot lan cham. */
+  measurement: PunchMeasurement;
+}
+
+/**
+ * Ghi bang chung (toa do + khoang cach da do, va anh NEU CO) cho MOT lan cham
+ * — dung CHUNG cho ca `checkIn` (`kind: "check_in"`) lan `checkOut`
+ * (`kind: "check_out"`, plan 03-04 Task 2) thay vi hai ham gan giong het nhau.
+ * Thu tu: tai anh len Storage (bo qua khi khong co anh) ->
+ * doc-truoc-insert-hoac-update DUNG MOT dong `attendance_photos` theo
+ * (`attendance_record_id`, `kind`) -> `logMutation` rieng cho bang anh.
+ *
+ * MOT DONG VAN DUOC GHI KHI KHONG CO ANH (migration 0032). Dong nay giu toa
+ * do, khoang cach va diem lam viec gan nhat — bo no di thi moi lan cham GAN
+ * (tuc da so lan cham) se khong con dau vet vi tri nao de doi chieu ve sau.
+ *
+ * Phep do den tu ben ngoai (`measurement`) chu khong tinh lai o day, vi noi
+ * goi da can chinh no de quyet dinh CO TU CHOI HAY KHONG truoc khi ghi. Moi
+ * lan goi van la mot phep do RIENG cua chinh lan cham do — gia tri cua lan vao
+ * khong bao gio chep sang lan ra (T-03-04-04).
+ */
+async function writePunchEvidence({
+  supabase,
+  companyId,
+  employeeId,
+  actorUserId,
+  attendanceRecordId,
+  kind,
+  nowIso,
+  punchEvidence,
+  measurement,
+}: WritePunchEvidenceInput): Promise<PunchEvidenceResult> {
   // T-03-06/ATT-01: anh chi den tu khung hinh truc tiep (Blob dung canh
   // duoc kiem boi punchEvidenceSchema) — khong co duong nao khac de doc
   // duoc mot Blob tai day. photoId la uuid, KHONG PHAI so thu tu, de khong
   // ai liet ke duoc anh bang cach doan URL.
+  const photo = punchEvidence.photo ?? null;
+  // Dung MOT uuid cho ca duong dan Storage lan khoa chinh cua dong (khi la
+  // dong moi), de tu mot duong dan trong Storage lan nguoc ve dung dong bang
+  // chung ma khong can mot bang tra cuu.
   const photoId = randomUUID();
-  const storagePath = buildAttendancePhotoPath({
-    companyId,
-    employeeId,
-    photoId,
-    kind,
-  });
+  let storagePath: string | null = null;
 
-  const { error: uploadError } = await supabase.storage
-    .from(ATTENDANCE_PHOTO_BUCKET)
-    .upload(storagePath, punchEvidence.photo, {
-      contentType: punchEvidence.photo.type,
-      upsert: false,
+  if (photo) {
+    storagePath = buildAttendancePhotoPath({
+      companyId,
+      employeeId,
+      photoId,
+      kind,
     });
-  if (uploadError) {
-    // Tai len that bai thi KHONG duoc de lai mot dong attendance_photos mo
-    // coi — dong do chi duoc ghi SAU buoc nay, nen khong ghi gi ca la dung.
-    throw new Error("Không thể tải ảnh chấm công lên máy chủ.");
+
+    const { error: uploadError } = await supabase.storage
+      .from(ATTENDANCE_PHOTO_BUCKET)
+      .upload(storagePath, photo, {
+        contentType: photo.type,
+        upsert: false,
+      });
+    if (uploadError) {
+      // Tai len that bai thi KHONG duoc de lai mot dong attendance_photos mo
+      // coi — dong do chi duoc ghi SAU buoc nay, nen khong ghi gi ca la dung.
+      throw new Error("Không thể tải ảnh chấm công lên máy chủ.");
+    }
   }
 
   // Cham vao lan thu hai trong cung (attendance_record_id, kind) cap nhat
@@ -235,7 +380,7 @@ async function writePunchEvidence({
   // la lop hai, cung khuon doc-truoc-insert-hoac-update nhu attendance_records.
   const { data: existingPhoto, error: existingPhotoError } = await supabase
     .from("attendance_photos")
-    .select("id")
+    .select("id, storage_path")
     .eq("attendance_record_id", attendanceRecordId)
     .eq("kind", kind)
     .eq("company_id", companyId)
@@ -249,8 +394,8 @@ async function writePunchEvidence({
     latitude: punchEvidence.latitude,
     longitude: punchEvidence.longitude,
     accuracy_meters: punchEvidence.accuracyMeters,
-    work_site_id: nearestWorkSiteId,
-    distance_meters: nearestDistanceMeters,
+    work_site_id: measurement.workSiteId,
+    distance_meters: measurement.distanceMeters,
   };
 
   let photoRow: RawAttendancePhotoRow;
@@ -258,6 +403,12 @@ async function writePunchEvidence({
 
   if (existingPhoto) {
     photoAuditAction = "update";
+    // `storage_path` bi GHI DE bang gia tri cua LAN NAY, ke ca khi lan nay
+    // khong co anh (thanh null). Dong bang chung phai mo ta DUNG lan cham dang
+    // ghi; giu lai anh cua mot lan thu truoc — chup o mot toa do khac — se
+    // bien no thanh mot bang chung noi sai. Tep cu tro thanh mo coi trong
+    // Storage, dung nhu khi tai len de (moi lan sinh mot uuid moi): D-22
+    // khong co job don, day la ranh gioi da biet chu khong phai mot ro ri moi.
     const { data: updatedPhoto, error: updatePhotoError } = await supabase
       .from("attendance_photos")
       .update({ storage_path: storagePath, ...photoWriteRow })
@@ -303,9 +454,9 @@ async function writePunchEvidence({
   });
 
   return {
-    distanceMeters: nearestDistanceMeters,
-    workSiteName: nearestWorkSiteName,
-    isOutsideRadius,
+    distanceMeters: measurement.distanceMeters,
+    workSiteName: measurement.workSiteName,
+    isOutsideRadius: measurement.isOutsideRadius,
   };
 }
 
@@ -321,17 +472,16 @@ async function writePunchEvidence({
  * `tf_shift_minutes`) va RPC cua migration 0010 (`tf_server_now`,
  * `tf_local_instant`) — KHONG bao gio tu tinh gio-tru-gio o tang ung dung.
  *
- * `evidence` la OPTIONAL O MUC KIEU (khong phai o muc hanh vi), tiep tuc ke
- * thua chinh xac quyet dinh cua 03-01 cho `checkIn` va ap dung lai cho
- * `checkOut`: `attendance-status-card.tsx`/`employee-home-view.tsx` (Task 3,
- * chua chay o thoi diem Task 2) van con goi `checkOutService(recordId, time)`
- * voi mot chuoi o vi tri tham so thu hai — Task 2 sua RIENG loi goi do thanh
- * `checkOutService(recordId)` (bo tham so `time` da bi xoa, KHONG truyen gia
- * tri sai kieu) de `npm run typecheck` xanh ngay sau Task 2 ma khong phai
- * noi day Camera Sheet vao luong tan ca truoc thoi han (viec do la cua
- * Task 3). VE HANH VI, `evidence` la BAT BUOC: thieu no (undefined hoac
- * khong qua duoc `punchEvidenceSchema`) nem `AttendanceRejectedError`
- * ("missing_photo") TRUOC KHI cham Storage hay ghi bat ky dong nao.
+ * `evidence` (TOA DO) la BAT BUOC ve hanh vi du optional ve kieu: thieu no
+ * (`undefined`, hoac khong qua duoc `punchEvidenceSchema`) nem
+ * `AttendanceRejectedError("missing_photo")` TRUOC KHI cham Storage hay ghi
+ * bat ky dong nao.
+ *
+ * ANH BEN TRONG `evidence` THI KHONG PHAI LUC NAO CUNG BAT BUOC. Cau hoi "lan
+ * nay co phai chup anh khong" la mot cau hoi ve KHOANG CACH, va no chi tra loi
+ * duoc sau khi server do lai (`measurePunchLocation`) — nen thu tu o day la:
+ * do TRUOC, tu choi neu can anh ma thieu anh, ROI MOI ghi dong nao. Do sau khi
+ * ghi se de lai mot dong cham cong roi moi tu choi chinh lan cham do.
  *
  * D-20b: dung DUNG BA ly do tu choi ma server tu quyet duoc — `missing_photo`
  * (thieu bang chung), `outside_shift` (cham cong ngoai khung gio ca duoc
@@ -369,6 +519,21 @@ export async function checkIn(
   const punchEvidence = evidenceResult.data;
 
   const supabase = await createServerSupabase();
+
+  // DO TRUOC KHI GHI. Lan cham vuot nguong cho phep ma khong kem anh bi tu
+  // choi tai day — TRUOC dong `attendance_records` dau tien, nen mot lan bi tu
+  // choi khong de lai dau vet nao phai don. Client da hoi truoc qua
+  // `evaluatePunchLocation()`, nhung cau tra loi do la mot goi y cho giao dien:
+  // phep do co gia tri phap ly la phep do NAY.
+  const measurement = await measurePunchLocation({
+    supabase,
+    companyId: activeCompanyId,
+    employeeId,
+    location: punchEvidence,
+  });
+  if (measurement.requiresPhoto && !punchEvidence.photo) {
+    throw new AttendanceRejectedError("missing_photo");
+  }
 
   // D-19: check_in_at LUON la dong ho cua database (tf_server_now()), khong
   // bao gio la mot tham so tu client.
@@ -546,6 +711,7 @@ export async function checkIn(
     kind: "check_in",
     nowIso: nowIso as string,
     punchEvidence,
+    measurement,
   });
 
   return {
@@ -600,6 +766,20 @@ export async function checkOut(
   // khung gio ca" theo nghia rong.
   if (!beforeRow.check_in_at) {
     throw new AttendanceRejectedError("outside_shift");
+  }
+
+  // DO TRUOC KHI GHI — cung ly do voi `checkIn`: mot lan tan ca thieu anh
+  // trong khi phai co bi tu choi TRUOC khi `check_out_at` duoc ghi de len ban
+  // ghi. Do lai DOC LAP cho lan RA, khong dung lai phep do cua lan vao
+  // (T-03-04-04).
+  const measurement = await measurePunchLocation({
+    supabase,
+    companyId,
+    employeeId: beforeRow.employee_id,
+    location: punchEvidence,
+  });
+  if (measurement.requiresPhoto && !punchEvidence.photo) {
+    throw new AttendanceRejectedError("missing_photo");
   }
 
   const { data: shiftRow, error: shiftError } = await supabase
@@ -726,6 +906,7 @@ export async function checkOut(
     kind: "check_out",
     nowIso: nowIso as string,
     punchEvidence,
+    measurement,
   });
 
   return {

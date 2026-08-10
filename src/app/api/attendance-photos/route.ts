@@ -25,8 +25,13 @@ import {
  */
 export const dynamic = "force-dynamic";
 
+/**
+ * `storage_path` co mat o day CHI de `attendancePhotoRowSchema` suy ra
+ * `hasPhoto` — chinh schema do bo no khoi dau ra, nen no khong di tiep vao
+ * phan hoi JSON (T-03-05-04 van nguyen ven).
+ */
 const PHOTO_COLUMNS =
-  "id, company_id, attendance_record_id, kind, captured_at, latitude, longitude, accuracy_meters, work_site_id, distance_meters, review_status, work_sites(name)";
+  "id, company_id, attendance_record_id, kind, captured_at, latitude, longitude, accuracy_meters, work_site_id, distance_meters, review_status, storage_path, work_sites(name)";
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {

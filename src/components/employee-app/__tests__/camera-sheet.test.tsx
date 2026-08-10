@@ -96,6 +96,22 @@ const NOT_FLAGGED = {
 const noop = async () => NOT_FLAGGED;
 
 /**
+ * Buoc DO TRUOC quyet dinh co bat camera hay khong. Moi bai kiem ve camera
+ * phai di qua nhanh "phai chup" — camera khong con bat ngay khi Sheet mo.
+ */
+const evaluateFar = async () => ({
+  requiresPhoto: true,
+  distanceMeters: 620,
+  workSiteName: "Xưởng 2",
+});
+
+const evaluateNear = async () => ({
+  requiresPhoto: false,
+  distanceMeters: 30,
+  workSiteName: "Văn phòng chính",
+});
+
+/**
  * jsdom khong trien khai Canvas 2D that (`getContext("2d")` tra `null` mac
  * dinh) — gia lap toi thieu de `captureFrame()` THAT (dung tu camera.ts,
  * khong bi mock) chay duoc trong bai kiem component nay. `compressPhoto()`
@@ -141,7 +157,7 @@ async function renderAndCapture(
   });
 
   const onOpenChange = vi.fn();
-  render(<CameraSheet open onOpenChange={onOpenChange} onSubmit={onSubmit} punchKind="check_in" />);
+  render(<CameraSheet open onOpenChange={onOpenChange} onEvaluate={evaluateFar} onSubmit={onSubmit} punchKind="check_in" />);
 
   const captureButton = await screen.findByRole("button", { name: "Chụp ảnh" });
   fireEvent.click(captureButton);
@@ -157,7 +173,7 @@ describe("CameraSheet — bon nhanh loi camera (Task 2)", () => {
     mockGetUserMedia(() =>
       Promise.reject(new DOMException("tu choi", "NotAllowedError")),
     );
-    render(<CameraSheet open onOpenChange={vi.fn()} onSubmit={noop} punchKind="check_in" />);
+    render(<CameraSheet open onOpenChange={vi.fn()} onEvaluate={evaluateFar} onSubmit={noop} punchKind="check_in" />);
 
     expect(await screen.findByText("Không có quyền dùng camera")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Thử lại" })).not.toBeNull();
@@ -167,7 +183,7 @@ describe("CameraSheet — bon nhanh loi camera (Task 2)", () => {
     mockGetUserMedia(() =>
       Promise.reject(new DOMException("khong co camera", "NotFoundError")),
     );
-    render(<CameraSheet open onOpenChange={vi.fn()} onSubmit={noop} punchKind="check_in" />);
+    render(<CameraSheet open onOpenChange={vi.fn()} onEvaluate={evaluateFar} onSubmit={noop} punchKind="check_in" />);
 
     expect(await screen.findByText("Không tìm thấy camera")).not.toBeNull();
     const link = screen.getByRole("link", { name: "Bổ sung chấm công" });
@@ -183,7 +199,7 @@ describe("CameraSheet — bon nhanh loi camera (Task 2)", () => {
         new DOMException("rang buoc khong thoa man", "OverconstrainedError"),
       ),
     );
-    render(<CameraSheet open onOpenChange={vi.fn()} onSubmit={noop} punchKind="check_in" />);
+    render(<CameraSheet open onOpenChange={vi.fn()} onEvaluate={evaluateFar} onSubmit={noop} punchKind="check_in" />);
 
     expect(await screen.findByText("Không tìm thấy camera")).not.toBeNull();
   });
@@ -192,7 +208,7 @@ describe("CameraSheet — bon nhanh loi camera (Task 2)", () => {
     mockGetUserMedia(() =>
       Promise.reject(new DOMException("dang duoc dung", "NotReadableError")),
     );
-    render(<CameraSheet open onOpenChange={vi.fn()} onSubmit={noop} punchKind="check_in" />);
+    render(<CameraSheet open onOpenChange={vi.fn()} onEvaluate={evaluateFar} onSubmit={noop} punchKind="check_in" />);
 
     expect(await screen.findByText("Không mở được camera")).not.toBeNull();
     expect(
@@ -210,7 +226,7 @@ describe("CameraSheet — tu choi quyen vi tri va het gio GPS (Task 2)", () => {
     mockGetUserMedia(() => Promise.resolve(stream));
     mockGeolocationReject(1); // PERMISSION_DENIED
 
-    render(<CameraSheet open onOpenChange={vi.fn()} onSubmit={noop} punchKind="check_in" />);
+    render(<CameraSheet open onOpenChange={vi.fn()} onEvaluate={evaluateFar} onSubmit={noop} punchKind="check_in" />);
 
     expect(await screen.findByText("Cần quyền truy cập vị trí")).not.toBeNull();
     expect(
@@ -219,16 +235,32 @@ describe("CameraSheet — tu choi quyen vi tri va het gio GPS (Task 2)", () => {
     expect(screen.getByRole("button", { name: "Thử lại" })).not.toBeNull();
   });
 
-  it("6. Het gio cho GPS -> chip trang thai doi thanh nut thu lai, khung hinh khong bi thay", async () => {
+  it("6. Het gio cho GPS -> khoi 'chua lay duoc vi tri' voi nut thu lai, KHONG mo camera va KHONG lang le mien anh", async () => {
     const { stream } = fakeStream();
-    mockGetUserMedia(() => Promise.resolve(stream));
+    const getUserMedia = vi.fn(() => Promise.resolve(stream));
+    Object.defineProperty(globalThis.navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia },
+    });
     mockGeolocationReject(3); // TIMEOUT
 
-    render(<CameraSheet open onOpenChange={vi.fn()} onSubmit={noop} punchKind="check_in" />);
+    const onSubmit = vi.fn(noop);
+    render(
+      <CameraSheet
+        open
+        onOpenChange={vi.fn()}
+        onEvaluate={evaluateFar}
+        onSubmit={onSubmit}
+        punchKind="check_in"
+      />,
+    );
 
-    // Khung hinh van hien thi nut chup (khong bi mot khoi loi thay the).
-    expect(await screen.findByRole("button", { name: "Chụp ảnh" })).not.toBeNull();
+    expect(await screen.findByText("Chưa lấy được vị trí")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Thử lại" })).not.toBeNull();
+    // Khong biet dang o dau thi khong duoc gui, va cung khong duoc coi la
+    // "gan nen mien anh" — day la chinh cho mot cong chan co the bi ro ri.
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(getUserMedia).not.toHaveBeenCalled();
   });
 });
 
@@ -238,7 +270,7 @@ describe("CameraSheet — dong Sheet va cau truc chung (Task 2)", () => {
     mockGetUserMedia(() => Promise.resolve(stream));
 
     const onOpenChange = vi.fn();
-    render(<CameraSheet open onOpenChange={onOpenChange} onSubmit={noop} punchKind="check_in" />);
+    render(<CameraSheet open onOpenChange={onOpenChange} onEvaluate={evaluateFar} onSubmit={noop} punchKind="check_in" />);
 
     const closeButton = await screen.findByRole("button", { name: "Đóng" });
     closeButton.click();
@@ -253,12 +285,131 @@ describe("CameraSheet — dong Sheet va cau truc chung (Task 2)", () => {
       Promise.reject(new DOMException("khong co camera", "NotFoundError")),
     );
     const { container } = render(
-      <CameraSheet open onOpenChange={vi.fn()} onSubmit={noop} punchKind="check_in" />,
+      <CameraSheet open onOpenChange={vi.fn()} onEvaluate={evaluateFar} onSubmit={noop} punchKind="check_in" />,
     );
 
     expect(await screen.findByText("Không tìm thấy camera")).not.toBeNull();
     expect(container.querySelector('input[type="file"]')).toBeNull();
     expect(document.querySelector('input[type="file"]')).toBeNull();
+  });
+});
+
+describe("CameraSheet — anh chi bat buoc khi o xa", () => {
+  it("19. Trong nguong cho phep -> KHONG mo camera, gui thang voi photo = null", async () => {
+    const { stream } = fakeStream();
+    const getUserMedia = vi.fn(() => Promise.resolve(stream));
+    Object.defineProperty(globalThis.navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia },
+    });
+
+    const onSubmit = vi.fn<
+      (evidence: PunchEvidence) => Promise<PunchSubmitResult>
+    >(async () => NOT_FLAGGED);
+    const onOpenChange = vi.fn();
+    render(
+      <CameraSheet
+        open
+        onOpenChange={onOpenChange}
+        onEvaluate={evaluateNear}
+        onSubmit={onSubmit}
+        punchKind="check_in"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    // Day la khang dinh trung tam cua ca thay doi: camera KHONG duoc cham
+    // toi. Mot lan `getUserMedia` o day nghia la den camera da sang tren may
+    // nguoi dung du khong ai can den no.
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Chụp ảnh" })).toBeNull();
+
+    const [evidence] = onSubmit.mock.calls[0] as [PunchEvidence];
+    expect(evidence.photo ?? null).toBeNull();
+    expect(evidence.latitude).toBe(21.0285);
+    expect(evidence.accuracyMeters).toBe(12);
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("20. Ngoai nguong cho phep -> mo camera va noi ro VI SAO (ten diem + khoang cach)", async () => {
+    const { stream } = fakeStream();
+    mockGetUserMedia(() => Promise.resolve(stream));
+
+    const onSubmit = vi.fn(noop);
+    render(
+      <CameraSheet
+        open
+        onOpenChange={vi.fn()}
+        onEvaluate={evaluateFar}
+        onSubmit={onSubmit}
+        punchKind="check_in"
+      />,
+    );
+
+    expect(await screen.findByRole("button", { name: "Chụp ảnh" })).not.toBeNull();
+    expect(screen.getByText(/Xưởng 2/)).not.toBeNull();
+    expect(screen.getByText(/620 m/)).not.toBeNull();
+    // Chua chup thi chua gui — camera mo KHONG phai la da cham cong.
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("21. Server KHONG dong y voi buoc do truoc (missing_photo cho lan gui khong anh) -> mo camera, khong bao loi", async () => {
+    const { stream } = fakeStream();
+    const getUserMedia = vi.fn(() => Promise.resolve(stream));
+    Object.defineProperty(globalThis.navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia },
+    });
+
+    const onSubmit = vi.fn(async () => {
+      throw { message: "Thieu anh", reason: "missing_photo" };
+    });
+    render(
+      <CameraSheet
+        open
+        onOpenChange={vi.fn()}
+        onEvaluate={evaluateNear}
+        onSubmit={onSubmit}
+        punchKind="check_in"
+      />,
+    );
+
+    // Phep do cua server thang phep do cua buoc truoc: bat camera de nguoi
+    // dung lam tiep, KHONG dung mot khoi loi de giai thich su bat dong.
+    expect(await screen.findByRole("button", { name: "Chụp ảnh" })).not.toBeNull();
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Thiếu ảnh chấm công")).toBeNull();
+  });
+
+  it("22. Buoc do truoc hong (loi mang) -> khong gui gi ca, khong mo camera", async () => {
+    const { stream } = fakeStream();
+    const getUserMedia = vi.fn(() => Promise.resolve(stream));
+    Object.defineProperty(globalThis.navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia },
+    });
+
+    const onSubmit = vi.fn(noop);
+    render(
+      <CameraSheet
+        open
+        onOpenChange={vi.fn()}
+        onEvaluate={async () => {
+          throw new Error("Failed to fetch");
+        }}
+        onSubmit={onSubmit}
+        punchKind="check_in"
+      />,
+    );
+
+    expect(await screen.findByText("Chưa lấy được vị trí")).not.toBeNull();
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(getUserMedia).not.toHaveBeenCalled();
   });
 });
 
@@ -390,7 +541,7 @@ describe("CameraSheet — banner 'da ghi nhan nhung o xa' (D-20, Task 3)", () =>
       isOutsideRadius: true,
     }));
     const onOpenChange = vi.fn();
-    render(<CameraSheet open onOpenChange={onOpenChange} onSubmit={onSubmit} punchKind="check_in" />);
+    render(<CameraSheet open onOpenChange={onOpenChange} onEvaluate={evaluateFar} onSubmit={onSubmit} punchKind="check_in" />);
 
     const captureButton = await screen.findByRole("button", { name: "Chụp ảnh" });
     fireEvent.click(captureButton);

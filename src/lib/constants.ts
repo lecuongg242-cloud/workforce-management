@@ -424,6 +424,20 @@ export const ATTENDANCE_EVIDENCE_LABEL = {
   // Loading — dinh vi GPS
   gpsAcquiring: "Đang lấy vị trí…",
   gpsAcquired: "Vị trí: đã xác định",
+  // Buoc do truoc: lay vi tri roi hoi server co phai chup anh khong. Camera
+  // CHUA bat o giai doan nay — day la ly do man hinh nay ton tai.
+  locatingTitle: "Đang xác định vị trí",
+  locatingBody: "Chỉ mất vài giây. Nếu bạn đang ở nơi làm việc, không cần chụp ảnh.",
+  submittingNearTitle: "Đang chấm công",
+  submittingNearBody: "Bạn đang ở trong khu vực làm việc.",
+  // Vi sao lan nay PHAI chup — hien ngay tren khung hinh, vi khong noi thi
+  // nguoi dung se doc viec bat chup anh nhu mot hanh vi that thuong cua ung
+  // dung thay vi mot he qua cua vi tri ho dang dung.
+  photoRequiredNoticePrefix: "Bạn cách",
+  photoRequiredNoticeDistanceLabel: "khoảng",
+  photoRequiredNoticeSuffix: "— cần một ảnh để xác nhận.",
+  photoRequiredNoticeNoSite:
+    "Chưa xác định được khoảng cách tới điểm làm việc — cần một ảnh để xác nhận.",
   // Nut hanh dong
   submitIdle: "Gửi chấm công",
   submitPending: "Đang gửi…",
@@ -450,6 +464,11 @@ export const ATTENDANCE_EVIDENCE_LABEL = {
   locationPermissionDeniedTitle: "Cần quyền truy cập vị trí",
   locationPermissionDeniedBody:
     "TimeFlow cần vị trí để đối chiếu với điểm làm việc. Cấp quyền vị trí trong cài đặt trình duyệt rồi thử lại.",
+  // Het gio cho GPS / khong dinh vi duoc. Khong lang le cho qua: khong biet
+  // dang o dau thi khong the ket luan la dang o gan.
+  locationUnavailableTitle: "Chưa lấy được vị trí",
+  locationUnavailableBody:
+    "Hãy ra chỗ thoáng hoặc bật lại định vị trên thiết bị, rồi thử lại.",
   // Khong co thiet bi camera (NotFoundError/OverconstrainedError) — khong co
   // duong lui trong phase nay (ATT-01 cam thay the bang thu vien anh)
   noCameraDeviceTitle: "Không tìm thấy camera",
@@ -587,6 +606,11 @@ export const PHOTO_REVIEW_STATUS_TONE: Record<PhotoReviewStatus, SemanticTone> =
 export const ATTENDANCE_PHOTO_DIALOG_LABEL = {
   noPhoto: "Bản ghi này không có ảnh đính kèm.",
   missingLeg: "Chưa có ảnh cho lần chấm công này.",
+  // KHAC HAN `missingLeg`. "Chua co anh" nghia la lan cham do chua xay ra;
+  // dong duoi day nghia la no DA xay ra, o trong nguong cho phep, va he thong
+  // KHONG HOI anh — mot ket qua binh thuong, khong phai mot thieu sot. Nham
+  // hai thu nay se khien quan tri di tim mot tam anh khong ton tai.
+  noPhotoNeeded: "Không cần ảnh — chấm trong khu vực cho phép.",
   loadError: "Không tải được ảnh.",
   reload: "Tải lại ảnh",
   fetchErrorReload: "Thử lại",

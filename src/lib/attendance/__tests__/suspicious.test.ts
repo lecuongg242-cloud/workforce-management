@@ -63,6 +63,7 @@ describe("isOutsideShiftWindow — ca sang 06:00-14:00, bien do 120 phut", () =>
 import {
   SUSPICIOUS_DISTANCE_MULTIPLIER,
   isSuspiciousPunch,
+  requiresPunchPhoto,
   suspiciousMultiplier,
 } from "@/lib/attendance/suspicious";
 
@@ -190,6 +191,67 @@ describe("isSuspiciousPunch — nguong tu cau hinh doanh nghiep (D-29)", () => {
 
     expect(isSuspiciousPunch({ ...input, multiplier: 0 })).toBe(false);
     expect(isSuspiciousPunch({ ...input, multiplier: -3 })).toBe(false);
+  });
+});
+
+/**
+ * `requiresPunchPhoto` dung CUNG nguong voi `isSuspiciousPunch` nhung tra loi
+ * mot cau hoi khac — nen nhom nay khoa lai CA hai su giong nhau lan diem khac
+ * nhau duy nhat (thieu phep do).
+ */
+describe("requiresPunchPhoto", () => {
+  const base = {
+    radiusMeters: 100,
+    canCheckInRemotely: false,
+    multiplier: 5,
+  };
+
+  it("12. trong ban kinh -> khong can anh", () => {
+    expect(requiresPunchPhoto({ ...base, distanceMeters: 40 })).toBe(false);
+  });
+
+  it("13. ngoai ban kinh nhung CHUA toi nguong -> van khong can anh", () => {
+    expect(requiresPunchPhoto({ ...base, distanceMeters: 300 })).toBe(false);
+  });
+
+  it("14. bien: bang DUNG nguong chua can anh, hon mot met la can", () => {
+    expect(requiresPunchPhoto({ ...base, distanceMeters: 500 })).toBe(false);
+    expect(requiresPunchPhoto({ ...base, distanceMeters: 501 })).toBe(true);
+  });
+
+  it("15. canCheckInRemotely -> khong can anh du xa toi dau", () => {
+    expect(
+      requiresPunchPhoto({
+        ...base,
+        distanceMeters: 50_000,
+        canCheckInRemotely: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("16. THIEU PHEP DO -> CAN anh, nguoc voi isSuspiciousPunch (diem khac nhau duy nhat)", () => {
+    const missingDistance = { ...base, distanceMeters: null };
+    expect(requiresPunchPhoto(missingDistance)).toBe(true);
+    expect(isSuspiciousPunch(missingDistance)).toBe(false);
+
+    const missingRadius = { ...base, distanceMeters: 40, radiusMeters: null };
+    expect(requiresPunchPhoto(missingRadius)).toBe(true);
+    expect(isSuspiciousPunch(missingRadius)).toBe(false);
+  });
+
+  it("17. nguong hong (<= 0) -> CAN anh, khong lang le mien", () => {
+    expect(
+      requiresPunchPhoto({ ...base, distanceMeters: 40, multiplier: 0 }),
+    ).toBe(true);
+    expect(
+      requiresPunchPhoto({ ...base, distanceMeters: 40, multiplier: -3 }),
+    ).toBe(true);
+  });
+
+  it("18. nguong rong hon cua doanh nghiep noi rong luon vung khong can anh", () => {
+    const far = { ...base, distanceMeters: 900 };
+    expect(requiresPunchPhoto({ ...far, multiplier: 5 })).toBe(true);
+    expect(requiresPunchPhoto({ ...far, multiplier: 10 })).toBe(false);
   });
 });
 

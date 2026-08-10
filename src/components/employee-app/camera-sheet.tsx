@@ -22,7 +22,6 @@ import {
   CameraInUseError,
   CameraPermissionDeniedError,
   LocationPermissionDeniedError,
-  LocationTimeoutError,
   NoCameraDeviceError,
   acquireLocation,
   captureFrame,
@@ -38,51 +37,50 @@ import {
 } from "@/lib/constants";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { AttendanceRejectionReason, PunchEvidence } from "@/lib/types/domain";
+import type {
+  AttendanceRejectionReason,
+  PunchEvidence,
+  PunchLocation,
+  PunchLocationEvaluation,
+} from "@/lib/types/domain";
 
 /**
- * Sheet toan man hinh: viewfinder -> chup -> xem lai -> gui. Thay HAN thanh
- * dieu huong duoi khi mo (khong phu len no) — day la mot tac vu modal, khong
- * phai mot diem den dieu huong (UI-SPEC §"Spacing Scale").
+ * Sheet toan man hinh cho mot lan cham cong. Thay HAN thanh dieu huong duoi
+ * khi mo (khong phu len no) — day la mot tac vu modal, khong phai mot diem den
+ * dieu huong (UI-SPEC §"Spacing Scale").
+ *
+ * TEN "CameraSheet" GIO CHI DUNG MOT NUA THOI GIAN. Luong that la: lay vi tri
+ * -> hoi server "co phai chup anh khong" -> GAN thi gui thang, XA thi moi bat
+ * camera. Camera la mot NHANH cua Sheet nay, khong con la ly do ton tai cua
+ * no. Nguoi dung dung dung cho lam viec se khong bao gio thay khung hinh nao.
+ *
+ * Vi sao khong tu quyet o client: khoang cach chi do duoc sau khi doc
+ * `work_sites` + nguong cua doanh nghiep, ma ca hai deu o server. `onEvaluate`
+ * hoi truoc CHI de biet co bat camera hay khong; server van do LAI trong
+ * `checkIn`/`checkOut` va van tu choi neu can anh ma thieu anh — cau tra loi o
+ * buoc nay khong phai mot giay thong hanh.
  *
  * KHONG dung phan tu chon tep cua HTML (the input voi kieu "file") o BAT KY
  * DAU nao trong file nay hay trong cay `src/app/employee/`. Thuoc tinh goi y
  * chup anh cua phan tu do ("capture") cung KHONG DU: tren iOS Safari he dieu
- * hanh van luon hien bo chon thu vien anh ben canh camera, nen duong duy
- * nhat loai tru duoc thu vien anh la luong media truc tiep qua canvas
+ * hanh van luon hien bo chon thu vien anh ben canh camera, nen duong duy nhat
+ * loai tru duoc thu vien anh la luong media truc tiep qua canvas
  * (`captureFrame`, `src/lib/attendance/camera.ts`) — khong co con duong nao
  * khac trong file nay dung duoc anh co san lam bang chung (T-03-06).
  *
- * Khong doc dong ho thiet bi o lan ve dau (rule D-19a) — dau thoi gian den
- * tu server (`tf_server_now()`), khong mot dong nao trong file nay goi ham
- * dung de lay thoi diem hien tai cua trinh duyet.
- *
- * Plan 03-03 (Task 2) them day du bon nhanh loi camera/vi tri con lai (03-01
- * tracer moi chi xu ly `NotAllowedError`): khong co camera dung duoc
- * (`NoCameraDeviceError` — dan sang duong bo sung cong, KHONG mo bo chon
- * anh), camera dang bi ung dung khac giu (`CameraInUseError`), tu choi
- * quyen vi tri (`LocationPermissionDeniedError` — cong client-side, KHONG
- * phai ly do tu choi thu tu cua D-20b vi chua co toa do nao roi khoi thiet
- * bi), va het gio cho GPS (`LocationTimeoutError` — chi doi chip trang thai,
- * KHONG thay ca khung hinh vi khung hinh van dung duoc). Cong them
- * `compressPhoto()` chen giua buoc chup va buoc gui.
- *
- * Plan 03-03 (Task 3) them tang trinh bay KET QUA sau khi Server Action tra
- * ve: ba ly do tu choi cua D-20b (`missing_photo`/`outside_shift` do SERVER
- * quyet, `network_error` la phan loai DUY NHAT client tu quyet khi loi
- * KHONG mang truong `reason` hop le — xem `classifyRejection`), va banner
- * "da ghi nhan nhung o xa" (D-20) doi hoi mot nut cham "Da hieu" thay vi
- * toast thoang qua. `onSubmit` doi tu `Promise<void>` sang
- * `Promise<PunchSubmitResult>` — day la mot thay doi RULE 2 (chuc nang thieu
- * quan trong) ngoai <files> goc cua Task 3: khong co kenh nao khac de
- * `checkIn()` (Server Action) tra khoang cach/ten diem lam viec THAT ve cho
- * banner, nen `src/lib/data/mutations/attendance.ts` va
- * `src/app/employee/employee-home-view.tsx` cung duoc mo rong toi thieu
- * trong commit nay — xem SUMMARY.md muc "Deviations".
+ * Khong doc dong ho thiet bi o lan ve dau (rule D-19a) — dau thoi gian den tu
+ * server (`tf_server_now()`), khong mot dong nao trong file nay goi ham dung
+ * de lay thoi diem hien tai cua trinh duyet.
  */
 
 type CameraState =
   | "idle"
+  /** Dang lay GPS — camera CHUA bat, va co the se khong bao gio bat */
+  | "locating"
+  /** Da co toa do, dang hoi server co phai chup anh khong */
+  | "evaluating"
+  /** Trong nguong cho phep — dang gui thang, khong anh */
+  | "submitting-near"
   | "requesting"
   | "streaming"
   | "captured"
@@ -91,28 +89,28 @@ type CameraState =
   | "no-camera"
   | "camera-in-use";
 
-type GpsStatus = "acquiring" | "acquired" | "timeout";
-
 interface Coords {
   latitude: number;
   longitude: number;
   accuracyMeters: number;
 }
 
-/** Cac trang thai chan-toan-bo-khung-hinh (khac chip GPS-timeout, KHONG thay
- * khung hinh — xem comment o gpsStatus === "timeout" ben duoi). */
+/** Cac trang thai chan-toan-bo-khung-hinh */
 type BlockingOverlay =
+  | "locating"
+  | "submitting-near"
   | "loading"
   | "camera-permission-denied"
   | "camera-no-device"
   | "camera-in-use"
   | "location-permission-denied"
+  | "location-unavailable"
   | "rejection"
   | "flagged";
 
-/** Ket qua `onSubmit` phai tra ve (Task 3) — cho phep Camera Sheet tu quyet
- * co hien banner "da ghi nhan nhung o xa" hay khong bang du lieu THAT tu
- * server, khong phai gia dinh o client. */
+/** Ket qua `onSubmit` phai tra ve — cho phep Sheet tu quyet co hien banner "da
+ * ghi nhan nhung o xa" hay khong bang du lieu THAT tu server, khong phai gia
+ * dinh o client. */
 export interface PunchSubmitResult {
   distanceMeters: number | null;
   workSiteName: string | null;
@@ -120,15 +118,12 @@ export interface PunchSubmitResult {
 }
 
 /**
- * Phan loai loi tu `onSubmit` (Server Action `checkIn`/`checkOut` qua ranh
- * gioi RSC/Server Action) bang `isAttendanceRejection()` chinh thuc
- * (`src/lib/attendance/rejection.ts`, plan 03-04) — kiem theo HINH DANG (co
- * truong `reason` hop le), KHONG dung `instanceof`: mot loi nem tu Server
- * Action co the mat nguyen mau khi toi client (tai lieu Next.js: chi
- * `message` chac chan duoc chuyen tiep qua ranh gioi nay). Truoc 03-04, ham
- * nay tu viet lai chinh logic kiem hinh dang nay (03-03); gio goi thang
- * `isAttendanceRejection()` de chi con MOT noi dinh nghia "the nao la mot
- * loi tu choi hop le". Khong phai mot loi tu choi hop le -> phan loai la
+ * Phan loai loi tu `onSubmit`/`onEvaluate` (Server Action qua ranh gioi
+ * RSC/Server Action) bang `isAttendanceRejection()` chinh thuc
+ * (`src/lib/attendance/rejection.ts`) — kiem theo HINH DANG (co truong `reason`
+ * hop le), KHONG dung `instanceof`: mot loi nem tu Server Action co the mat
+ * nguyen mau khi toi client (tai lieu Next.js: chi `message` chac chan duoc
+ * chuyen tiep qua ranh gioi nay). Khong phai mot loi tu choi hop le ->
  * `network_error`, phan loai DUY NHAT client tu quyet dinh (D-20b: hai ly do
  * con lai do SERVER quyet).
  */
@@ -165,30 +160,50 @@ function FullScreenMessage({
   );
 }
 
+function FullScreenSpinner({
+  title,
+  body,
+}: {
+  title: string;
+  body?: string;
+}): React.ReactElement {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center text-white">
+      <Loader2 aria-hidden="true" className="size-8 animate-spin" />
+      <p className="text-[15px]">{title}</p>
+      {body ? <p className="text-[13px] text-white/70">{body}</p> : null}
+    </div>
+  );
+}
+
 export function CameraSheet({
   open,
   onOpenChange,
+  onEvaluate,
   onSubmit,
   punchKind,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Buoc do truoc: toa do -> "co phai chup anh khong". Khong ghi gi ca. */
+  onEvaluate: (location: PunchLocation) => Promise<PunchLocationEvaluation>;
   onSubmit: (evidence: PunchEvidence) => Promise<PunchSubmitResult>;
   /**
-   * Phan biet vao ca / tan ca (plan 03-04, Task 3) — CHI dung cho tieu de
-   * sr-only cua Sheet (trinh doc man hinh) va la duy nhat khac biet giua hai
-   * loai o component nay. Nhan nut gui va noi dung ba khoi tu choi/banner
-   * GIU NGUYEN chung cho ca hai loai, dung UI-SPEC "Gửi chấm công" — may
-   * trang thai khong doi theo prop nay.
+   * Phan biet vao ca / tan ca — CHI dung cho tieu de sr-only cua Sheet (trinh
+   * doc man hinh) va la duy nhat khac biet giua hai loai o component nay.
+   * Nhan nut gui va noi dung cac khoi tu choi/banner GIU NGUYEN chung cho ca
+   * hai loai — may trang thai khong doi theo prop nay.
    */
   punchKind: "check_in" | "check_out";
 }): React.ReactElement {
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const [state, setState] = React.useState<CameraState>("idle");
   const [stream, setStream] = React.useState<MediaStream | null>(null);
-  const [gpsStatus, setGpsStatus] = React.useState<GpsStatus>("acquiring");
   const [locationDenied, setLocationDenied] = React.useState(false);
+  const [locationUnavailable, setLocationUnavailable] = React.useState(false);
   const [coords, setCoords] = React.useState<Coords | null>(null);
+  const [evaluation, setEvaluation] =
+    React.useState<PunchLocationEvaluation | null>(null);
   const [photoBlob, setPhotoBlob] = React.useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [rejection, setRejection] = React.useState<AttendanceRejectionReason | null>(
@@ -201,7 +216,22 @@ export function CameraSheet({
   const streamRef = React.useRef<MediaStream | null>(null);
   streamRef.current = stream;
 
-  const startCamera = React.useCallback(() => {
+  /**
+   * Moi lan mo Sheet / bam thu lai la mot LUOT moi. Cac doan `.then()` dang
+   * bay giua chung kiem lai so hieu luot truoc khi ghi state — khong co no,
+   * mot phep do cu vua ve muon se dieu khien giao dien cua luot dang chay.
+   */
+  const flowIdRef = React.useRef(0);
+
+  const closeStream = React.useCallback((): void => {
+    if (streamRef.current) {
+      closeCamera(streamRef.current);
+      streamRef.current = null;
+      setStream(null);
+    }
+  }, []);
+
+  const startCamera = React.useCallback((): void => {
     setState("requesting");
     openCamera()
       .then((mediaStream) => {
@@ -229,55 +259,130 @@ export function CameraSheet({
       });
   }, [onOpenChange]);
 
-  const startLocation = React.useCallback((): (() => void) => {
-    setGpsStatus("acquiring");
+  /**
+   * Gui mot lan cham. `photo` bang `null` la duong GAN — khong anh, va do la
+   * mot lan gui HOP LE, khong phai mot lan gui thieu.
+   *
+   * Server co the KHONG DONG Y voi phep do cua buoc truoc (vi tri doi giua hai
+   * buoc, hoac client bi sua tay): khi do no tra ve `missing_photo`. Dap lai
+   * bang cach BAT CAMERA chu khong phai bao loi — nguoi dung chi can lam mot
+   * viec, khong can hieu vi sao ung dung doi y.
+   */
+  const submitPunch = React.useCallback(
+    async (location: Coords, photo: Blob | null): Promise<void> => {
+      setState(photo ? "submitting" : "submitting-near");
+      setRejection(null);
+      try {
+        // Nen anh phia client TRUOC khi roi thiet bi (bien phap thu nhat
+        // chong loi vuot gioi han than Server Action — xem camera.ts).
+        const compressedPhoto = photo ? await compressPhoto(photo) : null;
+        const result = await onSubmit({
+          photo: compressedPhoto,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracyMeters: location.accuracyMeters,
+        });
+        // Da gui xong — camera khong con can chay nua bat ke ket qua thanh
+        // cong binh thuong hay bi danh dau, nhung chi DONG han Sheet o duong
+        // thanh cong binh thuong (D-20: ket qua bi danh dau can mot lan cham
+        // "Da hieu", khong phai bien mat ngay).
+        closeStream();
+        if (result.isOutsideRadius) {
+          setFlaggedResult(result);
+          setState("captured");
+          return;
+        }
+        onOpenChange(false);
+      } catch (cause) {
+        const reason = classifyRejection(cause);
+        // Server noi "phai co anh" trong khi ta gui khong anh -> bat camera,
+        // khong phai bao loi. Phep do cua server la phep do co gia tri.
+        if (reason === "missing_photo" && !photo) {
+          setEvaluation((current) =>
+            current ? { ...current, requiresPhoto: true } : current,
+          );
+          startCamera();
+          return;
+        }
+        // Giu lai anh + toa do da co trong bo nho de khong bat nguoi dung chup
+        // lai (D-23) — quay ve "captured" thay vi ve "streaming"/"idle".
+        setState("captured");
+        setRejection(reason);
+      }
+    },
+    [closeStream, onOpenChange, onSubmit, startCamera],
+  );
+
+  /**
+   * MOT luot day du: lay toa do -> hoi server -> re nhanh. Day la diem vao duy
+   * nhat cua Sheet, dung chung cho lan mo dau lan moi nut "Thu lai" cua cac
+   * man hinh loi vi tri.
+   */
+  const runPunchFlow = React.useCallback((): void => {
+    flowIdRef.current += 1;
+    const flowId = flowIdRef.current;
+
+    setState("locating");
     setLocationDenied(false);
-    let cancelled = false;
+    setLocationUnavailable(false);
+    setRejection(null);
+
     acquireLocation()
-      .then((position) => {
-        if (cancelled) return;
-        setCoords({
+      .then(async (position) => {
+        if (flowId !== flowIdRef.current) return;
+        const location: Coords = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracyMeters: position.coords.accuracy,
-        });
-        setGpsStatus("acquired");
+        };
+        setCoords(location);
+        setState("evaluating");
+
+        const result = await onEvaluate(location);
+        if (flowId !== flowIdRef.current) return;
+        setEvaluation(result);
+
+        if (result.requiresPhoto) {
+          startCamera();
+          return;
+        }
+        await submitPunch(location, null);
       })
       .catch((cause) => {
-        if (cancelled) return;
+        if (flowId !== flowIdRef.current) return;
         if (cause instanceof LocationPermissionDeniedError) {
           setLocationDenied(true);
           return;
         }
-        if (cause instanceof LocationTimeoutError) {
-          setGpsStatus("timeout");
-          return;
-        }
-        // Loi geolocation la khac (vi du POSITION_UNAVAILABLE) — cung dua
-        // ve nut thu lai thay vi treo vo han hoac lam vo giao dien.
-        setGpsStatus("timeout");
+        // Het gio cho GPS, POSITION_UNAVAILABLE, hoac buoc do o server hong.
+        // Ca ba deu dan toi cung mot cho: khong biet dang o dau, nen khong gui
+        // gi ca va nut duy nhat la chay lai ca luot. KHONG lang le mien anh —
+        // thieu phep do khong phai bang chung cua binh thuong.
+        //
+        // Co y KHONG re nhanh sang cac khoi tu choi cua D-20b o day: ba khoi
+        // do noi ve mot lan CHAM CONG bi tu choi, ma o buoc nay chua co lan
+        // cham nao ca — khoi "thieu anh" chang han se dua ra mot nut "Chup
+        // lai" trong khi camera con chua bat.
+        setLocationUnavailable(true);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [onEvaluate, startCamera, submitPunch]);
 
-  // Mo camera + lay vi tri SONG SONG (khong noi tiep) ngay khi Sheet mo.
+  // Bat dau luot moi moi lan Sheet mo. Camera KHONG duoc bat o day.
   React.useEffect(() => {
     if (!open) return;
 
     setPhotoBlob(null);
     setPreviewUrl(null);
     setCoords(null);
-    setRejection(null);
+    setEvaluation(null);
     setFlaggedResult(null);
-    startCamera();
-    const cancelLocation = startLocation();
+    runPunchFlow();
 
     return () => {
-      cancelLocation();
+      // Huy moi doan dang bay cua luot nay khi Sheet dong.
+      flowIdRef.current += 1;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- startCamera/startLocation on chua object reference qua onOpenChange, chi can chay lai khi `open` doi
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runPunchFlow om cac callback tu prop; chi can chay lai khi `open` doi
   }, [open]);
 
   // Gan stream vao the <video> khi co
@@ -307,10 +412,8 @@ export function CameraSheet({
 
   function handleClose(): void {
     // Dong Sheet o BAT KY trang thai nao deu goi closeCamera().
-    if (streamRef.current) {
-      closeCamera(streamRef.current);
-    }
-    setStream(null);
+    flowIdRef.current += 1;
+    closeStream();
     setState("idle");
     setRejection(null);
     setFlaggedResult(null);
@@ -338,40 +441,23 @@ export function CameraSheet({
     setState("streaming");
   }
 
-  async function handleSubmit(): Promise<void> {
-    if (!photoBlob || !coords) return;
-    setState("submitting");
-    setRejection(null);
-    try {
-      // Nen anh phia client TRUOC khi roi thiet bi (bien phap thu nhat
-      // chong loi vuot gioi han than Server Action — xem camera.ts).
-      const compressedPhoto = await compressPhoto(photoBlob);
-      const result = await onSubmit({
-        photo: compressedPhoto,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        accuracyMeters: coords.accuracyMeters,
-      });
-      // Da gui xong — camera khong con can chay nua bat ke ket qua thanh
-      // cong binh thuong hay bi danh dau, nhung chi DONG han Sheet o duong
-      // thanh cong binh thuong (D-20: ket qua bi danh dau can mot lan cham
-      // "Da hieu", khong phai bien mat ngay).
-      if (streamRef.current) {
-        closeCamera(streamRef.current);
-        setStream(null);
-      }
-      if (result.isOutsideRadius) {
-        setFlaggedResult(result);
-        setState("captured");
-        return;
-      }
-      handleClose();
-    } catch (cause) {
-      // Giu lai anh + toa do da co trong bo nho de khong bat nguoi dung chup
-      // lai (D-23) — quay ve "captured" thay vi ve "streaming"/"idle".
-      setState("captured");
-      setRejection(classifyRejection(cause));
+  function handleSubmitCaptured(): void {
+    if (!coords || !photoBlob) return;
+    void submitPunch(coords, photoBlob);
+  }
+
+  /**
+   * Nut "Gui lai" cua man hinh loi mang. Chua qua duoc buoc do thi chay lai CA
+   * luot; da co toa do roi thi gui lai DUNG thu dang giu, khong bat chup lai
+   * (D-23).
+   */
+  function handleRetrySubmit(): void {
+    if (!coords) {
+      runPunchFlow();
+      return;
     }
+    setRejection(null);
+    void submitPunch(coords, photoBlob);
   }
 
   /** Banner "da ghi nhan nhung o xa" chi dong khi nguoi dung CHAM "Da hieu"
@@ -391,7 +477,26 @@ export function CameraSheet({
   else if (state === "no-camera") overlay = "camera-no-device";
   else if (state === "camera-in-use") overlay = "camera-in-use";
   else if (locationDenied) overlay = "location-permission-denied";
+  else if (locationUnavailable) overlay = "location-unavailable";
+  else if (state === "locating" || state === "evaluating") overlay = "locating";
+  else if (state === "submitting-near") overlay = "submitting-near";
   else if (state === "requesting") overlay = "loading";
+
+  /**
+   * Vi sao lan nay phai chup — ghep tai noi goi (cung khuon voi banner "o xa"),
+   * khong dung mot ham dinh dang trong constants.ts de giu file do thuan du
+   * lieu tinh.
+   */
+  const photoRequiredNotice =
+    evaluation && evaluation.workSiteName && evaluation.distanceMeters !== null
+      ? [
+          ATTENDANCE_EVIDENCE_LABEL.photoRequiredNoticePrefix,
+          evaluation.workSiteName,
+          ATTENDANCE_EVIDENCE_LABEL.photoRequiredNoticeDistanceLabel,
+          `${formatNumber(Math.round(evaluation.distanceMeters))} m`,
+          ATTENDANCE_EVIDENCE_LABEL.photoRequiredNoticeSuffix,
+        ].join(" ")
+      : ATTENDANCE_EVIDENCE_LABEL.photoRequiredNoticeNoSite;
 
   return (
     <Sheet
@@ -425,12 +530,25 @@ export function CameraSheet({
             </Button>
           </div>
 
+          {/* --------------------------------------------- Dang lay vi tri */}
+          {overlay === "locating" ? (
+            <FullScreenSpinner
+              title={ATTENDANCE_EVIDENCE_LABEL.locatingTitle}
+              body={ATTENDANCE_EVIDENCE_LABEL.locatingBody}
+            />
+          ) : null}
+
+          {/* --------------------------------------------- Gan: gui thang, khong anh */}
+          {overlay === "submitting-near" ? (
+            <FullScreenSpinner
+              title={ATTENDANCE_EVIDENCE_LABEL.submittingNearTitle}
+              body={ATTENDANCE_EVIDENCE_LABEL.submittingNearBody}
+            />
+          ) : null}
+
           {/* --------------------------------------------- Dang mo camera */}
           {overlay === "loading" ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 text-white">
-              <Loader2 aria-hidden="true" className="size-8 animate-spin" />
-              <p className="text-[15px]">{ATTENDANCE_EVIDENCE_LABEL.cameraOpening}</p>
-            </div>
+            <FullScreenSpinner title={ATTENDANCE_EVIDENCE_LABEL.cameraOpening} />
           ) : null}
 
           {/* --------------------------------------------- Tu choi quyen camera */}
@@ -496,15 +614,34 @@ export function CameraSheet({
               title={ATTENDANCE_EVIDENCE_LABEL.locationPermissionDeniedTitle}
               body={ATTENDANCE_EVIDENCE_LABEL.locationPermissionDeniedBody}
             >
-              {/* Cong CLIENT-SIDE truoc khi gui — KHONG phai ly do tu choi
-                  thu tu cua D-20b: chua co toa do nao roi khoi thiet bi o
+              {/* Cong CLIENT-SIDE truoc khi gui — KHONG phai mot trong ba ly
+                  do tu choi cua D-20b: chua co toa do nao roi khoi thiet bi o
                   trang thai nay nen chua co yeu cau nao den server ca. */}
               <Button
                 type="button"
                 variant="onDark"
                 size="mobile"
                 className="mt-2 max-w-64"
-                onClick={startLocation}
+                onClick={runPunchFlow}
+              >
+                {ATTENDANCE_EVIDENCE_LABEL.retry}
+              </Button>
+            </FullScreenMessage>
+          ) : null}
+
+          {/* --------------------------------------------- Khong lay duoc vi tri */}
+          {overlay === "location-unavailable" ? (
+            <FullScreenMessage
+              icon={MapPinOff}
+              title={ATTENDANCE_EVIDENCE_LABEL.locationUnavailableTitle}
+              body={ATTENDANCE_EVIDENCE_LABEL.locationUnavailableBody}
+            >
+              <Button
+                type="button"
+                variant="onDark"
+                size="mobile"
+                className="mt-2 max-w-64"
+                onClick={runPunchFlow}
               >
                 {ATTENDANCE_EVIDENCE_LABEL.retry}
               </Button>
@@ -549,7 +686,7 @@ export function CameraSheet({
                   variant="onDark"
                   size="mobile"
                   className="mt-2 max-w-64"
-                  onClick={handleSubmit}
+                  onClick={handleRetrySubmit}
                 >
                   {ATTENDANCE_EVIDENCE_LABEL.submitRetry}
                 </Button>
@@ -613,33 +750,23 @@ export function CameraSheet({
               ) : null}
 
               {/* Lop phu mo toi tren viewfinder — ngoai le 60/30/10 da ghi o UI-SPEC */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/70 to-transparent" />
 
-              <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-4 px-6 pb-8">
-                {/* Chip trang thai vi tri — GPS timeout (LocationTimeoutError)
-                    KHONG thay ca khung hinh (khung hinh van dung duoc, chi
-                    thieu toa do): chi mot minh chip nay doi thanh nut thu lai. */}
+              <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 px-6 pb-8">
+                {/* VI SAO lan nay phai chup — dat ngay tren nut chup. Camera
+                    chi bat khi khoang cach vuot nguong, va neu khong noi ra
+                    thi nguoi dung se doc no nhu mot hanh vi that thuong cua
+                    ung dung thay vi mot he qua cua noi ho dang dung. */}
+                <p className="max-w-80 rounded-control bg-black/55 px-3 py-2 text-center text-[13px] leading-snug text-white">
+                  {photoRequiredNotice}
+                </p>
+
+                {/* Chip trang thai vi tri — toi day toa do LUON da co (camera
+                    chi bat sau khi do xong), nen chip nay chi con mot trang
+                    thai. */}
                 <div className="flex items-center gap-1.5 rounded-full bg-black/55 px-3 py-1.5 text-[13px] text-white">
-                  {gpsStatus === "acquired" ? (
-                    <>
-                      <Check aria-hidden="true" className="size-3.5" />
-                      {ATTENDANCE_EVIDENCE_LABEL.gpsAcquired}
-                    </>
-                  ) : gpsStatus === "timeout" ? (
-                    <button
-                      type="button"
-                      onClick={startLocation}
-                      className="flex items-center gap-1.5"
-                    >
-                      <MapPinOff aria-hidden="true" className="size-3.5" />
-                      {ATTENDANCE_EVIDENCE_LABEL.retry}
-                    </button>
-                  ) : (
-                    <>
-                      <Loader2 aria-hidden="true" className="size-3.5 animate-spin" />
-                      {ATTENDANCE_EVIDENCE_LABEL.gpsAcquiring}
-                    </>
-                  )}
+                  <Check aria-hidden="true" className="size-3.5" />
+                  {ATTENDANCE_EVIDENCE_LABEL.gpsAcquired}
                 </div>
 
                 {state === "streaming" ? (
@@ -666,7 +793,7 @@ export function CameraSheet({
                       type="button"
                       size="mobile"
                       disabled={state === "submitting" || !photoBlob || !coords}
-                      onClick={handleSubmit}
+                      onClick={handleSubmitCaptured}
                     >
                       {state === "submitting" ? (
                         <>

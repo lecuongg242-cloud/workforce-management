@@ -27,7 +27,8 @@ import { createServerSupabase } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 interface AttendancePhotoLookupRow {
-  storage_path: string;
+  /** Nullable tu migration 0032 — mot dong bang chung khong kem tep anh nao. */
+  storage_path: string | null;
   company_id: string;
 }
 
@@ -64,6 +65,15 @@ export async function GET(
 
     // ATT-04: chi quan tri (owner/admin) xem lai anh cham cong.
     requireRole(role, ["owner", "admin"]);
+
+    // Dong ton tai nhung KHONG co tep anh (lan cham trong nguong cho phep,
+    // migration 0032). Tra 404 voi CUNG thong diep nhu tren: route nay chi
+    // phat byte anh, va o day khong co byte nao ca. Man hinh quan tri khong
+    // dua vao 404 nay de biet dieu do — no doc `hasPhoto` tu sieu du lieu va
+    // khong hoi anh ngay tu dau; nhanh nay la lop chan cho lien ket dan tay.
+    if (!photo.storage_path) {
+      return new Response("Không tìm thấy.", { status: 404 });
+    }
 
     const { data: blob, error: downloadError } = await supabase.storage
       .from(ATTENDANCE_PHOTO_BUCKET)

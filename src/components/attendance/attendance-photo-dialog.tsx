@@ -163,18 +163,30 @@ export function AttendancePhotoDialog({
               <div className="grid gap-3">
                 {kindOrder.map((kind) => {
                   const photo = photoByKind.get(kind);
-                  return photo ? (
-                    <PhotoSlot
-                      key={kind}
-                      photo={photo}
-                      label={ATTENDANCE_PHOTO_DIALOG_LABEL.kindLabel[kind]}
-                    />
-                  ) : (
-                    <MissingLegSlot
-                      key={kind}
-                      label={ATTENDANCE_PHOTO_DIALOG_LABEL.kindLabel[kind]}
-                    />
-                  );
+                  const label = ATTENDANCE_PHOTO_DIALOG_LABEL.kindLabel[kind];
+                  // Ba truong hop KHAC NHAU, khong duoc gop: co anh; da cham
+                  // nhung trong nguong cho phep nen khong ai hoi anh; va chua
+                  // cham lan do.
+                  if (!photo) {
+                    return (
+                      <EmptySlot
+                        key={kind}
+                        label={label}
+                        body={ATTENDANCE_PHOTO_DIALOG_LABEL.missingLeg}
+                      />
+                    );
+                  }
+                  if (!photo.hasPhoto) {
+                    return (
+                      <EmptySlot
+                        key={kind}
+                        label={label}
+                        body={ATTENDANCE_PHOTO_DIALOG_LABEL.noPhotoNeeded}
+                        icon={MapPin}
+                      />
+                    );
+                  }
+                  return <PhotoSlot key={kind} photo={photo} label={label} />;
                 })}
               </div>
 
@@ -271,13 +283,22 @@ function PhotoSlot({
   );
 }
 
-function MissingLegSlot({ label }: { label: string }): React.ReactElement {
+/** O anh rong — dung cho CA HAI ly do khong co anh, phan biet bang `body`/`icon`. */
+function EmptySlot({
+  label,
+  body,
+  icon: Icon = ImageOff,
+}: {
+  label: string;
+  body: string;
+  icon?: LucideIcon;
+}): React.ReactElement {
   return (
     <div className="grid gap-1.5">
       <p className="text-xs font-medium text-ink-secondary">{label}</p>
       <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 rounded-panel border border-dashed border-hairline bg-canvas-soft px-4 text-center text-sm text-ink-muted">
-        <ImageOff aria-hidden="true" className="size-6" />
-        <p>{ATTENDANCE_PHOTO_DIALOG_LABEL.missingLeg}</p>
+        <Icon aria-hidden="true" className="size-6" />
+        <p>{body}</p>
       </div>
     </div>
   );

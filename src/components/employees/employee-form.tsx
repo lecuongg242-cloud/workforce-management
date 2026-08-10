@@ -95,6 +95,7 @@ export function EmployeeForm({
   allEmployees,
   defaultStartDate,
   onSaved,
+  onCancel,
 }: {
   mode: "create" | "edit";
   companyId: string;
@@ -114,6 +115,18 @@ export function EmployeeForm({
    * thiet khi con so dung da nam ngay day.
    */
   onSaved?: (employee: Employee) => void;
+  /**
+   * DOI XUNG voi `onSaved`, va vi dung mot ly do: bieu mau nay song o HAI ngu
+   * canh — mot trang rieng (`/admin/employees/new`) va mot hop thoai (nut
+   * "Chỉnh sửa" o ho so nhan vien). "Huy" o trang rieng nghia la ROI TRANG;
+   * "Huy" trong hop thoai nghia la DONG HOP THOAI, va chi the thoi.
+   *
+   * Truoc khi co prop nay, duong huy luon dieu huong — nen bam "Hủy" trong hop
+   * thoai vua dong hop thoai vua nem nguoi dung ra khoi trang ho so ho dang
+   * xem. `onSaved` da tach hai ngu canh nay o duong LUU tu truoc; day la phan
+   * con thieu cua chinh su tach do o duong HUY.
+   */
+  onCancel?: () => void;
 }): React.ReactElement {
   const router = useRouter();
   const { invalidate } = useDataStore();
@@ -336,12 +349,26 @@ export function EmployeeForm({
     }
   });
 
+  /**
+   * Roi bo bieu mau — MOT dinh nghia duy nhat cho ca hai ngu canh, dung o ca
+   * nut "Hủy" lan nut xac nhan cua hop thoai "chua luu". Hai noi goi phai lam
+   * DUNG mot viec: neu chung khac nhau thi bam "Hủy" khi sach se dong hop
+   * thoai, con bam "Hủy" khi ban se dieu huong — cung mot nut, hai ket qua.
+   */
+  const leaveForm = (): void => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    router.push("/admin/employees");
+  };
+
   const handleCancel = (): void => {
     if (isDirty) {
       setConfirmLeave(true);
       return;
     }
-    router.back();
+    leaveForm();
   };
 
   return (
@@ -917,16 +944,19 @@ export function EmployeeForm({
         </Button>
       </StickyFormActions>
 
+      {/* Chu cua hop thoai nay phai NOI DUNG viec sap xay ra. Trong hop thoai
+          chinh sua, "Rời khỏi trang" la mot loi hua sai: khong ai roi trang
+          nao ca, chi co hop thoai dong lai. */}
       <ConfirmDialog
         open={confirmLeave}
         onOpenChange={setConfirmLeave}
-        title="Rời khỏi trang khi chưa lưu?"
+        title={onCancel ? "Đóng khi chưa lưu?" : "Rời khỏi trang khi chưa lưu?"}
         description="Các thông tin bạn vừa nhập sẽ không được giữ lại."
-        confirmLabel="Rời khỏi trang"
+        confirmLabel={onCancel ? "Đóng, không lưu" : "Rời khỏi trang"}
         tone="destructive"
         onConfirm={() => {
           setConfirmLeave(false);
-          router.push("/admin/employees");
+          leaveForm();
         }}
       />
     </form>

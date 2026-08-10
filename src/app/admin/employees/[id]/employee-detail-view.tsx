@@ -779,7 +779,16 @@ export function EmployeeDetailView({
 
       {/* Hop thoai chinh sua */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-3xl">
+        {/* `pb-0` KHONG phai mot tinh chinh khoang cach cho dep. `EmployeeForm`
+            ket thuc bang mot thanh hanh dong `position: sticky; bottom: 0`, ma
+            sticky do bam vao day VUNG CUON — tuc la day PHAN NOI DUNG, ben
+            TREN padding-bottom cua chinh hop thoai nay. Con 24px padding thi
+            con mot dai 24px nam duoi thanh do, va noi dung bieu mau troi qua
+            dai ay khi cuon: nguoi dung thay mot o chon lo ra ben duoi thanh
+            nut. Bo padding di thi thanh nut cham dung day vung cuon. Thanh do
+            da co padding rieng (`py-3` + safe-area), nen o day khong mat
+            khoang tho nao. */}
+        <DialogContent className="max-h-[88vh] overflow-y-auto pb-0 sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Chỉnh sửa nhân viên</DialogTitle>
             <DialogDescription>
@@ -798,6 +807,10 @@ export function EmployeeDetailView({
               setIsEditing(false);
               void offerRealign(updated);
             }}
+            // Bam "Hủy" o day CHI dong hop thoai — nguoi dung o lai dung ho so
+            // ho dang xem. Khong truyen prop nay thi bieu mau se dieu huong,
+            // vi mac dinh cua no la ngu canh trang rieng (`/admin/employees/new`).
+            onCancel={() => setIsEditing(false)}
           />
         </DialogContent>
       </Dialog>
