@@ -157,14 +157,39 @@ chưa ai bấm tay. Đặc biệt cần nhìn khối hiện mật khẩu tạm *
    nhập thật qua PostgREST (JWT thật, `auth.uid()` thật, RLS thật, không mock gì).
    13/13 đạt. Nên D-49 và D-50 **không** phải là khẳng định chỉ tồn tại trên giấy.
 
-2. **Chưa ai bấm tay trên trình duyệt.** Ba màn hình mới (`/platform`, `/platform/log`,
-   và banner hỗ trợ trên `/admin/*`) đều chưa được nhìn bằng mắt. Danh sách cụ thể cần
-   bấm nằm ở mục "Còn thiếu" của từng tiêu chí bên trên — **bốn thứ**:
-   1. `/platform` hiện đủ hai doanh nghiệp kèm số nhân viên đúng.
-   2. Mở phiên → banner hổ phách hiện đúng tên doanh nghiệp và số phút còn lại.
-   3. Bấm một nút ghi bất kỳ trong `/admin` khi đang ở phiên hỗ trợ → hiện đúng câu
-      "Bạn không có quyền thực hiện thao tác này."
-   4. `/platform/log` hiện đúng dòng phiên vừa mở, kèm lý do đã nhập.
+2. ~~**Chưa ai bấm tay trên trình duyệt.**~~ — **ĐÃ BẤM 2026-08-10**, qua Chrome
+   DevTools với tài khoản `ops@timeflow.vn` thật trên `localhost:3010`. Cả bốn mục đều
+   đạt:
+   1. ✅ `/platform` hiện cả hai doanh nghiệp thật (Ngọc Phát 6 nhân viên / kỳ
+      2026-08; Bình Minh 12 nhân viên) — **kèm một phát hiện**: danh sách lẫn hàng
+      chục doanh nghiệp fixture cũ (`Doanh nghiep e2e …`, `test 04-05 …`), đúng thứ
+      §Blockers của `STATE.md` đã ghi là rác từ phase 4/5/5.2. Một lần
+      `npm run db:seed` dọn sạch.
+   2. ✅ Banner hổ phách, đúng tên đầy đủ "Công ty TNHH Thương mại Ngọc Phát", đếm
+      ngược chạy thật (60 → 50 phút), nút *Đóng phiên* đưa về `/platform`.
+   3. ✅ Bấm **thật** một nút ghi (*Chuyển phòng ban* cho Chu Văn Lộc): `requireRole`
+      ném `ForbiddenError` tại `bulkMoveDepartment`, dữ liệu **không đổi** (nhân viên
+      vẫn ở "Sản xuất" sau hai lần thử), và toast hiện đúng nguyên văn
+      "Bạn không có quyền thực hiện thao tác này." — xác nhận bằng `MutationObserver`
+      vì toast tự tắt sau vài giây.
+   4. ✅ `/platform/log` hiện đúng lý do đã nhập, hết hạn đúng 60 phút sau, trạng thái
+      chuyển `Đang mở` → `Đã đóng`.
+
+   **Ba lỗi do chính buổi bấm tay này phát hiện, đã sửa** (commit `ef410c5`):
+   - `GET /api/companies` trả `[]` cho phiên hỗ trợ → sidebar kẹt "Đang tải…", banner
+     hiện mã thô `cty-01`. Nhánh support nằm nhầm trong `catch (NoMembershipError)`,
+     mà từ khi có D-51 thì lỗi đó không còn được ném nữa. **Lỗi tương tác giữa Task 4
+     và Task 6 — cả hai task đều xanh khi đứng riêng.** Đã thêm 2 test hồi quy.
+   - `/platform/log` tụt về mã thô **ngay khi đóng phiên**, vì join `companies(name)`
+     đi qua RLS mà quyền đọc bảng đó lại đến từ chính phiên. Mọi dòng lịch sử đều mất
+     tên. Đã đổi sang lấy tên qua `tf_platform_company_overview()`.
+   - `/select-company` không có lối nào sang `/platform`, trong khi platform admin
+     **luôn** rơi vào đúng trang đó sau khi đăng nhập. Sơ đồ luồng trong spec có bước
+     này nhưng plan không có task nào làm.
+
+   **Còn lại chưa bấm:** hai hộp thoại đường ghi trắng (*Cấp lại mật khẩu tạm*,
+   *Cấp quyền chủ*) — chúng đổi mật khẩu và quyền của tài khoản thật trên dev nên
+   không tự bấm; đã phủ bằng 6/6 test tích hợp trên Auth và database thật.
 
 3. **Nút ghi trong `/admin` không bị ẩn khi đang ở phiên hỗ trợ** (D-54, có chủ đích).
    Đội vận hành bấm rồi mới biết không được. Đánh đổi: ẩn nút ở 10 màn hình là 10 chỗ
@@ -182,9 +207,22 @@ chưa ai bấm tay. Đặc biệt cần nhìn khối hiện mật khẩu tạm *
    nếu một lần chạy bị ngắt giữa chừng (khối `finally` không kịp chạy). Cùng cách dọn
    với các phase trước.
 
+## Lỗi CÓ SẴN phát hiện khi nghiệm thu (ngoài phạm vi Phase 6)
+
+`GET /api/dashboard` trả **500** cho Ngọc Phát, nên `/admin/dashboard` chỉ hiện
+"Không tải được dữ liệu". Nguyên nhân: migration `0028_optional_employee_fields.sql`
+cho `employees.phone` nullable, nhưng `dashboardSummarySchema` (`api/dashboard.ts:52`)
+vẫn khai `phone: z.string()` — một nhân viên không có số điện thoại là đủ để cả bảng
+điều khiển hỏng.
+
+**Không phải hồi quy của Phase 6**: `git log main..HEAD` trên `src/app/api/dashboard/`
+và `src/lib/validation/api/dashboard.ts` đều rỗng. Chưa sửa vì nằm ngoài phạm vi phase
+và sát vùng đang có việc dở về form nhân viên.
+
 ## Chữ ký
 
-- [ ] Chủ dự án đã bấm tay đủ bốn thứ ở mục Giới hạn #2
+- [x] Đã bấm tay bốn mục ở Giới hạn #2 (2026-08-10, qua Chrome DevTools)
+- [ ] Chủ dự án tự xác nhận lại
 - [ ] Chủ dự án đồng ý đóng Phase 6
 
 Ngày: ................  Ký: ................
