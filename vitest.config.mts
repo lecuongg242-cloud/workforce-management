@@ -38,6 +38,15 @@ export default defineConfig(({ mode }) => {
       // vong RPC/Storage tuan tu qua mang that, co the vuot 5s tren ket noi
       // cham; khong anh huong toc do cac test thuan mock (chi la mot tran).
       testTimeout: 20000,
+      // Cung ly do voi `testTimeout` o tren, cho nua con lai bi bo quen: phan
+      // NANG NHAT cua cac test tich hop nam o `beforeAll` chu khong phai trong
+      // than test — tao tai khoan qua Admin API, chen ca/nhan vien, co file
+      // con tai anh len Storage, tat ca qua mang toi Supabase cloud. Mac dinh
+      // cua Vitest cho hook la 10s, va do dung la thong diep quan sat duoc:
+      // "Hook timed out in 10000ms", 1-3 file moi lan chay day du, KHAC file
+      // moi lan, va tat ca deu xanh khi chay rieng (xem STATE.md 05-2-06 —
+      // truoc day ghi nhan la "nhieu moi truong").
+      hookTimeout: 30000,
       setupFiles: ["./vitest.setup.ts"],
       include: [
         "src/**/*.test.ts",
