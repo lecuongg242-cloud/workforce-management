@@ -1,6 +1,10 @@
 # Phase 5.3 — Phiếu lương cho nhân viên (PAY-05)
 
-> **Trạng thái:** dự thảo, chưa thực thi. Viết ngày 2026-08-07.
+> **Trạng thái: ĐÃ THỰC THI** (xác nhận lại 2026-08-13). Viết ngày 2026-08-07.
+>
+> Header cũ ghi "dự thảo, chưa thực thi" và đã lỗi thời: `src/app/api/payslips/`
+> (gồm cả `[month]/`), migration `0029_payslip_rls.sql` và `19_payslip_rls.sql`
+> đều đã có trong repo.
 > **Requirement:** PAY-05 (`.planning/REQUIREMENTS.md:148`) — hiện đang nằm ở nhóm V3.
 > Kéo về v1 thì phải sửa REQUIREMENTS.md và ROADMAP.md như Phase 5.1/5.2 đã làm.
 

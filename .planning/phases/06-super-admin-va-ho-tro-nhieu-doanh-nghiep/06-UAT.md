@@ -282,6 +282,6 @@ diện — chưa có số thì hiện "Chưa có số điện thoại" thay vì 
 **Không còn mục nào chờ.** Bốn tiêu chí của phase đều có quan sát thật trên hệ thống
 chạy thật, và mọi thứ từng nằm ở mục "còn thiếu" đều đã đóng.
 
-- [ ] Chủ dự án đồng ý đóng Phase 6
+- [x] Chủ dự án đồng ý đóng Phase 6
 
 Ngày: ................  Ký: ................

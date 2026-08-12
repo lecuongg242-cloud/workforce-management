@@ -24,14 +24,14 @@ sớm có màn hình chạy được.
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Nền dữ liệu và cô lập doanh nghiệp** - Schema Postgres, RLS trên mọi bảng, test rò rỉ xuyên doanh nghiệp, cổng CI, chặn khóa bí mật lọt client bundle
+- [x] **Phase 1: Nền dữ liệu và cô lập doanh nghiệp** - Schema Postgres, RLS trên mọi bảng, test rò rỉ xuyên doanh nghiệp, cổng CI, chặn khóa bí mật lọt client bundle (completed 2026-07-31)
 - [x] **Phase 2: Phiên thật và cắt tầng dữ liệu giả** - Supabase Auth qua cookie, phân quyền bốn vai trò, toàn bộ `service.ts` chạy trên Postgres, xóa mock (completed 2026-08-02)
 - [x] **Phase 3: Chấm công có bằng chứng** - Ảnh hiện trường chụp trực tiếp, GPS kiểm ở server theo bán kính điểm làm việc, màn hình quản trị xem lại (completed 2026-08-03)
 - [x] **Phase 4: Quy tắc công do doanh nghiệp tự khai** - Trang cài đặt: giờ làm, ân hạn, ngày lễ, hệ số tăng ca; phân loại công theo quy tắc đang hiệu lực (completed 2026-08-06)
 - [x] **Phase 5: Duyệt yêu cầu và chốt kỳ công** - Duyệt/từ chối có lý do, tác động đúng vào dữ liệu kỳ, lịch sử xử lý, thông báo, chốt kỳ có ghi vết (completed 2026-08-06)
 - [x] **Phase 5.1: Bảng công của quản trị và bàn giao cho kế toán** (INSERTED 2026-08-06) - Lưới tháng + danh sách lượt chấm công, bảng chuẩn bị lương xuất CSV (completed 2026-08-06)
-- [x] **Phase 5.2: Tính lương do doanh nghiệp tự cấu hình** (INSERTED 2026-08-06) - Ba chế độ tính công, mức lương có phiên bản, phụ cấp/khấu trừ có phạm vi, chốt lương kỳ
-- [x] **Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp** - Danh sách toàn hệ thống, tra cứu sâu một doanh nghiệp, đường ghi riêng có kiểm soát
+- [x] **Phase 5.2: Tính lương do doanh nghiệp tự cấu hình** (INSERTED 2026-08-06) - Ba chế độ tính công, mức lương có phiên bản, phụ cấp/khấu trừ có phạm vi, chốt lương kỳ (completed 2026-08-06)
+- [x] **Phase 6: Super admin và hỗ trợ nhiều doanh nghiệp** - Danh sách toàn hệ thống, tra cứu sâu một doanh nghiệp, đường ghi riêng có kiểm soát (completed 2026-08-10)
 
 ## Phase Details
 
@@ -327,7 +327,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 5.1 → 5.2 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Nền dữ liệu và cô lập doanh nghiệp | 6/6 | In Progress|  |
+| 1. Nền dữ liệu và cô lập doanh nghiệp | 6/6 | Complete    | 2026-07-31 |
 | 2. Phiên thật và cắt tầng dữ liệu giả | 11/11 | Complete    | 2026-08-02 |
 | 3. Chấm công có bằng chứng | 7/7 | Complete    | 2026-08-03 |
 | 4. Quy tắc công do doanh nghiệp tự khai | 6/6 | Complete    | 2026-08-06 |
