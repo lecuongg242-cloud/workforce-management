@@ -74,14 +74,26 @@ jobs:
           docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER_NAME" \
             psql -U postgres -v ON_ERROR_STOP=1 -f /repo/supabase/seed.sql
 
+      # pgTAP duoc cai vao schema `extensions` (00_install_pgtap.sql), ma
+      # `search_path` mac dinh cua psql chi co `"$user", public` — nen moi loi
+      # goi `plan()`, `ok()`, `finish()` deu bao "function does not exist" va
+      # psql thoat voi ma 3. Tren Supabase cloud khong lo ra vi Supabase da dat
+      # san `extensions` vao search_path cua vai tro postgres; tren Postgres
+      # thuan cua CI thi khong ai dat.
+      #
+      # PGOPTIONS chi dat cho HAI buoc chay pgTAP, khong dat cho buoc ap
+      # migration — cac ham trong migration tu khai `set search_path` cua
+      # rieng chung (SECURITY DEFINER), va khong nen doi moi truong cua buoc do.
       - name: Run RLS coverage gate
         run: |
           set -euo pipefail
-          docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER_NAME" \
+          docker exec -e PGPASSWORD="$PGPASSWORD" \
+            -e PGOPTIONS="-c search_path=public,extensions" "$CONTAINER_NAME" \
             psql -U postgres -v ON_ERROR_STOP=1 -f /repo/supabase/tests/00_rls_coverage.sql
 
       - name: Run isolation test suite
         run: |
           set -euo pipefail
-          docker exec -e PGPASSWORD="$PGPASSWORD" "$CONTAINER_NAME" \
+          docker exec -e PGPASSWORD="$PGPASSWORD" \
+            -e PGOPTIONS="-c search_path=public,extensions" "$CONTAINER_NAME" \
             psql -U postgres -v ON_ERROR_STOP=1 -f /repo/supabase/tests/run-all.sql
