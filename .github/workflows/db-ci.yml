@@ -91,13 +91,16 @@ jobs:
             -e PGOPTIONS="-c search_path=public,extensions" "$CONTAINER_NAME" \
             psql -U postgres -v ON_ERROR_STOP=1 -f /repo/supabase/tests/00_rls_coverage.sql
 
-      # Khi bo pgTAP do, dua phan HONG len job summary. Log day cua Actions can
-      # dang nhap moi doc duoc, con job summary thi hien ra o truong `output`
-      # cua Checks API — nho vay biet duoc khang dinh nao do ma khong phai mo
-      # trinh duyet.
+      # Khi bo pgTAP do, phoi khang dinh hong ra ANNOTATION bang `::error::`.
+      # Log day cua Actions can dang nhap moi doc duoc; job summary thi KHONG
+      # len toi truong `output` cua Checks API (da thu). Annotation thi co.
       - name: Run isolation test suite
         run: |
-          set -uo pipefail
+          # GitHub Actions goi `run:` bang `bash -e {0}` — `-e` DA BAT SAN, va
+          # `set -uo pipefail` KHONG tat no. Thieu `set +e` thi script thoat
+          # ngay khi psql hong, `code=$?` khong bao gio chay, va khoi phoi loi
+          # ben duoi thanh vo dung (da mac dung loi nay o commit truoc).
+          set +e
           docker exec -e PGPASSWORD="$PGPASSWORD" \
             -e PGOPTIONS="-c search_path=public,extensions" "$CONTAINER_NAME" \
             psql -U postgres -v ON_ERROR_STOP=1 -f /repo/supabase/tests/run-all.sql \
