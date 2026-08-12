@@ -918,10 +918,13 @@ export const EMPLOYEE_OVERTIME_RATE_LABEL = {
   fieldValueMultiplier: "Hệ số (1,5 = 150% đơn giá giờ)",
   fieldEffectiveFrom: "Hiệu lực từ ngày",
   // Hệ quả PHẢI nói trước khi bấm lưu: mức riêng ăn trọn cả bốn loại ngày.
+  // Hai câu này từng bị để rỗng, nên khung cảnh báo hiện ra chỉ có icon mà
+  // không có chữ — người khai không có cách nào biết mình vừa đổi cách tính
+  // ngày lễ của một con người.
   scopeWarning:
-    "",
+    "Mức riêng này áp cho MỌI giờ tăng ca của người đó: ngày thường, ngày nghỉ, ngày lễ và ca đêm đều tính cùng một mức.",
   legalNote:
-    "",
+    "Nghĩa là ngày lễ của người này sẽ không còn được nhân 300% theo Điều 98 Bộ luật Lao động.",
   retroWarning:
     "Ngày hiệu lực nằm trong quá khứ. Mức này sẽ áp cho cả những ngày đã qua kể từ ngày đó — hãy chắc chắn đó là điều bạn muốn.",
   cancel: "Huỷ",

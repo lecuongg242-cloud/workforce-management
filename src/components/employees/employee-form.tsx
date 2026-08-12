@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ImagePlus, Loader2 } from "lucide-react";
+import { AlertTriangle, ImagePlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -25,7 +25,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   CONTRACT_TYPE_OPTIONS,
+  EMPLOYEE_OVERTIME_RATE_LABEL as OT_LABEL,
   GENDER_OPTIONS,
+  OVERTIME_RATE_VALUE_TYPE_OPTIONS,
   PAY_RATE_LABEL,
   PAY_RATE_UNIT_OPTIONS,
   PAY_RATE_UNIT_SUFFIX,
@@ -34,6 +36,7 @@ import {
   WORK_LOCATION_OPTIONS,
 } from "@/lib/constants";
 import { createEmployee, updateEmployee } from "@/lib/data/employees";
+import { createEmployeeOvertimeRate } from "@/lib/data/employee-overtime-rates";
 import { createPayRate } from "@/lib/data/pay-rates";
 import { useDataStore } from "@/lib/data/store";
 import { formatDuration } from "@/lib/format";
@@ -177,6 +180,10 @@ export function EmployeeForm({
             payRateUnit: "month",
             payRateAmount: null,
             payRateEffectiveFrom: defaultStartDate,
+            // O che do sua, hai o nay khong hien va khong duoc kiem — doi tien
+            // tang ca la mot PHIEN BAN MOI khai o tab "Thông tin lương".
+            overtimeRateValueType: "fixed_hourly",
+            overtimeRateValue: null,
           }
         : {
             fullName: "",
@@ -210,6 +217,12 @@ export function EmployeeForm({
             payRateUnit: "month",
             payRateAmount: null,
             payRateEffectiveFrom: defaultStartDate,
+            // Mac dinh la SO TIEN: mot thoa thuan rieng trong doanh nghiep nho
+            // luon duoc viet bang tien ("tang ca 60.000/giờ"), khong bang he
+            // so. Cung mac dinh voi `OvertimeRateDialog` o ho so. Con SO TIEN
+            // thi de trong (D-26) — cung ly do voi `payRateAmount`.
+            overtimeRateValueType: "fixed_hourly",
+            overtimeRateValue: null,
           },
     [employee, currentShift, departments, shifts, allEmployees, defaultStartDate],
   );
@@ -232,6 +245,7 @@ export function EmployeeForm({
   const shiftWorkingDays = watch("shiftWorkingDays");
   const payRateUnit = watch("payRateUnit");
   const payRateEffectiveFrom = watch("payRateEffectiveFrom");
+  const overtimeRateValueType = watch("overtimeRateValueType");
   const isHoursMode = shiftMode === "hours";
   const managers = allEmployees.filter(
     (item) => item.systemRole !== "employee" && item.id !== employee?.id,
@@ -319,6 +333,39 @@ export function EmployeeForm({
           });
           router.push(`/admin/employees/${created.id}`);
           return;
+        }
+
+        // Tien tang ca — loi goi RIENG thu hai, cung ly do va cung cach xu ly
+        // that bai voi muc luong o tren: `employee_overtime_rates` cung tham
+        // chieu `employee_id` nen khong ghi truoc duoc, va toi day thi ho so
+        // LAN muc luong deu da ton tai.
+        //
+        // CHI o ca linh hoat. Ca co gio cu the khong hien hai o do tren man
+        // hinh, nen o day cung khong duoc ghi mot dong nao — ghi mot muc rieng
+        // ma nguoi khai khong he nhap se lang le go ho khoi he so cua doanh
+        // nghiep.
+        if (values.shiftMode === "hours" && values.overtimeRateValue !== null) {
+          try {
+            await createEmployeeOvertimeRate({
+              employeeId: created.id,
+              valueType: values.overtimeRateValueType,
+              value: values.overtimeRateValue,
+              // MOT ngay hieu luc cho ca hai thoa thuan — dung o
+              // `payRateEffectiveFrom` ma nguoi dung vua chon.
+              effectiveFrom: values.payRateEffectiveFrom,
+            });
+          } catch (overtimeCause) {
+            invalidate();
+            toast.error("Đã thêm nhân viên nhưng chưa lưu được tiền tăng ca", {
+              description: `${
+                overtimeCause instanceof Error
+                  ? overtimeCause.message
+                  : OT_LABEL.saveError
+              } Hãy khai lại ở tab “${PAY_RATE_LABEL.sectionTitle}”.`,
+            });
+            router.push(`/admin/employees/${created.id}`);
+            return;
+          }
         }
 
         invalidate();
@@ -821,10 +868,109 @@ export function EmployeeForm({
             />
           </Field>
 
+          {/* TIEN TANG CA — CHI o ca linh hoat (migration 0026).
+              Voi ca linh hoat, tang ca la phan vuot qua so gio chuan cua
+              ngay: no la dieu kien lam viec da chot luc tuyen, khong phai mot
+              khoan khai them o mot man hinh khac. Doi sang ca co gio cu the
+              thi hai o nay bien mat VA het bat buoc (xem `employeeSchema`).
+
+              Nhan lay tu EMPLOYEE_OVERTIME_RATE_LABEL — cung bo chu voi hop
+              thoai o ho so, khong viet lai chuoi thu hai cho cung mot o. */}
+          {isHoursMode ? (
+            <>
+              <Field
+                id="overtimeRateValueType"
+                label={OT_LABEL.fieldValueType}
+                error={errors.overtimeRateValueType?.message}
+                required
+              >
+                <Controller
+                  control={control}
+                  name="overtimeRateValueType"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="overtimeRateValueType" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OVERTIME_RATE_VALUE_TYPE_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </Field>
+
+              <Field
+                id="overtimeRateValue"
+                // Nhan doi theo kieu khai: "60000" o o tien va "1,5" o o he so
+                // la hai dai luong khac han nhau — mot nhan chung se lam nguoi
+                // dung go nham don vi.
+                label={
+                  overtimeRateValueType === "fixed_hourly"
+                    ? OT_LABEL.fieldValueFixed
+                    : OT_LABEL.fieldValueMultiplier
+                }
+                error={errors.overtimeRateValue?.message}
+                required
+              >
+                <Controller
+                  control={control}
+                  name="overtimeRateValue"
+                  render={({ field }) => (
+                    <Input
+                      id="overtimeRateValue"
+                      type="number"
+                      step={
+                        overtimeRateValueType === "fixed_hourly" ? "1000" : "0.1"
+                      }
+                      min="0"
+                      className="num"
+                      value={field.value ?? ""}
+                      onChange={(event) =>
+                        field.onChange(
+                          event.target.value === ""
+                            ? null
+                            : event.target.valueAsNumber,
+                        )
+                      }
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
+              </Field>
+
+              {/* He qua tien bac ma nguoi khai KHONG suy ra duoc tu o nhap:
+                  mot muc rieng an tron ca bon loai ngay, nen ngay le cua nguoi
+                  nay khong con duoc nhan 300%. Phai noi TRUOC khi bam luu. */}
+              <FormFieldFull>
+                <p className="flex items-start gap-2 rounded-control border border-hairline bg-canvas-soft px-3 py-2.5 text-xs text-ink-secondary">
+                  <AlertTriangle
+                    aria-hidden="true"
+                    className="mt-0.5 size-3.5 shrink-0"
+                  />
+                  <span>
+                    {OT_LABEL.scopeWarning} {OT_LABEL.legalNote}
+                  </span>
+                </p>
+              </FormFieldFull>
+            </>
+          ) : null}
+
           <Field
             id="payRateEffectiveFrom"
             label={PAY_RATE_LABEL.fieldEffectiveFrom}
             error={errors.payRateEffectiveFrom?.message}
+            // O ca linh hoat, MOT ngay nay chi phoi CA HAI thoa thuan — noi ra
+            // thay vi de nguoi dung doan xem tien tang ca bat dau tu bao gio.
+            hint={
+              isHoursMode
+                ? "Áp cho cả lương gốc lẫn tiền tăng ca ở trên."
+                : undefined
+            }
             required
           >
             <Input

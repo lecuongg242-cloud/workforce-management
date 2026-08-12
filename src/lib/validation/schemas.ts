@@ -294,6 +294,20 @@ export const employeeSchema = z.object({
   // (D-26), va 0 cung se lot qua moi phep kiem "da khai chua".
   payRateAmount: z.number().nullable(),
   payRateEffectiveFrom: z.string(),
+
+  /**
+   * TIEN TANG CA RIENG (migration 0026) khai NGAY khi them nhan vien, va CHI
+   * o ca linh hoat. Voi ca linh hoat, tang ca la phan vuot qua so gio chuan
+   * cua ngay — no la dieu kien lam viec da chot luc tuyen, khong phai mot
+   * khoan khai them sau.
+   *
+   * Khong co ngay hieu luc rieng o day: no dung CHUNG `payRateEffectiveFrom`.
+   * Luc tao ho so, hai thoa thuan nay luon bat dau cung mot ngay; muon tach
+   * chung ve sau thi khai mot phien ban moi o tab "Thông tin lương".
+   */
+  overtimeRateValueType: z.enum(["multiplier", "fixed_hourly"]),
+  /** `null` = o nhap dang de trong. Cung ly do voi `payRateAmount` (D-26). */
+  overtimeRateValue: z.number().nullable(),
 })
   .superRefine((values, ctx) => {
     if (values.shiftMode === "hours") {
@@ -342,6 +356,64 @@ export const employeeSchema = z.object({
         code: z.ZodIssueCode.custom,
         message: "Vui lòng chọn ngày mức lương bắt đầu hiệu lực.",
         path: ["payRateEffectiveFrom"],
+      });
+    }
+
+    /* -------------------------------------------------------------------- */
+    /* Tien tang ca — bat buoc CHI o ca linh hoat, luc tao moi               */
+    /* -------------------------------------------------------------------- */
+    //
+    // Dieu kien doc tu `payRateRequired` (von la co "dang o che do tao moi",
+    // xem chu thich cua chinh truong do) CONG voi che do ca. KHONG them mot co
+    // thu hai cho cung mot su that: hai co roi se lech nhau sau mot lan sua.
+    //
+    // Ca co gio cu the thi hai o nay KHONG hien tren man hinh — bat buoc mot o
+    // khong ai nhin thay se khoa bieu mau ma khong chi duoc cho nao sai.
+    if (values.shiftMode !== "hours") return;
+
+    if (
+      values.overtimeRateValue === null ||
+      Number.isNaN(values.overtimeRateValue)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Vui lòng nhập tiền tăng ca.",
+        path: ["overtimeRateValue"],
+      });
+      return;
+    }
+
+    if (values.overtimeRateValue <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Tiền tăng ca phải lớn hơn 0.",
+        path: ["overtimeRateValue"],
+      });
+      return;
+    }
+
+    // HAI BIEN TREN NAY PHAI KHOP DUNG `employeeOvertimeRateInputSchema` phia
+    // server (`src/lib/validation/api/overtime-rates.ts`) — hai lop, MOT bo
+    // quy tac. Lech nhau thi mot con so lot qua bieu mau roi bi server tu choi
+    // sau khi ho so da duoc tao.
+    if (
+      values.overtimeRateValueType === "multiplier" &&
+      values.overtimeRateValue > 10
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Hệ số tăng ca không vượt quá 10 lần đơn giá giờ.",
+        path: ["overtimeRateValue"],
+      });
+    }
+    if (
+      values.overtimeRateValueType === "fixed_hourly" &&
+      values.overtimeRateValue > 10_000_000
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Số tiền một giờ tăng ca quá lớn.",
+        path: ["overtimeRateValue"],
       });
     }
   });
