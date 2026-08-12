@@ -37,13 +37,24 @@
  * CHI DUOC NANG LEN, khong bao gio ha xuong — ha moc la cach am tham bien
  * mot bo test dang co lai thanh mot cong van bao xanh (xem <prohibitions>
  * cua 02-02-PLAN.md).
+ *
+ * NGOAI LE DUY NHAT, 2026-08-12: ha 306 -> 305. Day KHONG phai bo bot test.
+ * `18_payroll_runs.sql` khai `plan(11)` trong khi file chi co 10 khang dinh
+ * (dung bang tong bon tieu de muc cua chinh no). Cong nay cong cac con so
+ * `plan()` lai, nen no thua 1 ngay tu dau — moc 306 chua bao gio la mot con so
+ * do duoc. Loi lo ra khi cong `db-ci` chay tron ven lan dau (truoc do no chet
+ * o buoc RLS vi pgTAP nam trong schema `extensions` ma khong ai dat
+ * search_path, nen buoc chay `run-all.sql` luon bi skip).
+ *
+ * So khang dinh THAT chay duoc khong he giam: van la 305 truoc va sau. Cai
+ * duoc sua la SO SACH.
  */
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const MIN_ASSERTIONS = 306;
+const MIN_ASSERTIONS = 305;
 
 const TESTS_DIR = path.join("supabase", "tests");
 const RUN_ALL_PATH = path.join(TESTS_DIR, "run-all.sql");

@@ -10,7 +10,15 @@
 
 begin;
 
-select plan(11);
+-- 10 = 3 (UPDATE bi chan) + 1 (chot hai lan) + 2 (co lap cheo) + 4 (DELETE
+-- keo theo cay) — dung bang tong bon tieu de muc ben duoi tu khai.
+--
+-- Truoc day o day la `plan(11)`, lech mot. Khong khang dinh nao bi mat: chinh
+-- con so la sai, tu luc viet file o Phase 5.2. Khong ai thay vi bo pgTAP chua
+-- bao gio chay tron ven — cong `db-ci` do o buoc TRUOC do (pgTAP nam trong
+-- schema `extensions` ma khong ai dat search_path), nen buoc chay `run-all.sql`
+-- luon bi skip. Sua cong do xong thi loi nay lo ra ngay o lan chay dau tien.
+select plan(10);
 
 /* ============================================================================
    Du lieu doi chieu: mot ban chot cua cty-01 voi mot dong va mot khoan.
