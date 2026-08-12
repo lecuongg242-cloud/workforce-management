@@ -82,17 +82,12 @@ function resolveTiming(nowTotalMinutes: number): {
   lateBy: number;
   toleranceBefore: number;
   toleranceAfter: number;
-} {
-  if (nowTotalMinutes < 2) {
-    // 00:00 va 00:01 — khong the dung mot ca bat dau truoc do ma van cung
-    // ngay. Nem loi RO RANG thay vi bo qua im lang: mot test tu tat di la mot
-    // khoang trong khong ai nhin thay.
-    throw new Error(
-      "Test này không chạy được trong hai phút đầu sau nửa đêm (giờ VN) — " +
-        "không tồn tại giờ bắt đầu ca nào vừa trước hiện tại vừa cùng ngày lịch. " +
-        "Chạy lại sau 00:02.",
-    );
-  }
+} | null {
+  // 00:00 va 00:01 — khong ton tai gio bat dau ca nao vua TRUOC hien tai vua
+  // CUNG ngay lich, va "muon 1 phut" thi lam tron giay co the ra 0 nen khang
+  // dinh se bap benh. Tra null de noi goi bo qua co ly do, thay vi nem loi
+  // lam do ca file cho mot kich ban BAT KHA THI chu khong phai that bai.
+  if (nowTotalMinutes < 2) return null;
   const lateBy = Math.min(LATE_BY_MINUTES, nowTotalMinutes);
   return {
     lateBy,
@@ -155,7 +150,11 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
   /** Ban chup dong cua nhan vien A NGAY SAU khi cham cong, truoc moi thay doi quy tac. */
   let recordASnapshot: Record<string, unknown> | null = null;
   /** Chot o `beforeAll` — xem `resolveTiming()`. */
-  let timing: ReturnType<typeof resolveTiming>;
+  let timing: NonNullable<ReturnType<typeof resolveTiming>>;
+  /** Kich ban chinh dung duoc khong (xem `resolveTiming`). */
+  let timingReady = false;
+  /** Ca QUA DEM co dung duoc o thoi diem chay khong — xem `beforeAll`. */
+  let nightShiftReady = false;
 
   function ownerSession(employeeId: string | null = null) {
     return {
@@ -201,7 +200,14 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     const { hour, minute } = vnHourMinute(new Date(nowIsoRaw as string));
     const nowTotalMinutes = hour * 60 + minute;
 
-    timing = resolveTiming(nowTotalMinutes);
+    const resolved = resolveTiming(nowTotalMinutes);
+    if (resolved === null) {
+      // Khong dung fixture nao ca — moi test ben duoi se tu bo qua.
+      timingReady = false;
+      return;
+    }
+    timingReady = true;
+    timing = resolved;
 
     // Ca bat dau `timing.lateBy` phut TRUOC hien tai va keo dai 8 tieng: moi
     // lan cham cong trong test nay deu muon dung ngan ay phut so voi ke hoach,
@@ -248,28 +254,31 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     // ngay), nen `end_time < start_time` -> cot sinh `overnight` = true, va
     // "bay gio" nam TRUOC gio ket thuc ca. Moc bat dau THAT SU la T+10 HOM
     // QUA, tuc lan cham nay muon gan tron mot ngay.
-    if (nowTotalMinutes >= 1430) {
-      throw new Error(
-        "Test ca qua đêm không dựng được trong 10 phút cuối ngày (>= 23:50 giờ VN) — " +
-          "giờ bắt đầu ca sẽ tràn sang ngày hôm sau. Chạy lại sau 00:02.",
-      );
-    }
-    const { error: nightShiftError } = await admin.from("shifts").insert({
-      id: NIGHT_SHIFT_ID,
-      company_id: COMPANY_ID,
-      name: "Test ca qua đêm (04-02)",
-      code: "T0402NIGHT",
-      start_time: minutesToHms(nowTotalMinutes + 10),
-      end_time: minutesToHms(nowTotalMinutes + 5),
-      break_minutes: 0,
-      late_tolerance_minutes: 5,
-      working_days: [1, 2, 3, 4, 5, 6, 7],
-      status: "active",
-    });
-    if (nightShiftError) {
-      throw new Error(
-`Không tạo được shift ca đêm: ${nightShiftError.message}`,
-      );
+    // Trong ~10 phut cuoi ngay kich ban nay BAT KHA THI, khong phai kho: no
+    // doi `now < gio ket thuc < gio bat dau` (deu la gio trong ngay), ma
+    // khong con du cho truoc nua dem cho ca hai moc. Luc do bo qua DUNG MOT
+    // test o duoi thay vi lam ca file do — mot test khong dung duoc khac han
+    // mot test that bai.
+    nightShiftReady = nowTotalMinutes < 1430;
+
+    if (nightShiftReady) {
+      const { error: nightShiftError } = await admin.from("shifts").insert({
+        id: NIGHT_SHIFT_ID,
+        company_id: COMPANY_ID,
+        name: "Test ca qua đêm (04-02)",
+        code: "T0402NIGHT",
+        start_time: minutesToHms(nowTotalMinutes + 10),
+        end_time: minutesToHms(nowTotalMinutes + 5),
+        break_minutes: 0,
+        late_tolerance_minutes: 5,
+        working_days: [1, 2, 3, 4, 5, 6, 7],
+        status: "active",
+      });
+      if (nightShiftError) {
+        throw new Error(
+          `Không tạo được shift ca đêm: ${nightShiftError.message}`,
+        );
+      }
     }
     const { error: employeesError } = await admin.from("employees").insert([
       {
@@ -286,14 +295,18 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
         full_name: "Nhân viên test 04-02 B",
         email: `${EMP_B}@timeflow.test`,
       },
-      {
-        ...baseEmployee,
-        id: EMP_NIGHT,
-        code: "T0402N",
-        full_name: "Nhân viên test 04-02 ca đêm",
-        email: `${EMP_NIGHT}@timeflow.test`,
-        shift_id: NIGHT_SHIFT_ID,
-      },
+      ...(nightShiftReady
+        ? [
+            {
+              ...baseEmployee,
+              id: EMP_NIGHT,
+              code: "T0402N",
+              full_name: "Nhân viên test 04-02 ca đêm",
+              email: `${EMP_NIGHT}@timeflow.test`,
+              shift_id: NIGHT_SHIFT_ID,
+            },
+          ]
+        : []),
     ]);
     if (employeesError) {
       throw new Error(`Không tạo được employees test: ${employeesError.message}`);
@@ -328,7 +341,13 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     await admin.auth.admin.deleteUser(actorUserId);
   });
 
-  it("1. [tiêu chí 1] ân hạn 30 phút, đến muộn 20 phút -> late_minutes = 0, trạng thái on_time", async () => {
+  it("1. [tiêu chí 1] ân hạn 30 phút, đến muộn 20 phút -> late_minutes = 0, trạng thái on_time", async (ctx) => {
+    if (!timingReady) {
+      // Kich ban khong dung duoc o khung gio nay — bo qua CO LY DO, hien ra
+      // trong ket qua chay, khong phai that bai va cung khong im lang.
+      ctx.skip();
+      return;
+    }
     const record = await checkIn(EMP_A, makeEvidence());
     recordAId = record.id;
 
@@ -338,7 +357,13 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     recordASnapshot = await readRecord(recordAId);
   });
 
-  it("2. [tiêu chí 1] siết ân hạn xuống 5 phút -> lần chấm KẾ TIẾP đã tính muộn, không có bước áp dụng nào ở giữa", async () => {
+  it("2. [tiêu chí 1] siết ân hạn xuống 5 phút -> lần chấm KẾ TIẾP đã tính muộn, không có bước áp dụng nào ở giữa", async (ctx) => {
+    if (!timingReady) {
+      // Kich ban khong dung duoc o khung gio nay — bo qua CO LY DO, hien ra
+      // trong ket qua chay, khong phai that bai va cung khong im lang.
+      ctx.skip();
+      return;
+    }
     await updateShift(SHIFT_ID, { lateToleranceMinutes: timing.toleranceAfter });
 
     const record = await checkIn(EMP_B, makeEvidence());
@@ -354,7 +379,13 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     );
   });
 
-  it("3. [tiêu chí 4] bản ghi của nhân viên A giữ nguyên late_minutes/status sau khi ân hạn đổi", async () => {
+  it("3. [tiêu chí 4] bản ghi của nhân viên A giữ nguyên late_minutes/status sau khi ân hạn đổi", async (ctx) => {
+    if (!timingReady) {
+      // Kich ban khong dung duoc o khung gio nay — bo qua CO LY DO, hien ra
+      // trong ket qua chay, khong phai that bai va cung khong im lang.
+      ctx.skip();
+      return;
+    }
     const after = await readRecord(recordAId);
 
     expect(after.late_minutes).toBe(0);
@@ -362,7 +393,13 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     expect(after).toEqual(recordASnapshot);
   });
 
-  it("4. [tiêu chí 4] đổi cả GIỜ BẮT ĐẦU ca cũng không chạm vào bản ghi đã có", async () => {
+  it("4. [tiêu chí 4] đổi cả GIỜ BẮT ĐẦU ca cũng không chạm vào bản ghi đã có", async (ctx) => {
+    if (!timingReady) {
+      // Kich ban khong dung duoc o khung gio nay — bo qua CO LY DO, hien ra
+      // trong ket qua chay, khong phai that bai va cung khong im lang.
+      ctx.skip();
+      return;
+    }
     const { data: shiftRow } = await admin
       .from("shifts")
       .select("start_time")
@@ -381,7 +418,13 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     expect(after).toEqual(recordASnapshot);
   });
 
-  it("5. lượt chấm THỨ HAI trong cùng ngày không bị tính muộn dù ân hạn đã siết (migration 0013 không bị phá)", async () => {
+  it("5. lượt chấm THỨ HAI trong cùng ngày không bị tính muộn dù ân hạn đã siết (migration 0013 không bị phá)", async (ctx) => {
+    if (!timingReady) {
+      // Kich ban khong dung duoc o khung gio nay — bo qua CO LY DO, hien ra
+      // trong ket qua chay, khong phai that bai va cung khong im lang.
+      ctx.skip();
+      return;
+    }
     await checkOut(recordAId, makeEvidence());
     const second = await checkIn(EMP_A, makeEvidence());
 
@@ -391,7 +434,13 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
   });
 
 
-  it("6. CA QUA ĐÊM: mốc bắt đầu ca lùi về hôm qua, người vào muộn KHÔNG còn được ghi on_time", async () => {
+  it("6. CA QUA ĐÊM: mốc bắt đầu ca lùi về hôm qua, người vào muộn KHÔNG còn được ghi on_time", async (ctx) => {
+    if (!nightShiftReady) {
+      // Bo qua CO LY DO, hien ra trong ket qua chay — khong phai that bai,
+      // va cung khong phai im lang.
+      ctx.skip();
+      return;
+    }
     // HỒI QUY cho lỗi phát hiện 2026-08-11.
     //
     // `work_date` của một khoảnh khắc là ngày lịch của chính nó (D-08, ép
@@ -426,6 +475,8 @@ describe("resolveTiming — ca test không bao giờ được wrap qua nửa đ�
   it("giờ bình thường: giữ nguyên 20 phút muộn, ân hạn 30 rồi 5 như thiết kế gốc", () => {
     for (const nowTotalMinutes of [20, 60, 480, 1439]) {
       const timing = resolveTiming(nowTotalMinutes);
+      expect(timing).not.toBeNull();
+      if (timing === null) continue;
       expect(timing.lateBy).toBe(20);
       expect(timing.toleranceBefore).toBe(30);
       expect(timing.toleranceAfter).toBe(5);
@@ -435,6 +486,8 @@ describe("resolveTiming — ca test không bao giờ được wrap qua nửa đ�
   it("ngay sau nửa đêm: thu nhỏ độ muộn để giờ bắt đầu ca không âm", () => {
     for (let nowTotalMinutes = 2; nowTotalMinutes < 20; nowTotalMinutes += 1) {
       const timing = resolveTiming(nowTotalMinutes);
+      expect(timing).not.toBeNull();
+      if (timing === null) continue;
       // Bat bien 1: gio bat dau ca luon cung ngay lich (khong am -> khong wrap
       // -> cot sinh `overnight` khong bat).
       expect(nowTotalMinutes - timing.lateBy).toBeGreaterThanOrEqual(0);
@@ -447,11 +500,13 @@ describe("resolveTiming — ca test không bao giờ được wrap qua nửa đ�
     }
   });
 
-  it("hai phút đầu sau nửa đêm: ném lỗi rõ ràng thay vì bỏ qua im lặng", () => {
+  it("hai phút đầu sau nửa đêm: trả null để test tự bỏ qua, không làm đỏ cả file", () => {
+    // 00:00 va 00:01 la kich ban BAT KHA THI (khong co gio bat dau ca nao vua
+    // truoc hien tai vua cung ngay lich), khac han mot test THAT BAI. Tra null
+    // de noi goi `ctx.skip()` co ly do — hien ra trong ket qua chay chu khong
+    // im lang, va cung khong lam do mot thu von khong the dung duoc.
     for (const nowTotalMinutes of [0, 1]) {
-      expect(() => resolveTiming(nowTotalMinutes)).toThrow(
-        "hai phút đầu sau nửa đêm",
-      );
+      expect(resolveTiming(nowTotalMinutes)).toBeNull();
     }
   });
 });
