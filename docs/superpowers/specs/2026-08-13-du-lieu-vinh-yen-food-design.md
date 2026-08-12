@@ -222,6 +222,38 @@ trí nhớ, nay cưỡng chế bằng máy.
 5. `npm run db:seed` **bị từ chối** kèm thông điệp nêu tên Vinh Yến Food.
 6. `npm run lint` và `npm run typecheck` xanh.
 
+## Kết quả thực thi (2026-08-13)
+
+Đã nạp lên database. Đối chiếu:
+
+| Bước nghiệm thu | Kết quả |
+|---|---|
+| Chạy hai lần liên tiếp | ✅ lần hai: 0 tài khoản mới, 0 dòng lương mới |
+| Đọc ngược từ database | ✅ 11 hồ sơ, 11 membership (1 owner + 10 employee), 10+10 dòng lương/tăng ca, `overtime_rules` và `holidays` đều rỗng |
+| Cấu hình | ✅ `daily_hours`, 9,5 giờ/công, `standard_days_per_month = null`; ca `kind='hours'` 570 phút, `working_days = {1..7}` |
+| Đăng nhập thật | ✅ `yen@vinhyenfood.com` / `12345678` |
+| Phép tính tiền | ✅ 6 bài trong `src/lib/payroll/__tests__/vinh-yen-food-config.test.ts`, chạy qua chính `computePayrollLine()` |
+| Cổng chặn `db:seed` | ✅ cả ba nhánh (từ chối / cho qua / có `TF_SEED_WIPE_REAL_DATA=1`) |
+| `lint` / `typecheck` / `check:secrets` | ✅ |
+
+**Hai điều CHƯA làm được trong môi trường này, phải làm bằng tay:**
+
+1. **Chưa ai mở trình duyệt nhìn.** Toàn bộ nghiệm thu trên là quan sát của máy
+   trên database thật. `/admin/employees` và `/admin/payroll` chưa được bấm tay —
+   cùng tính chất với các mục còn treo của Phase 5 và 5.1 trong `.planning/STATE.md`.
+2. **Cổng chặn `db:seed` được kiểm bằng một `psql` giả** (qua biến `PSQL_PATH` mà
+   `resolvePsql()` vốn đã hỗ trợ), vì máy phát triển không cài `psql` — đúng như
+   mục 04-06/05-06/05-2-06 của `.planning/STATE.md` đã ghi. Đường code chạy là
+   đường thật; chỉ có dữ liệu trả về là giả.
+
+**Một phát hiện ngoài dự tính:** database này đang mang **953 doanh nghiệp**, gần
+như toàn bộ là fixture của test tích hợp không xoá được (`cty-wm-*`, `cty-pay-*`,
+`cty-adj-*`, `cty-05xx-*`…). Vinh Yến Food giờ nằm lẫn trong đó. Hệ quả có thật:
+cách dọn được `.planning/STATE.md` khuyên bốn lần — `npm run db:seed` — từ nay bị
+cổng chặn từ chối, và dùng đường thoát `TF_SEED_WIPE_REAL_DATA=1` sẽ xoá luôn Vinh
+Yến Food. Cần một đường dọn fixture có chọn lọc; việc đó nằm ngoài phạm vi bản
+thiết kế này.
+
 ## Ngoài phạm vi
 
 - **Điểm làm việc GPS** (`/admin/work-sites`) — cần toạ độ thật của quán. Không khai
