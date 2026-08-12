@@ -105,15 +105,12 @@ jobs:
           code=$?
           cat /tmp/pgtap.log
           if [ "$code" -ne 0 ]; then
-            {
-              echo "### pgTAP that bai (exit $code)"
-              echo ""
-              echo '```'
-              grep -E "^not ok|^# +Failed test|^psql:|ERROR:" /tmp/pgtap.log | head -60
-              echo ""
-              echo "--- 40 dong cuoi ---"
-              tail -40 /tmp/pgtap.log
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
+            # `::error::` tao ANNOTATION — thu duy nhat cua mot lan chay that
+            # bai doc duoc qua Checks API ma khong can dang nhap. Job summary
+            # KHONG len toi truong `output` cua API (da thu o commit truoc).
+            grep -E "^not ok|^psql:.*ERROR|^ERROR:" /tmp/pgtap.log \
+              | head -10 \
+              | while IFS= read -r line; do echo "::error::${line}"; done
+            echo "::error::pgTAP exit ${code}; $(grep -c '^not ok' /tmp/pgtap.log || true) khang dinh khong dat"
           fi
           exit "$code"
