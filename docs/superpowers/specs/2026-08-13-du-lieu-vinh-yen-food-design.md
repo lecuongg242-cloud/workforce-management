@@ -124,7 +124,7 @@ Cả 11 dòng: `status='active'`, `start_date='2026-08-01'`, `shift_id` là ca l
 | NV007 | Đinh Thị Mười | `muoi.dt` | `employee` | 250.000 | 40.000 |
 | NV008 | Hà Việt Anh | `vietanh.hv` | `employee` | 220.000 | 40.000 |
 | NV009 | Nguyễn Thị Sáu | `sau.nt` | `employee` | 270.000 | 40.000 |
-| NV010 | Đường Văn Hưng | `hung.dv` | `employee` | 200.000 | **30.000** |
+| NV010 | Đường Văn Hưng | `hung.dv` | `employee` | 200.000 | 40.000 |
 
 Quy tắc email là *tên + viết tắt họ đệm*, áp cho **cả mười người** chứ không phải
 chỉ hai chỗ trùng (Trần Thị **Anh** / Hà Việt **Anh**, Nguyễn Thị **Yên** / chủ
@@ -170,7 +170,9 @@ KHÔNG PHẢI BỐN"), không phải một chỗ sót.
 | 8 tiếng | 480 phút × đơn giá = 210.526 | 0 | **210.526** |
 | 6 tiếng | 0,6316 công = 157.895 | 0 | **157.895** |
 
-Với Đường Văn Hưng (200.000đ): đơn giá giờ = 21.052,63đ, tăng ca 30.000đ/giờ.
+Tăng ca là **40.000đ/giờ cho cả mười người** — con số này không đổi theo lương gốc,
+nên nó giống nhau ở mọi dòng. Chỉ đơn giá giờ của lương gốc là khác nhau: Đường Văn
+Hưng (200.000đ) ra 21.052,63đ/giờ, Nguyễn Văn Thái (300.000đ) ra 31.578,95đ/giờ.
 
 ## Kiến trúc script
 
