@@ -89,6 +89,101 @@ function runPsqlFile(url, file) {
   return run(`"${psqlBin}"`, [url, "-v", "ON_ERROR_STOP=1", "-f", file]);
 }
 
+/**
+ * Chay mot cau lenh SQL va tra ve stdout da cat khoang trang. Khac `run()` o
+ * cho khong ke thua stdio — cong `assertNoRealCompanies()` can DOC ket qua chu
+ * khong chi in no ra.
+ */
+function psqlQuery(url, sql) {
+  if (psqlBin === null) psqlBin = resolvePsql();
+  const result = spawnSync(`"${psqlBin}"`, [url, "-t", "-A", "-v", "ON_ERROR_STOP=1", "-c", sql], {
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
+  if (result.error || result.status !== 0) {
+    return null;
+  }
+  return String(result.stdout || "").trim();
+}
+
+/**
+ * Cong chan D-06b: `seed` TU CHOI chay khi database co du lieu doanh nghiep
+ * THAT.
+ *
+ * `supabase/seed.sql` mo dau bang `truncate ... companies, employees ...
+ * cascade`. Do la hanh vi dung cho mot database chi chua du lieu mau — va la
+ * mot tham hoa im lang cho mot database co doanh nghiep dang chay that. Khong
+ * co canh bao, khong co ban sao, khong hoan tac duoc.
+ *
+ * Tu 2026-08-13, dieu do khong con la gia dinh: Vinh Yen Food (`cty-vinhyen`)
+ * song trong CHINH database dev, canh hai doanh nghiep mau. `.planning/STATE.md`
+ * khuyen chay `npm run db:seed` o bon cho khac nhau de don fixture test con
+ * sot — moi lan nhu vay tu day tro di la mot lan suyt xoa mat du lieu that.
+ *
+ * Nen bat bien "seed chi cham vao du lieu mau" duoc cuong che bang MAY, cung
+ * khuon voi `assertNotCloud()` ngay ben duoi. `TF_SEED_WIPE_REAL_DATA=1` la
+ * duong thoat co y thuc, khong phai mot co tien tay.
+ *
+ * Khong doc duoc danh sach doanh nghiep (chua chay migration, database rong,
+ * psql hong) thi KHONG chan: mot cong khong tra loi duoc cau hoi thi khong duoc
+ * quyen tu tra loi "co" — buoc `psql -f seed.sql` ngay sau do se bao loi that.
+ */
+const SEED_SAFE_COMPANY_IDS = ["cty-01", "cty-02"];
+
+function assertNoRealCompanies(url) {
+  if (process.env.TF_SEED_WIPE_REAL_DATA === "1") {
+    console.error(
+      "CANH BAO: TF_SEED_WIPE_REAL_DATA=1 — `seed` se XOA moi doanh nghiep,\n" +
+        "ke ca du lieu that, truoc khi nap lai bo mau.",
+    );
+    return;
+  }
+
+  const safeList = SEED_SAFE_COMPANY_IDS.map((id) => `'${id}'`).join(", ");
+  const rows = psqlQuery(
+    url,
+    `select id || ' — ' || name from public.companies where id not in (${safeList}) order by id;`,
+  );
+
+  // `null` = khong hoi duoc (bang chua ton tai, psql hong). Khong chan.
+  if (rows === null || rows === "") return;
+
+  const names = rows.split(/\r?\n/).filter((line) => line.trim() !== "");
+
+  // Database dev dang mang ~950 doanh nghiep, gan het la fixture cua test tich
+  // hop khong xoa duoc (xem .planning/STATE.md, cac muc 04-06 / 05-06 /
+  // 05-2-06). In het ra se lam thong diep dai toi muc khong ai doc — va mot
+  // canh bao khong ai doc thi khong khac gi khong co canh bao.
+  const PREVIEW = 10;
+  const preview = names.slice(0, PREVIEW).map((name) => `    ${name}`).join("\n");
+  const rest =
+    names.length > PREVIEW
+      ? `\n    … và ${names.length - PREVIEW} doanh nghiệp nữa`
+      : "";
+
+  console.error(
+    "TU CHOI: `seed` se XOA SACH du lieu that.\n" +
+      "\n" +
+      "`supabase/seed.sql` bat dau bang `truncate companies, employees, ...\n" +
+      "cascade`. Database nay dang co " +
+      names.length +
+      " doanh nghiep KHONG thuoc\nbo du lieu mau:\n" +
+      "\n" +
+      preview +
+      rest +
+      "\n\n" +
+      "Cascade se keo theo toan bo nhan vien, cham cong, muc luong va bang luong\n" +
+      "cua ho. Khong co ban sao va khong hoan tac duoc.\n" +
+      "\n" +
+      "Neu chi can don fixture test con sot, hay xoa dung nhung dong do thay vi\n" +
+      "nap lai ca bo seed.\n" +
+      "\n" +
+      "Neu THAT SU muon xoa het va nap lai du lieu mau:\n" +
+      "    TF_SEED_WIPE_REAL_DATA=1 npm run db:seed",
+  );
+  process.exit(1);
+}
+
 function cmdPush(url) {
   return run("npx", [
     "supabase",
@@ -102,6 +197,10 @@ function cmdPush(url) {
 }
 
 function cmdSeed(url) {
+  // Chan TRUOC khi cham vao `psql -f`: mot khi `truncate` da chay thi khong con
+  // gi de bao ve. Dat o day chu khong o `main()` de `testdb` — von goi lai
+  // `cmdSeed()` — duoc bao boi cung mot cong, khong phai nho ai do nho them.
+  assertNoRealCompanies(url);
   return runPsqlFile(url, "supabase/seed.sql");
 }
 

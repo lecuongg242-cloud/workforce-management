@@ -17,6 +17,7 @@
     "test": "vitest run",
     "check:assertions": "node scripts/check-pgtap-assertions.mjs",
     "seed:auth": "node --env-file=.env.local scripts/seed-auth.mjs",
+    "seed:vinhyen": "node --env-file=.env.local scripts/seed-vinh-yen-food.mjs",
     "reset:passwords": "node --env-file=.env.local scripts/reset-temp-passwords.mjs",
     "check:signup": "node --env-file=.env.local scripts/check-signup-disabled.mjs",
     "test:e2e": "node --env-file=.env.local scripts/e2e-auth.mjs",
