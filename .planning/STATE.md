@@ -294,6 +294,30 @@ None yet.
 
 ### Blockers/Concerns
 
+- **2026-08-13 — DOANH NGHIỆP THẬT ĐẦU TIÊN ĐANG SỐNG TRÊN DATABASE DEV.**
+  Vinh Yến Food (`cty-vinhyen`, 1 chủ + 10 nhân viên, có mức lương và tiền tăng ca
+  thật) đã được nạp bằng `npm run seed:vinhyen`. Thiết kế và biên bản nghiệm thu:
+  `docs/superpowers/specs/2026-08-13-du-lieu-vinh-yen-food-design.md`.
+
+  Hệ quả **làm mất hiệu lực lời khuyên ở ba mục 04-06 / 05-06 / 05-2-06 bên dưới**:
+  `npm run db:seed` từ nay **bị một cổng chặn trong `scripts/db.mjs` từ chối** khi
+  database có doanh nghiệp ngoài `cty-01`/`cty-02` — vì `seed.sql` mở đầu bằng
+  `truncate ... cascade` và sẽ xoá sạch dữ liệu thật. Đường thoát
+  `TF_SEED_WIPE_REAL_DATA=1` **cũng xoá Vinh Yến Food**, nên nó không phải cách dọn
+  fixture.
+
+  **Việc còn treo:** cần một đường dọn fixture test **có chọn lọc** (xoá theo tiền
+  tố `cty-wm-*`/`cty-pay-*`/`cty-adj-*`/`cty-pc-*`/`cty-run-*`/`cty-e2ep-*`/
+  `cty-05xx-*`, tạm gỡ trigger append-only theo đúng thủ tục ở migration 0022/0026).
+  Đo được ngày 2026-08-13: **953 doanh nghiệp** trên database dev, gần như toàn bộ
+  là fixture. Chừng nào chưa có đường đó, mỗi lần chạy bộ test tích hợp lại cộng
+  thêm rác và không có cách dọn nào an toàn.
+
+  **Chưa ai bấm tay:** `/admin/employees` và `/admin/payroll` của Vinh Yến Food chưa
+  được nhìn trên trình duyệt — cùng tính chất với các mục 05-06 và 5.1 bên dưới.
+  Ba thứ chủ doanh nghiệp phải tự khai: số điện thoại + địa chỉ thật
+  (`/admin/settings`), điểm làm việc + toạ độ GPS (`/admin/work-sites`), ngày lễ.
+
 - **Phase 6 KHÔNG còn mục treo nào** (chốt 2026-08-12). Đã merge vào `main` và đẩy
   lên `origin`; toàn bộ nghiệm thu tay đã xong (xem `06-UAT.md` §Chữ ký). Việc
   "chạy pgTAP trên CI" được **đưa ra ngoài phạm vi theo quyết định của chủ dự án** —
