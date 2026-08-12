@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 6
 current_phase_name: Super admin và hỗ trợ nhiều doanh nghiệp
 status: complete
-stopped_at: Phase 6 da thuc thi xong 9/9 task tren nhanh phase-6-super-admin; cho chu du an bam tay 3 man hinh moi va ky 06-UAT.md
-last_updated: "2026-08-10T16:00:00.000Z"
-last_activity: 2026-08-10
-last_activity_desc: Thuc thi Phase 6 — 9/9 task, migration 0033-0036, phien ho tro co thoi han, khu /platform, cong no-inline-admin-role, e2e-support + e2e-support-rls
+stopped_at: Phase 6 xong va da merge vao main; khong con muc treo nao; cho chu du an ky dong phase o 06-UAT.md
+last_updated: "2026-08-12T17:30:00.000Z"
+last_activity: 2026-08-12
+last_activity_desc: Phase 6 merge vao main; sua 3 loi co san (dashboard 500 vi phone null, ca dem vao muon ghi on_time, fixture test do sau nua dem) va 3 loi ha tang test (hookTimeout, search_path pgTAP tren CI, plan(11) sai o 18_payroll_runs)
 progress:
   total_phases: 6
   completed_phases: 6
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-07-31)
 
 Phase: 6 — Super admin và hỗ trợ nhiều doanh nghiệp — **9/9 task đã thực thi**
 Plan: `docs/superpowers/plans/2026-08-10-phase-6-super-admin.md`
-Status: xong về mã và test trên nhánh `phase-6-super-admin`; **chưa merge**, và **biên bản `06-UAT.md` chưa có chữ ký chủ dự án**
+Status: **đã merge vào `main` và đẩy lên `origin`**; nghiệm thu tay xong, chỉ còn chữ ký đóng phase của chủ dự án
 Last activity: 2026-08-10 — Thực thi Phase 6 (migration 0033–0036, `support_sessions` + `tf_has_support_access`, khu `/platform`, cổng `no-inline-admin-role`, `e2e-support` + `e2e-support-rls`)
 
 Progress: [██████████] 100% — Phase 1–6 đã thực thi xong (toàn bộ 44 requirement của v1)
@@ -265,6 +265,27 @@ Quyết định phát sinh **khi thực thi** Phase 6 (2026-08-10):
 - `AccessRole` khai ở `domain.ts` chứ không ở `session-context.ts` như spec dự định —
   `UserSession.role` cũng cần nó, và `domain.ts` không được import ngược lên tầng auth
 
+Sửa chữa **sau khi Phase 6 đóng** (2026-08-11 → 12), đều là lỗi CÓ SẴN không phải
+hồi quy — ghi lại để sau này không phải dựng lại bối cảnh:
+
+- `f61a75b`: `/admin/dashboard` trả 500 cho cả doanh nghiệp chỉ vì MỘT nhân viên
+  không có số điện thoại. Migration 0028 cho sáu cột `employees` thành nullable và
+  quét đường đọc nhân viên, nhưng bỏ sót đường đọc bảng điều khiển. TypeScript im
+  lặng vì `RawEmployeeRow` khai `phone: string` — một lời khai sai so với database.
+- `9d2bebe`: người ca đêm vào muộn **sau nửa đêm** được ghi `on_time`. `work_date`
+  là ngày lịch của khoảnh khắc (D-08), nên mốc bắt đầu ca giải ra ở TƯƠNG LAI và số
+  phút muộn bị kẹp về 0. Sửa bằng `scheduledStartDayOffset()` — **không đụng D-08**,
+  chỉ đổi mốc được đếm muộn so với.
+- `1ce1f93`: `shift-rules-effect.test.ts` đỏ **tất định** trong 20 phút đầu mỗi đêm.
+- `d4ee409`: `vitest.config.mts` thiếu `hookTimeout` (mặc định 10s) trong khi phần
+  nặng nhất của test tích hợp nằm ở `beforeAll`. Đây mới là nguyên nhân thật của thứ
+  05-2-06 ghi là "nhiễu môi trường". Sau khi sửa: **ba lượt suite liên tiếp sạch,
+  72 file / 787 test**.
+- `78ee1f5` + `8af16ce`: cổng `db-ci` đỏ **từ trước Phase 6** vì pgTAP nằm ở schema
+  `extensions` mà không ai đặt `search_path`; và `18_payroll_runs.sql` khai
+  `plan(11)` trong khi chỉ có 10 khẳng định (sàn `check:assertions` vì thế thừa 1
+  ngay từ đầu: 306 → **305**).
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -273,9 +294,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- **Phase 6 — `npm run test:db` vẫn chưa chạy được** (không có `psql`/`docker`/`supabase` CLI; kiểm lại trong phiên 2026-08-10). File pgTAP mới `20_support_sessions.sql` (**14 assertion**, sàn 292 → **306**) đã viết và đã vào cổng đếm nhưng **chưa chạy thật**. Khác ba phase trước: phase này thêm `scripts/e2e-support-rls.mjs` chạy **cùng những khẳng định đó** bằng phiên đăng nhập thật qua PostgREST (13/13), nên D-49/D-50 không phải khẳng định chỉ tồn tại trên giấy.
-- **Phase 6 — chủ dự án chưa bấm tay** qua ba màn hình mới (`/platform`, `/platform/log`, banner hỗ trợ trên `/admin/*`). Bốn thứ cần bấm được liệt kê ở `06-UAT.md` §Giới hạn đã biết mục 2. Đáng chú ý nhất là **banner hỗ trợ** — nó là vế "màn hình luôn hiển thị rõ đang xem doanh nghiệp nào" của chính tiêu chí 2, và là thứ duy nhất trong phase không kiểm bằng máy được.
-- **Phase 6 — nhánh `phase-6-super-admin` chưa merge vào `main`.**
+- **Phase 6 KHÔNG còn mục treo nào** (chốt 2026-08-12). Đã merge vào `main` và đẩy
+  lên `origin`; toàn bộ nghiệm thu tay đã xong (xem `06-UAT.md` §Chữ ký). Việc
+  "chạy pgTAP trên CI" được **đưa ra ngoài phạm vi theo quyết định của chủ dự án** —
+  không phải bị bỏ sót, và **không nêu lại ở các phase sau**; lý do và những gì đã
+  sửa được trên đường đi ghi ở `06-UAT.md` §Giới hạn đã biết mục 1.
+
 - **Không còn pending.** Khóa Supabase legacy trong `docs/env` (gồm `SUPABASE_SERVICE_ROLE_KEY`) vẫn ở dạng plaintext và khóa `service_role` legacy vẫn còn hiệu lực, bỏ qua toàn bộ RLS. Việc "thu hồi & cấp lại khóa legacy" đã bị **gỡ khỏi phạm vi ngày 2026-07-31** theo quyết định có chủ đích của chủ dự án (xem `.planning/REQUIREMENTS.md` §Out of Scope và `.planning/PROJECT.md` §Out of Scope) — không phải bị bỏ sót hay còn chờ xử lý. Rủi ro được ghi nhận và chấp nhận có ý thức, không chặn `/gsd-ship`. Vế còn lại của AUTH-06 (không khóa bí mật nào lọt xuống client bundle) đã hoàn thành và được xác minh (`npm run check:secrets`, plan 01-03).
 - Chưa có test tự động nào trong repo — hạ tầng test (pgTAP + Vitest) phải dựng ngay ở Phase 1
 - Nghiên cứu còn khoảng trống cần làm rõ khi lập kế hoạch Phase 3: độ phủ thiết bị cho `getUserMedia()` và độ chính xác GPS tại văn phòng thật; và Phase 5: mô hình duyệt một cấp có đủ cho doanh nghiệp pilot không

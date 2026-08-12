@@ -144,40 +144,60 @@ dữ liệu **không đổi** (nhân viên vẫn ở "Sản xuất"), và toast 
 toast tự tắt sau vài giây. Đây là xác nhận trực tiếp cho khẳng định trung tâm của
 D-52: **không sửa một dòng nào trong 16 file `mutations/*.ts` mà đường ghi vẫn đóng.**
 
-**Còn thiếu:** hai hộp thoại đường ghi trắng (*Cấp lại mật khẩu tạm*, *Cấp quyền chủ*)
-chưa bấm — chúng đổi mật khẩu và quyền của tài khoản thật trên dev nên không tự bấm.
-Đã phủ bằng 6/6 test tích hợp trên Auth và database thật, gồm cả khẳng định mật khẩu
-tạm không xuống `audit_log` và mật khẩu mới đăng nhập được thật.
+**Đã bấm tay — vế "hai đường ghi trắng": xong cả hai.**
+
+- *Cấp lại mật khẩu tạm*: chủ dự án tự bấm 2026-08-12, xác nhận chạy đúng.
+- *Cấp quyền chủ doanh nghiệp*: bấm 2026-08-12 trên tài khoản dùng-một-lần
+  (`uat-owner-…@timeflow.test`), đã dọn sạch sau đó. Quan sát:
+  - Trường hợp âm trước: email không tồn tại → toast *"Không tìm thấy tài khoản với
+    email …"*, hộp thoại **giữ nguyên** để sửa chứ không đóng mất dữ liệu vừa gõ.
+  - Trường hợp thật: toast *"Đã cấp quyền chủ doanh nghiệp cho … tại Công ty TNHH
+    Thương mại Ngọc Phát."*, hộp thoại tự đóng.
+  - Database: `memberships` có đúng một dòng `cty-01 / owner / active`.
+  - `audit_log`: `action=update`, `company_id=null` (tầng nền tảng — đúng D-56),
+    `entity_table=memberships`, và `reason` mang **cả mã doanh nghiệp lẫn nguyên văn
+    lý do đã gõ**: *"Super admin cấp quyền chủ doanh nghiệp cty-01: Ticket #501 —
+    khách mất quyền chủ sau khi đổi nhân sự"*.
+
+**Không còn mục nào chưa bấm tay.**
 
 ---
 
-## Kết quả các cổng (chạy 2026-08-10)
+## Kết quả các cổng (chạy 2026-08-10, cập nhật 2026-08-12)
 
 | lệnh | kết quả |
 |---|---|
 | `npm run typecheck` | sạch |
 | `npm run lint` | 0 lỗi (1 cảnh báo có sẵn ở `scripts/tmp/setup-ngocphat.mjs`, ngoài phạm vi) |
-| `npm run test` | **70 file, 774/774 xanh** |
-| `npm run check:assertions` | 306 (sàn 306) |
+| `npm run test` | **72 file, 787/787 xanh** (ba lượt liên tiếp, sau khi đặt `hookTimeout`) |
+| `npm run check:assertions` | 305 (sàn 305 — xem Giới hạn #1) |
 | `npm run check:secrets` | OK — quét 93 file, không khoá bí mật nào |
 | `npm run test:e2e-support` | **TẤT CẢ ĐẠT** (17 khẳng định, HTTP thật) |
 | `npm run test:e2e-support-rls` | **13/13** (database thật, phiên đăng nhập thật) |
-| `npm run test:db` | **KHÔNG CHẠY ĐƯỢC** — xem mục dưới |
+| `npm run test:db` | ngoài phạm vi (Giới hạn #1) |
 
 ## Giới hạn đã biết
 
-1. **`npm run test:db` chưa chạy thật lần nào trong phase này.** Môi trường phát triển
-   không có `psql`, `docker`, hay `supabase` CLI, và database dev là Supabase cloud nên
-   bộ chạy test từ chối nạp fixture pgTAP. Đây là blocker **đã treo từ 04-06** qua
-   05-06 và 05-2-06, không phải mới.
+1. **`npm run test:db` / pgTAP trên CI — ĐÃ ĐƯA RA NGOÀI PHẠM VI 2026-08-12 theo
+   quyết định của chủ dự án.** Không còn là việc treo, không nêu lại ở các phase sau.
 
-   Hệ quả: 14 assertion của `supabase/tests/20_support_sessions.sql` đã viết, đã vào
-   cổng đếm (sàn 292 → **306**), nhưng **chưa chạy thật**. Cần Postgres tạm của CI.
+   Bối cảnh để quyết định này đọc được về sau: môi trường phát triển không có `psql`,
+   `docker` hay `supabase` CLI, nên `npm run test:db` không chạy được tại máy (blocker
+   treo từ 04-06). Khi truy tiếp trên CI thì lộ ra ba tầng nợ có sẵn, đã sửa hết:
+   pgTAP nằm ở schema `extensions` mà không ai đặt `search_path` (nên cổng RLS của CI
+   đỏ từ trước Phase 6 và bước chạy `run-all.sql` **luôn bị skip**); `18_payroll_runs.sql`
+   khai `plan(11)` trong khi chỉ có 10 khẳng định; và sàn `check:assertions` vì thế
+   thừa 1 ngay từ đầu (306 → **305**, sửa sổ sách chứ không bỏ test).
 
-   Bù lại — và đây là điểm khác với ba phase trước: phase này thêm
-   `scripts/e2e-support-rls.mjs`, chạy **cùng những khẳng định đó** bằng một phiên đăng
-   nhập thật qua PostgREST (JWT thật, `auth.uid()` thật, RLS thật, không mock gì).
-   13/13 đạt. Nên D-49 và D-50 **không** phải là khẳng định chỉ tồn tại trên giấy.
+   **Điều cố ý chấp nhận:** lượt CI cuối cùng chưa ai xác nhận xanh hay đỏ. Bộ pgTAP
+   có thể còn khẳng định khác chưa từng chạy và chưa từng đúng.
+
+   **Vì sao chấp nhận được:** mọi hành vi mà pgTAP của phase này khẳng định đều đã
+   được phủ độc lập bằng đường khác chạy trên hệ thống thật —
+   `scripts/e2e-support-rls.mjs` (13/13, phiên đăng nhập thật qua PostgREST: JWT thật,
+   `auth.uid()` thật, RLS thật, không mock gì) và `scripts/e2e-support.mjs` (17 khẳng
+   định qua HTTP thật). Nên D-49 và D-50 không phải là khẳng định chỉ tồn tại trên
+   giấy — chỉ là chúng chưa được khẳng định *thêm một lần nữa* bằng pgTAP.
 
 2. ~~**Chưa ai bấm tay trên trình duyệt.**~~ — **ĐÃ BẤM 2026-08-10**, qua Chrome
    DevTools với tài khoản `ops@timeflow.vn` thật trên `localhost:3010`. Cả bốn mục đều
@@ -209,9 +229,7 @@ tạm không xuống `audit_log` và mật khẩu mới đăng nhập được t
      **luôn** rơi vào đúng trang đó sau khi đăng nhập. Sơ đồ luồng trong spec có bước
      này nhưng plan không có task nào làm.
 
-   **Còn lại chưa bấm:** hai hộp thoại đường ghi trắng (*Cấp lại mật khẩu tạm*,
-   *Cấp quyền chủ*) — chúng đổi mật khẩu và quyền của tài khoản thật trên dev nên
-   không tự bấm; đã phủ bằng 6/6 test tích hợp trên Auth và database thật.
+   **Hai hộp thoại đường ghi trắng: đã bấm nốt 2026-08-12** — xem cuối Tiêu chí 4.
 
 3. **Nút ghi trong `/admin` không bị ẩn khi đang ở phiên hỗ trợ** (D-54, có chủ đích).
    Đội vận hành bấm rồi mới biết không được. Đánh đổi: ẩn nút ở 10 màn hình là 10 chỗ
@@ -238,13 +256,32 @@ vẫn khai `phone: z.string()` — một nhân viên không có số điện tho
 điều khiển hỏng.
 
 **Không phải hồi quy của Phase 6**: `git log main..HEAD` trên `src/app/api/dashboard/`
-và `src/lib/validation/api/dashboard.ts` đều rỗng. Chưa sửa vì nằm ngoài phạm vi phase
-và sát vùng đang có việc dở về form nhân viên.
+và `src/lib/validation/api/dashboard.ts` đều rỗng.
+
+**ĐÃ SỬA 2026-08-11** (commit `f61a75b`): bốn chỗ vẫn khai `phone` không-null được
+sửa cho khớp database (`RawEmployeeRow`, schema Zod, `DashboardSummary`, và thẻ giao
+diện — chưa có số thì hiện "Chưa có số điện thoại" thay vì hai nút gọi/nhắn dựng ra
+`tel:null`). Có test hồi quy; đã xác nhận trên trình duyệt.
+
+**Hai lỗi CÓ SẴN khác cũng phát hiện trong đợt này, đã sửa:**
+- Người ca đêm vào muộn sau nửa đêm được ghi `on_time` (commit `9d2bebe`) —
+  `work_date` là ngày lịch nên mốc bắt đầu ca giải ra ở TƯƠNG LAI, số phút muộn bị
+  kẹp về 0. Sửa bằng `scheduledStartDayOffset()`, không đụng tới D-08.
+- `shift-rules-effect.test.ts` đỏ tất định trong 20 phút đầu mỗi đêm (commit
+  `1ce1f93`) — fixture dựng ca `now − 20 phút`, sau nửa đêm thì âm và cuộn vòng
+  thành ca qua đêm ngoài ý muốn.
 
 ## Chữ ký
 
-- [x] Đã bấm tay bốn mục ở Giới hạn #2 (2026-08-10, qua Chrome DevTools)
-- [ ] Chủ dự án tự xác nhận lại
+- [x] Bốn mục ở Giới hạn #2 — bấm tay 2026-08-10 qua Chrome DevTools
+- [x] *Cấp lại mật khẩu tạm* — chủ dự án tự bấm 2026-08-12
+- [x] *Cấp quyền chủ doanh nghiệp* — bấm 2026-08-12, có kiểm database
+- [x] pgTAP trên CI — **đưa ra ngoài phạm vi** 2026-08-12 theo quyết định của chủ
+      dự án (Giới hạn #1)
+
+**Không còn mục nào chờ.** Bốn tiêu chí của phase đều có quan sát thật trên hệ thống
+chạy thật, và mọi thứ từng nằm ở mục "còn thiếu" đều đã đóng.
+
 - [ ] Chủ dự án đồng ý đóng Phase 6
 
 Ngày: ................  Ký: ................
