@@ -8,6 +8,8 @@ import { AttendanceRejectedError } from "@/lib/attendance/rejection";
 import { requiresPunchPhoto } from "@/lib/attendance/suspicious";
 import { logMutation } from "@/lib/data/audit";
 import { loadCompanySettings } from "@/lib/settings/company-settings";
+import { addDays } from "@/lib/format";
+import { scheduledStartDayOffset } from "@/lib/shifts/overnight-anchor";
 import { ATTENDANCE_PHOTO_BUCKET, buildAttendancePhotoPath } from "@/lib/storage/attendance-photos";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { attendanceRecordSchema } from "@/lib/validation/api/attendance";
@@ -44,10 +46,15 @@ interface RawShiftRow {
   duration_minutes: number | null;
   break_minutes: number;
   late_tolerance_minutes: number;
+  /**
+   * Cot SINH cua bang `shifts` (`end_time < start_time`, 0004:44). Doc lai
+   * chu KHONG BAO GIO tinh lai o tang ung dung — quyet dinh 02-06.
+   */
+  overnight: boolean;
 }
 
 const SHIFT_PUNCH_COLUMNS =
-  "id, kind, start_time, end_time, duration_minutes, break_minutes, late_tolerance_minutes";
+  "id, kind, start_time, end_time, duration_minutes, break_minutes, late_tolerance_minutes, overnight";
 
 /**
  * CA LINH HOAT (migration 0027) KHONG CO GIO MOC, nen ba dai luong do tu mot
@@ -631,9 +638,46 @@ export async function checkIn(
   // tra null va roi vao nhanh nem loi ben duoi, tuc mot nhan vien ca linh hoat
   // se khong cham cong duoc.
   if (isFirstPunchOfDay && !isHoursShift(shift)) {
+    // CA QUA DEM: moc bat dau ca co the nam o HOM QUA.
+    //
+    // `work_date` cua mot khoanh khac la ngay lich cua chinh no (D-08, ep
+    // bang CHECK constraint o 0004:109) — dung, va KHONG doi o day. Nhung
+    // voi ca 22:00-06:00, mot luot cham luc 00:09 co `work_date` la hom nay,
+    // nen giai gio bat dau ca tren chinh ngay do se ra 22:00 TOI NAY: mot moc
+    // trong TUONG LAI. So phut muon thanh am, bi kep ve 0, va nguoi vao muon
+    // hai tieng duoc ghi `on_time`.
+    //
+    // `scheduledStartDayOffset()` chi doi MOC DUOC DEM MUON SO VOI — mot phep
+    // do. No khong dung toi `work_date`, khong dung toi D-08, va khong dung
+    // toi bat ky cot nao duoc luu.
+    // Gio KET THUC ca dat tren chinh ngay cong — moc de biet luot cham nay
+    // dang o nua truoc hay nua sau khung gio ca. Chi hoi database khi ca that
+    // su qua dem: ca trong ngay khong can them mot vong goi nao.
+    let shiftEndInstantOnWorkDate: string | null = null;
+    if (shift.overnight && shift.end_time !== null) {
+      const { data: endInstant, error: endInstantError } = await supabase.rpc(
+        "tf_local_instant",
+        { p_date: workDate, p_time: shift.end_time },
+      );
+      if (endInstantError || !endInstant) {
+        throw new Error("Không thể tính thời gian kết thúc ca.");
+      }
+      shiftEndInstantOnWorkDate = endInstant as string;
+    }
+
+    const dayOffset = scheduledStartDayOffset({
+      overnight: shift.overnight,
+      punchInstant: nowIso as string,
+      shiftEndInstantOnWorkDate,
+    });
+    const scheduledStartDate =
+      dayOffset === 0
+        ? (workDate as string)
+        : addDays(workDate as string, dayOffset);
+
     const { data: scheduledStart, error: scheduledStartError } = await supabase.rpc(
       "tf_local_instant",
-      { p_date: workDate, p_time: shift.start_time },
+      { p_date: scheduledStartDate, p_time: shift.start_time },
     );
     if (scheduledStartError || !scheduledStart) {
       throw new Error("Không thể tính thời gian bắt đầu ca.");

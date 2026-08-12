@@ -48,7 +48,10 @@ const DEPARTMENT_ID = "dept-01";
 const SHIFT_ID = "sft-04-02-late";
 const EMP_A = "emp-04-02-a";
 const EMP_B = "emp-04-02-b";
-const TEST_EMPLOYEE_IDS = [EMP_A, EMP_B];
+/** Ca QUA DEM — dung cho phep kiem moc bat dau ca lui ve hom qua. */
+const NIGHT_SHIFT_ID = "sft-04-02-night";
+const EMP_NIGHT = "emp-04-02-night";
+const TEST_EMPLOYEE_IDS = [EMP_A, EMP_B, EMP_NIGHT];
 
 /**
  * So phut nhan vien den muon so voi gio bat dau ca theo ke hoach — gia tri
@@ -241,6 +244,33 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
       user_id: null,
     };
 
+    // Ca QUA DEM bao quanh hien tai: ket thuc T+5, bat dau T+10 (gio trong
+    // ngay), nen `end_time < start_time` -> cot sinh `overnight` = true, va
+    // "bay gio" nam TRUOC gio ket thuc ca. Moc bat dau THAT SU la T+10 HOM
+    // QUA, tuc lan cham nay muon gan tron mot ngay.
+    if (nowTotalMinutes >= 1430) {
+      throw new Error(
+        "Test ca qua đêm không dựng được trong 10 phút cuối ngày (>= 23:50 giờ VN) — " +
+          "giờ bắt đầu ca sẽ tràn sang ngày hôm sau. Chạy lại sau 00:02.",
+      );
+    }
+    const { error: nightShiftError } = await admin.from("shifts").insert({
+      id: NIGHT_SHIFT_ID,
+      company_id: COMPANY_ID,
+      name: "Test ca qua đêm (04-02)",
+      code: "T0402NIGHT",
+      start_time: minutesToHms(nowTotalMinutes + 10),
+      end_time: minutesToHms(nowTotalMinutes + 5),
+      break_minutes: 0,
+      late_tolerance_minutes: 5,
+      working_days: [1, 2, 3, 4, 5, 6, 7],
+      status: "active",
+    });
+    if (nightShiftError) {
+      throw new Error(
+`Không tạo được shift ca đêm: ${nightShiftError.message}`,
+      );
+    }
     const { error: employeesError } = await admin.from("employees").insert([
       {
         ...baseEmployee,
@@ -255,6 +285,14 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
         code: "T0402B",
         full_name: "Nhân viên test 04-02 B",
         email: `${EMP_B}@timeflow.test`,
+      },
+      {
+        ...baseEmployee,
+        id: EMP_NIGHT,
+        code: "T0402N",
+        full_name: "Nhân viên test 04-02 ca đêm",
+        email: `${EMP_NIGHT}@timeflow.test`,
+        shift_id: NIGHT_SHIFT_ID,
       },
     ]);
     if (employeesError) {
@@ -281,7 +319,12 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     // employees cascade sang attendance_records roi attendance_photos.
     await admin.from("employees").delete().in("id", TEST_EMPLOYEE_IDS);
     await admin.from("attendance_records").delete().eq("shift_id", SHIFT_ID);
+    await admin
+      .from("attendance_records")
+      .delete()
+      .eq("shift_id", NIGHT_SHIFT_ID);
     await admin.from("shifts").delete().eq("id", SHIFT_ID);
+    await admin.from("shifts").delete().eq("id", NIGHT_SHIFT_ID);
     await admin.auth.admin.deleteUser(actorUserId);
   });
 
@@ -345,6 +388,29 @@ describe("Ân hạn đi muộn: hiệu lực ngay với lần chấm kế tiếp
     expect(second.id).not.toBe(recordAId);
     expect(second.lateMinutes).toBe(0);
     expect(second.status).toBe("on_time");
+  });
+
+
+  it("6. CA QUA ĐÊM: mốc bắt đầu ca lùi về hôm qua, người vào muộn KHÔNG còn được ghi on_time", async () => {
+    // HỒI QUY cho lỗi phát hiện 2026-08-11.
+    //
+    // `work_date` của một khoảnh khắc là ngày lịch của chính nó (D-08, ép
+    // bằng CHECK constraint ở 0004:109). Với ca qua đêm, giải giờ bắt đầu ca
+    // trên chính ngày đó cho ra một mốc trong TƯƠNG LAI, nên số phút muộn âm,
+    // bị kẹp về 0, và người vào muộn được ghi `on_time`.
+    //
+    // Ca dựng ở `beforeAll` kết thúc T+5 và bắt đầu T+10 (giờ trong ngày), nên
+    // mốc bắt đầu THẬT SỰ là T+10 HÔM QUA — lượt chấm này muộn gần trọn một
+    // ngày. Trước khi sửa, khẳng định `late` dưới đây đỏ với giá trị `on_time`.
+    vi.mocked(getSessionContext).mockResolvedValue(ownerSession(EMP_NIGHT));
+
+    const record = await checkIn(EMP_NIGHT, makeEvidence());
+
+    expect(record.status).toBe("late");
+    // ~1440 - 10 - 5 (ân hạn) = 1425 phút; cho ±2 phút vì hai lần gọi cách
+    // nhau vài giây và `tf_worked_minutes` làm tròn epoch.
+    expect(record.lateMinutes).toBeGreaterThan(1400);
+    expect(record.lateMinutes).toBeLessThan(1440);
   });
 });
 
