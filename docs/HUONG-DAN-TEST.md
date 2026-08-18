@@ -1,7 +1,11 @@
 # Hướng dẫn kiểm thử TimeFlow
 
-Tài liệu này mô tả cách kiểm chứng hệ thống **sau Phase 3** — thời điểm mỗi lần chấm công
-mang theo bằng chứng (ảnh chụp trực tiếp + toạ độ GPS), và quản trị có màn hình xem lại.
+Tài liệu này mô tả cách kiểm chứng hệ thống **sau Phase 6** — thời điểm toàn bộ 44
+requirement của v1 đã hoàn thành: chấm công có bằng chứng, quy tắc công do doanh nghiệp
+tự khai, duyệt yêu cầu và chốt kỳ, tính lương và phiếu lương, và cuối cùng là super admin
+với phiên hỗ trợ có thời hạn.
+
+*Cập nhật lần cuối: 2026-08-13.*
 
 > **Chỉ muốn đi một vòng xem có gì?** Nhảy thẳng xuống [§0](#0-đi-một-vòng-nhanh).
 > Phần còn lại là kiểm thử chi tiết, đọc khi cần.
@@ -60,10 +64,13 @@ npm run dev
 | 5 | `/admin/departments` | Thêm / sửa / xóa phòng ban |
 | 6 | `/admin/shifts` | 4 ca, có ca đêm qua ngày; nhân bản rồi sửa bản sao |
 | 7 | `/admin/work-sites` | **Mới ở phase 3** — khai báo điểm làm việc: toạ độ + bán kính cho phép |
-| 8 | `/admin/attendance/review` | **Mới ở phase 3** — danh sách lần chấm công cần người xem lại |
+| 8 | `/admin/attendance/review` | Danh sách lần chấm công cần người xem lại |
+| 9 | `/admin/attendance` | Lưới công tháng + trạng thái kỳ, có nút chốt kỳ |
+| 10 | `/admin/requests` | Hàng đợi duyệt: người chờ lâu nhất lên trước |
+| 11 | `/admin/payroll` | Bảng lương kỳ, bấm một dòng để xem chi tiết cách ra con số |
+| 12 | `/admin/settings` | Giờ làm chuẩn, ân hạn, ngày lễ, hệ số tăng ca |
 
-Ba mục `/admin/attendance`, `/admin/payroll`, `/admin/settings` hiện nhãn *"Sắp ra mắt"*
-và cố ý không đi đâu cả.
+Sidebar không còn mục nào gắn nhãn *"Sắp ra mắt"* — mọi màn hình trong đó đều đi được.
 
 ### 0.3 Vòng nhân viên — điện thoại
 
@@ -106,8 +113,13 @@ cookie nhận 401.
 | Điểm làm việc (toạ độ, bán kính) | ✓ Phase 3 |
 | Đánh dấu lần chấm công đáng ngờ + màn hình xem lại | ✓ Phase 3 |
 | Xem lại ảnh bằng chứng phía quản trị | ✓ Phase 3 |
-| Duyệt yêu cầu phía quản trị, chốt kỳ công, cài đặt doanh nghiệp | ○ Phase sau |
-| Tính lương, phiếu lương | ○ V3 |
+| Cài đặt doanh nghiệp: giờ làm, ân hạn, ngày lễ, hệ số tăng ca | ✓ Phase 4 |
+| Duyệt yêu cầu, lịch sử xử lý, thông báo, chốt kỳ công | ✓ Phase 5 |
+| Bảng công tháng của quản trị, xuất CSV cho kế toán | ✓ Phase 5.1 |
+| Tính lương: ba chế độ tính công, mức lương có phiên bản, phụ cấp/khấu trừ, chốt lương | ✓ Phase 5.2 |
+| Phiếu lương cho nhân viên | ✓ Phase 5.3 |
+| Super admin: danh sách toàn hệ thống, phiên hỗ trợ, nhật ký, hai đường ghi trắng | ✓ Phase 6 |
+| Thuế TNCN và bảo hiểm | ○ V3 |
 
 ---
 
@@ -126,7 +138,7 @@ npm run lint         # ESLint, gom rule cam doc gio may trong client component
 npm run test              # Vitest — tang du lieu, cong chan route, chuoi doi mat khau
 npm run build             # Next.js production build
 npm run check:secrets     # Quet .next/ tim khoa bi mat lot xuong client bundle
-npm run check:assertions  # Dem assertion pgTAP, san toi thieu 199
+npm run check:assertions  # Dem assertion pgTAP, san toi thieu 305
 ```
 
 ### 1.3 Cổng chạm cơ sở dữ liệu
@@ -140,11 +152,29 @@ npm run test:rls     # pgTAP: co lap giua hai doanh nghiep
 
 ### 1.3b Cổng chạy qua HTTP thật
 
-Hai lệnh này cần `npm run dev` đang chạy ở terminal khác, và cần mật khẩu tạm:
+Nhóm lệnh này cần `npm run dev` đang chạy ở terminal khác. Một số cần mật khẩu tạm,
+số còn lại tự tạo tài khoản dùng-một-lần rồi tự dọn.
 
 ```bash
 npm run test:e2e         # Dang nhap, doi mat khau, co lap giua hai doanh nghiep
 npm run test:e2e-photo -- <email-A> <mk-A> <email-B> <mk-B>   # Co lap ANH cham cong
+npm run test:e2e-settings   # Cai dat doanh nghiep (Phase 4)
+npm run test:e2e-approval   # Duyet yeu cau va chot ky (Phase 5)
+npm run test:e2e-payroll    # Bang luong va chot luong (Phase 5.2)
+npm run test:e2e-support    # Vong doi mot phien ho tro (Phase 6) — 17 khang dinh
+npm run test:walkthrough    # Di mot vong xuyen suot san pham
+```
+
+Riêng `test:e2e-support-rls` **không cần** `npm run dev` — nó đi thẳng xuống database:
+
+```bash
+npm run test:e2e-support-rls   # Ranh gioi phien ho tro o TANG DATABASE — 13 khang dinh
+```
+
+`TF_BASE_URL` đặt cổng khi Next.js nhảy khỏi 3000:
+
+```bash
+TF_BASE_URL=http://localhost:3010 npm run test:e2e-support
 ```
 
 `test:e2e-photo` là **cách duy nhất trong repo** phát hiện được lỗi RLS ở tầng
@@ -166,6 +196,10 @@ thật đều bị chặn im lặng, trong khi toàn bộ 200+ test vẫn xanh.
 | `src/__tests__/no-signed-url.test.ts` (trong `npm run test`) | Không ai lén đưa signed URL / `getPublicUrl` quay lại `src/`. Ảnh chỉ được đi qua broker route |
 | `npm run check:signup` | Đăng ký công khai đã tắt **ở endpoint thật**, không tin `config.toml` |
 | `npm run lint` | Không client component nào đọc `new Date()` / `Date.now()` ở lần vẽ đầu — nguồn gốc lỗi hydration |
+| `npm run test:e2e-support` | Phiên hỗ trợ mở đúng **một** doanh nghiệp, đọc được dữ liệu nơi đó, **ghi thì không**, đóng phiên là mất quyền ngay — kiểm qua HTTP thật |
+| `npm run test:e2e-support-rls` | Cùng ranh giới đó ở **tầng database**: JWT thật, `auth.uid()` thật, RLS thật, không mock gì. Đây là bằng chứng tự động cho D-50, thay cho pgTAP chưa chạy được tại máy |
+| `src/__tests__/no-inline-admin-role.test.ts` (trong `npm run test`) | Không Route Handler nào so `role === "owner"` trực tiếp — bắt buộc đi qua `canReadCompanyData()`. Bỏ sót một chỗ thì phiên hỗ trợ thấy màn hình **rỗng** chứ không báo lỗi |
+| `src/__tests__/admin-client-scope.test.ts` (trong `npm run test`) | `createAdminSupabase()` (bỏ qua RLS) không lọt ra ngoài `"use server"`/`mutations/` |
 
 ### 1.5 Hai cổng có thể đang đỏ, và đỏ đúng
 
@@ -179,6 +213,16 @@ khi thiếu bằng chứng.
 
 **`npm run test:db`** sẽ **từ chối chạy** khi `POSTGRES_URL_NON_POOLING` trỏ tới project
 Supabase trên cloud. Đó là hành vi đúng — xem mục 4.1.
+
+Nó cũng cần `psql` trên máy. Máy phát triển hiện tại không có `psql`, `docker` hay
+`supabase` CLI, nên **bộ pgTAP không chạy được tại chỗ** — chốt 2026-08-12 là đưa việc
+này ra ngoài phạm vi, xem mục 7. Bù lại, `test:e2e-support-rls` phủ cùng ranh giới
+bằng phiên đăng nhập thật qua PostgREST.
+
+**Cổng CI `db-ci`** (GitHub Actions, chạy mỗi lần push vào `main`) dựng Postgres 17 +
+pgTAP sạch trong container. Nó **đã đỏ từ trước Phase 6** vì một lỗi cấu hình, nay đã
+sửa (xem mục 4.7). Lượt chạy cuối cùng chưa ai xác nhận — đó là điều cố ý chấp nhận,
+không phải việc bị bỏ quên.
 
 ---
 
@@ -398,6 +442,46 @@ nghĩa "cần người xem lại", không có nghĩa "gian lận".
 Bước 51–52 là điều **chỉ thiết bị thật mới trả lời được**: trình duyệt máy tính luôn cho
 chọn webcam, nên không chứng minh được gì về ràng buộc "chỉ camera sau, không thư viện".
 
+### 3.10 Super admin và phiên hỗ trợ — phần mới của Phase 6
+
+Cần một tài khoản platform admin. Tạo bằng:
+
+```bash
+npm run seed:platform-admin    # Mac dinh ops@timeflow.vn; in mat khau MOT LAN
+```
+
+Tài khoản này **không thuộc doanh nghiệp nào** — đó là định nghĩa của vai trò, không
+phải thiếu sót. Đăng nhập xong sẽ rơi vào `/select-company` với danh sách rỗng, và có
+một liên kết **"TimeFlow · Vận hành"** dẫn sang `/platform`.
+
+| # | Thao tác | Kỳ vọng |
+|---|---|---|
+| 56 | Mở `/platform` | Thấy **toàn bộ** doanh nghiệp trên hệ thống, kèm số nhân viên, hoạt động gần nhất, kỳ đang mở |
+| 57 | Đăng nhập bằng tài khoản **thường** rồi gõ thẳng `/platform` | Bị đá về `/` — người không phải platform admin không được biết khu này tồn tại |
+| 58 | Bấm *Mở phiên hỗ trợ* trên một dòng | Hộp thoại **bắt nhập lý do**, nói rõ tên doanh nghiệp và "trong 60 phút" |
+| 59 | Bỏ trống lý do rồi xác nhận | Bị chặn — một phiên không lý do là một dòng nhật ký vô nghĩa |
+| 60 | Nhập lý do và xác nhận | Chuyển sang `/admin/dashboard`; **banner hổ phách dính đỉnh** ghi đúng **tên đầy đủ** doanh nghiệp và số phút còn lại |
+| 61 | Đi khắp `/admin/*` | Đọc được dữ liệu của doanh nghiệp đó như một quản trị viên |
+| 62 | Bấm **một nút ghi bất kỳ** (ví dụ *Chuyển phòng ban*) | Hiện đúng câu **"Bạn không có quyền thực hiện thao tác này."**, và dữ liệu **không đổi** |
+| 63 | Mở `/platform/log` | Có dòng phiên vừa mở: đúng lý do đã gõ, hết hạn đúng 60 phút sau, trạng thái *Đang mở* |
+| 64 | Bấm *Đóng phiên* trên banner | Quay về `/platform`; nhật ký chuyển sang *Đã đóng*, **vẫn giữ tên doanh nghiệp** |
+| 65 | Sau khi đóng, gõ lại một đường `/admin/*` | Không còn đọc được dữ liệu của doanh nghiệp đó |
+| 66 | `/platform` → *Cấp lại mật khẩu tạm*, nhập một email có thật | Mật khẩu hiện **đúng một lần** kèm câu "không hiện lại được — hãy chép ngay" |
+| 67 | *Cấp quyền chủ* với email **không tồn tại** | Báo *"Không tìm thấy tài khoản với email …"*, hộp thoại **giữ nguyên** để sửa |
+| 68 | *Cấp quyền chủ* với email có thật | Toast thành công; tài khoản đó nhận vai trò owner ở doanh nghiệp đã chọn |
+
+**Bước 62 là bước quan trọng nhất của cả phase.** Nó chứng minh phiên hỗ trợ chỉ mở lệnh
+đọc: 51 lời gọi `requireRole` trong 16 file mutation **không sửa một dòng nào** mà đường
+ghi vẫn đóng. Nút ghi **cố ý không bị ẩn** — ẩn ở 10 màn hình là 10 chỗ để quên, còn
+thông điệp từ chối thì đến từ một chỗ duy nhất.
+
+Toast tự tắt sau vài giây. Nếu chụp màn hình để làm bằng chứng thì phải chụp ngay, hoặc
+đọc log server — dòng `ForbiddenError` ở `bulkMoveDepartment` là bằng chứng tương đương.
+
+**Mỗi phiên để lại hai dòng `audit_log`** (một khi mở, một khi đóng), không phải mỗi
+request — xem D-55. Bảng `support_sessions` **không có policy `delete`**: nhật ký không
+xoá được, kể cả bởi chính người mở.
+
 ---
 
 ## 4. Sự cố đã gặp trong dự án này
@@ -506,7 +590,80 @@ Bài học đã áp vào script: **chỉ chấp nhận đúng mã lỗi của nh
 trong thông báo**, và mọi trường hợp không rõ đều fail. Một cổng nói dối còn tệ hơn không
 có cổng.
 
-### 4.6 Muốn về trạng thái dữ liệu gốc
+### 4.6 Test xanh, giao diện vẫn hỏng — lỗi ở lớp NỐI DÂY
+
+Ba lỗi trong Phase 6 đều cùng một hình: từng mảnh đều có test và đều xanh, nhưng chỗ
+**nối** giữa chúng thì trống. Cả 772 test lẫn hai bộ e2e đều không bắt được; chỉ một lần
+bấm tay trên trình duyệt mới lộ.
+
+1. **Banner hỗ trợ hiện mã thô `cty-01`, sidebar kẹt "Đang tải…".** `GET /api/companies`
+   trả mảng rỗng cho phiên hỗ trợ, vì nhánh xử lý nằm trong `catch (NoMembershipError)`
+   — mà từ khi `getSessionContext()` có nhánh `support` thì lỗi đó không còn được ném
+   nữa. **Lỗi tương tác giữa hai task, cả hai đều xanh khi đứng riêng.**
+2. **Nhật ký hỗ trợ tụt về mã thô ngay khi đóng phiên.** Route join `companies(name)` đi
+   qua RLS, mà quyền đọc bảng đó lại đến từ chính phiên hỗ trợ — nên **mọi dòng lịch sử
+   đều mất tên**, đúng lúc một nhật ký cần đọc lại nhất.
+3. **`/select-company` không có lối nào sang `/platform`**, trong khi platform admin
+   **luôn** rơi vào đúng trang đó sau khi đăng nhập.
+
+**Bài học:** test phủ được *hành vi*, không phủ được *sự có mặt*. Không chỗ nào khẳng
+định về **tên** doanh nghiệp, nên cả ba lỗi lọt qua. Với mỗi màn hình mới, một lần bấm
+tay vẫn là bắt buộc — và nó phải nhìn vào thứ người dùng thật sự đọc, không chỉ mã
+trạng thái.
+
+### 4.7 Cổng CI đỏ suốt nhiều tháng mà không ai biết
+
+`db-ci` hỏng ở bước "Run RLS coverage gate" từ trước Phase 6. Nguyên nhân: pgTAP được
+cài vào schema `extensions`, mà `search_path` mặc định của psql chỉ có `"$user", public`
+và **không chỗ nào trong repo đặt lại**. Nên mọi lời gọi `plan()`, `ok()`, `finish()`
+đều báo "function does not exist".
+
+Trên Supabase cloud không lộ ra, vì Supabase để sẵn `extensions` trong search_path của
+vai trò postgres. Tức là **cùng một lệnh chạy được ở máy nhưng chết trên CI** — và vì
+bước RLS đứng trước, bước chạy `run-all.sql` **luôn bị skip**. Toàn bộ bộ pgTAP chưa bao
+giờ chạy trọn vẹn.
+
+Sửa xong thì lộ tiếp lỗi thứ hai: `18_payroll_runs.sql` khai `plan(11)` trong khi chỉ
+có 10 khẳng định — pgTAP báo "planned 11 but ran 10" và ném lỗi. Kéo theo sàn
+`check:assertions` **thừa đúng 1 từ đầu** (306 → 305), vì cổng đó cộng các con số
+`plan()` lại mà không bao giờ kiểm chúng có thật không.
+
+**Bài học:** một con số trong sổ sách mà chưa lệnh nào từng đo lại thì không phải bằng
+chứng. Và một cổng CI chưa ai nhìn thấy xanh thì không phải cổng.
+
+### 4.8 Suite đầy đủ đỏ ngẫu nhiên — "nhiễu môi trường" có nguyên nhân thật
+
+Nhiều tháng liền, mỗi lần chạy `npm run test` có 1–3 file đỏ với `Hook timed out in
+10000ms`, **khác file mỗi lần**, và tất cả đều xanh khi chạy riêng. Sổ dự án ghi là
+nhiễu môi trường.
+
+Nguyên nhân thật: `vitest.config.mts` nâng `testTimeout` lên 20s cho test chạy trên
+database thật, nhưng **để `hookTimeout` ở mặc định 10s** — trong khi phần nặng nhất của
+những test đó nằm ở `beforeAll` (tạo tài khoản qua Admin API, chèn ca, chèn nhân viên,
+tải ảnh lên Storage), tất cả qua mạng tới cloud.
+
+Thêm `hookTimeout: 30000` → ba lượt suite liên tiếp sạch, 72 file / 787 test.
+
+**Hệ quả dây chuyền đáng nhớ:** hook bị giết giữa chừng thì `afterAll` không chạy, để
+lại fixture trên database dev, và **lượt chạy sau hỏng vì trùng khoá**. Một lỗi timeout
+đẻ ra một lỗi trông như lỗi dữ liệu.
+
+### 4.9 Test phụ thuộc giờ trong ngày
+
+`shift-rules-effect.test.ts` dựng ca bắt đầu `now − 20 phút`. Sau nửa đêm hiệu đó **âm**,
+bị cuộn vòng thành 23:4x, và vì `shifts.overnight` là cột sinh (`end_time < start_time`)
+nên ca bỗng thành ca qua đêm ngoài ý muốn → test đỏ **tất định** trong 20 phút đầu mỗi
+đêm.
+
+Cách xử lý cuối cùng: độ muộn không bao giờ vượt quá số phút đã trôi qua trong ngày, và
+với những khung giờ mà kịch bản **bất khả thi về logic** (00:00–00:01, và 23:50–23:59 cho
+ca đêm) thì từng test tự gọi `ctx.skip()` — hiện rõ "skipped" trong kết quả.
+
+Bản sửa đầu tiên **ném lỗi** ở hai khung đó, và nó sai: ném trong `beforeAll` làm **đỏ cả
+file**, tức đổi một cửa sổ 20 phút lấy hai cửa sổ nhỏ hơn chứ không hết. Một kịch bản
+không dựng được khác hẳn một test thất bại.
+
+### 4.10 Muốn về trạng thái dữ liệu gốc
 
 Khác V1, dữ liệu giờ tồn tại vĩnh viễn. Để làm sạch:
 
@@ -590,7 +747,11 @@ Thay `3000` bằng cổng thật trong output của `npm run dev`.
 | Phòng ban | `/admin/departments` |
 | Ca làm việc | `/admin/shifts` |
 | Điểm làm việc | `/admin/work-sites` |
+| Chấm công | `/admin/attendance` |
 | Chấm công cần xem lại | `/admin/attendance/review` |
+| Yêu cầu | `/admin/requests` |
+| Bảng lương | `/admin/payroll` |
+| Cài đặt doanh nghiệp | `/admin/settings` |
 
 ### Bắt buộc đăng nhập — nhân viên, thiết kế cho điện thoại
 
@@ -600,14 +761,26 @@ Thay `3000` bằng cổng thật trong output của `npm run dev`.
 | Lịch sử chấm công | `/employee/history` |
 | Yêu cầu | `/employee/requests` |
 | Hồ sơ cá nhân | `/employee/profile` |
+| Thông báo | `/employee/notifications` |
 
 Mở thẳng biểu mẫu tạo yêu cầu theo loại: `/employee/requests?type=leave` ·
 `?type=attendance_supplement` · `?type=time_adjustment` · `?type=overtime`
 
-### Chưa xây dựng
+### Bắt buộc đăng nhập — khu vận hành, chỉ platform admin
 
-`/admin/attendance`, `/admin/payroll`, `/admin/settings` hiển thị nhãn **"Sắp ra mắt"**
-trên sidebar và cố ý không điều hướng. Gõ thẳng đường link ra 404 — đúng thiết kế.
+| Màn hình | Đường link |
+|---|---|
+| Danh sách toàn hệ thống | `/platform` |
+| Nhật ký phiên hỗ trợ | `/platform/log` |
+
+Người không phải platform admin gõ thẳng hai đường này sẽ bị đá về `/` — không phải 404,
+vì 404 vẫn tiết lộ rằng đường dẫn đó tồn tại.
+
+### Đường dẫn cũ còn giữ
+
+`/admin/periods` **chuyển hướng** sang `/admin/attendance` — kỳ công đã gộp vào màn
+hình chấm công. Giữ lại vì đường cũ đã đi vào lịch sử trình duyệt và ghi chú của người
+dùng; một liên kết cũ trả 404 khiến người ta tưởng tính năng bị gỡ mất.
 
 ---
 
@@ -615,18 +788,25 @@ trên sidebar và cố ý không điều hướng. Gõ thẳng đường link ra
 
 Không phải lỗi — nằm ngoài phạm vi hiện tại:
 
-**Sẽ làm ở các phase sau của V2:** trang cài đặt doanh nghiệp (giờ làm, ngày lễ, hệ số
-tăng ca) · duyệt yêu cầu từ phía quản trị (hiện chỉ xem được danh sách chờ) · chốt kỳ
-công · màn hình super admin · màn hình chấm công tổng hợp `/admin/attendance`.
+**Đã xong hết** (trước đây nằm trong danh sách này): cài đặt doanh nghiệp · duyệt yêu
+cầu · chốt kỳ công · màn hình chấm công tổng hợp · super admin · tính lương · phiếu
+lương. Ngưỡng đáng ngờ cũng đã chuyển thành cấu hình doanh nghiệp ở Phase 4, không còn
+là hằng số.
 
-**Đã xong ở Phase 3** (trước đây nằm trong danh sách này): chấm công kèm ảnh hiện trường
-và GPS · cấu hình điểm làm việc · đánh dấu lần chấm công đáng ngờ · xem lại ảnh bằng
-chứng phía quản trị.
+**Toàn bộ 44 requirement của v1 đã hoàn thành.**
 
-**Ngưỡng đáng ngờ hiện là hằng số** (5× bán kính điểm làm việc gần nhất), chưa đọc từ cấu
-hình doanh nghiệp — sẽ chuyển ở Phase 4 khi trang cài đặt ra đời.
+**Không có đường gia hạn phiên hỗ trợ** (có chủ đích). Hết 60 phút thì mở phiên mới, và
+phiên mới là một dòng nhật ký mới.
 
-**Hoãn sang V3:** tính lương đầy đủ, phiếu lương, thuế và bảo hiểm.
+**Không có màn hình quản lý danh sách platform admin.** Thêm/bớt bằng
+`npm run seed:platform-admin` hoặc `insert` tay vào `platform_admins`.
+
+**pgTAP trên CI — đưa ra ngoài phạm vi 2026-08-12** theo quyết định của chủ dự án. Không
+phải bị bỏ sót. Hai tầng nợ đã sửa trên đường đi (xem mục 4.7), nhưng lượt CI cuối chưa
+ai xác nhận xanh. Chấp nhận được vì mọi hành vi mà pgTAP khẳng định đều đã được phủ độc
+lập bằng `test:e2e-support-rls` và `test:e2e-support`.
+
+**Hoãn sang V3:** thuế TNCN và bảo hiểm.
 
 **Loại trừ có chủ đích:** chấm công bằng QR · máy chấm công phần cứng · nhận diện khuôn
 mặt · thanh toán gói SaaS · mời thành viên qua email/SMS · đa ngôn ngữ · mobile app native.
@@ -650,3 +830,8 @@ mặt · thanh toán gói SaaS · mời thành viên qua email/SMS · đa ngôn 
 | `npm run seed:auth` | Tạo 10 tài khoản thật (chạy lại được) |
 | `npm run reset:passwords` | Lấy lại mật khẩu tạm khi đã mất |
 | `npm run check:signup` | Kiểm đăng ký công khai đã tắt chưa |
+| `npm run seed:platform-admin` | Tạo tài khoản super admin để nghiệm thu §3.10 |
+| `npm run test:e2e-support` | Vòng đời phiên hỗ trợ qua HTTP thật (cần `npm run dev`) |
+| `npm run test:e2e-support-rls` | Ranh giới phiên hỗ trợ ở tầng database (không cần `dev`) |
+| `npm run test:e2e-approval` · `test:e2e-payroll` · `test:e2e-settings` | Duyệt yêu cầu · bảng lương · cài đặt, qua HTTP thật |
+| `npm run test:walkthrough` | Đi một vòng xuyên suốt sản phẩm |
