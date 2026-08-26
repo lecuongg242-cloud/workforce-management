@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Hướng dẫn vận hành TimeFlow: 19 bước từ tạo nhân viên tới bảng lương, kèm ảnh chụp từ hệ thống đang chạy.">
+<meta name="robots" content="noindex">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Sổ tay vận hành TimeFlow">
+<meta property="og:description" content="Hướng dẫn vận hành TimeFlow: 19 bước từ tạo nhân viên tới bảng lương, kèm ảnh chụp từ hệ thống đang chạy.">
+<meta property="og:image" content="https://workforce-management-three.vercel.app/huong-dan/img/02-tong-quan.jpeg">
+<meta property="og:url" content="https://workforce-management-three.vercel.app/huong-dan.html">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>⏱</text></svg>">
+<title>Sổ tay vận hành TimeFlow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+/* ── Bảng màu: giấy sổ sách ngả xanh rêu, mực xanh đen, nhấn chàm của TimeFlow ── */
+:root {
+  --paper:      #f2f5f3;
+  --paper-2:    #e7ece9;
+  --card:       #ffffff;
+  --ink:        #16202e;
+  --ink-2:      #46566b;
+  --ink-3:      #6f8195;
+  --rule:       #d3dcd7;
+  --rule-2:     #bfcbc4;
+  --accent:     #4b31e8;
+  --accent-ink: #3620b8;
+  --accent-wash:#eceaff;
+  --warn:       #9a5b06;
+  --warn-wash:  #fdf3e2;
+  --warn-rule:  #e8c98e;
+  --ok:         #0d6b5f;
+  --ok-wash:    #e3f2ee;
+  --shadow:     0 1px 2px rgba(22,32,46,.06), 0 8px 24px -12px rgba(22,32,46,.18);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #10161d;
+    --paper-2:    #161e27;
+    --card:       #1a232e;
+    --ink:        #e7edf2;
+    --ink-2:      #a9b8c6;
+    --ink-3:      #7d8ea0;
+    --rule:       #2a3642;
+    --rule-2:     #3a4956;
+    --accent:     #a396ff;
+    --accent-ink: #c3baff;
+    --accent-wash:#241e4d;
+    --warn:       #edb765;
+    --warn-wash:  #33270f;
+    --warn-rule:  #6b5220;
+    --ok:         #6fd3bf;
+    --ok-wash:    #10322c;
+    --shadow:     0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #10161d;
+  --paper-2:    #161e27;
+  --card:       #1a232e;
+  --ink:        #e7edf2;
+  --ink-2:      #a9b8c6;
+  --ink-3:      #7d8ea0;
+  --rule:       #2a3642;
+  --rule-2:     #3a4956;
+  --accent:     #a396ff;
+  --accent-ink: #c3baff;
+  --accent-wash:#241e4d;
+  --warn:       #edb765;
+  --warn-wash:  #33270f;
+  --warn-rule:  #6b5220;
+  --ok:         #6fd3bf;
+  --ok-wash:    #10322c;
+  --shadow:     0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.68;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 940px; margin: 0 auto; padding: 0 22px 96px; }
+
+/* ── Đầu trang ── */
+.masthead {
+  border-bottom: 2px solid var(--ink);
+  padding: 64px 0 26px;
+  margin-bottom: 30px;
+}
+.eyebrow {
+  font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-3); margin: 0 0 14px;
+}
+h1 {
+  font-family: Lora, Georgia, serif;
+  font-weight: 600; font-size: clamp(34px, 6vw, 54px); line-height: 1.1;
+  letter-spacing: -.015em; margin: 0 0 16px; text-wrap: balance;
+}
+.standfirst { font-size: 19px; color: var(--ink-2); margin: 0; max-width: 58ch; }
+.byline {
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--rule);
+  display: flex; flex-wrap: wrap; gap: 8px 26px;
+  font-size: 13.5px; color: var(--ink-3);
+}
+.byline b { color: var(--ink-2); font-weight: 500; }
+
+/* ── Mục lục ── */
+.toc { background: var(--paper-2); border: 1px solid var(--rule); border-radius: 3px; padding: 20px 22px; margin: 0 0 44px; }
+.toc h2 { font-family: "Be Vietnam Pro", sans-serif; font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 12px; }
+.toc ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.toc a { color: var(--ink); text-decoration: none; border-bottom: 1px solid transparent; font-size: 15.5px; }
+.toc a:hover, .toc a:focus-visible { border-bottom-color: var(--accent); color: var(--accent-ink); }
+.toc .n { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-3); margin-right: 10px; }
+
+/* ── Phần ── */
+.part { margin: 0 0 12px; padding-top: 46px; }
+.part-head { border-top: 1px solid var(--rule-2); padding-top: 18px; margin-bottom: 30px; }
+.part-num {
+  font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: .12em;
+  color: var(--accent); text-transform: uppercase; display: block; margin-bottom: 8px;
+}
+h2 {
+  font-family: Lora, Georgia, serif; font-weight: 600;
+  font-size: clamp(25px, 3.6vw, 33px); line-height: 1.22; letter-spacing: -.01em;
+  margin: 0 0 10px; text-wrap: balance;
+}
+.part-head p { margin: 0; color: var(--ink-2); max-width: 60ch; font-size: 16.5px; }
+
+/* ── Bước ── */
+.step { margin: 38px 0; }
+.step-head { display: flex; gap: 14px; align-items: baseline; margin-bottom: 10px; }
+.step-n {
+  flex: none; font-family: "IBM Plex Mono", monospace; font-size: 13px; font-weight: 500;
+  color: var(--accent); background: var(--accent-wash);
+  border-radius: 2px; padding: 3px 8px; line-height: 1.3;
+}
+h3 {
+  font-family: "Be Vietnam Pro", sans-serif; font-weight: 600;
+  font-size: 20px; line-height: 1.35; margin: 0; letter-spacing: -.005em;
+}
+.step p { margin: 0 0 13px; max-width: 64ch; }
+.step p:last-child { margin-bottom: 0; }
+a { color: var(--accent-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Ảnh chụp ── */
+figure { margin: 22px 0 26px; }
+figure img {
+  display: block; max-width: 100%; height: auto;
+  border: 1px solid var(--rule-2); border-radius: 4px;
+  background: var(--card); box-shadow: var(--shadow);
+}
+figure.phone img { max-width: 340px; }
+figure.phone.crop img { max-height: 428px; object-fit: cover; object-position: top; }
+figure.phone { display: flex; flex-direction: column; align-items: flex-start; }
+figcaption {
+  margin-top: 10px; font-size: 13.5px; line-height: 1.55; color: var(--ink-3);
+  max-width: 60ch; border-left: 2px solid var(--rule-2); padding-left: 11px;
+}
+.pair { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.pair figure { margin: 22px 0 26px; }
+
+/* ── Khối lưu ý ── */
+.note {
+  border: 1px solid var(--rule); border-left: 3px solid var(--ink-3);
+  background: var(--card); border-radius: 3px;
+  padding: 15px 18px; margin: 22px 0; font-size: 15.5px; max-width: 64ch;
+}
+.note.warn { border-color: var(--warn-rule); border-left-color: var(--warn); background: var(--warn-wash); }
+.note.ok   { border-color: var(--ok); border-left-color: var(--ok); background: var(--ok-wash); }
+.note .label {
+  display: block; font-size: 11.5px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; margin-bottom: 6px; color: var(--ink-3);
+}
+.note.warn .label { color: var(--warn); }
+.note.ok .label { color: var(--ok); }
+.note p { margin: 0 0 9px; }
+.note p:last-child { margin-bottom: 0; }
+
+/* ── Bảng ── */
+.tablewrap { overflow-x: auto; margin: 22px 0 26px; border: 1px solid var(--rule); border-radius: 3px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+thead th {
+  font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-3); background: var(--paper-2); white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: .89em; }
+
+.intro-note {
+  font-size: 14.5px; color: var(--ink-3); max-width: 64ch;
+  margin: 0 0 34px; padding-left: 13px; border-left: 2px solid var(--rule-2);
+}
+
+footer {
+  margin-top: 66px; padding-top: 22px; border-top: 2px solid var(--ink);
+  font-size: 14px; color: var(--ink-3); max-width: 64ch;
+}
+
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  .wrap { padding: 0 16px 64px; }
+  .masthead { padding-top: 40px; }
+  .step-head { gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Tài liệu bàn giao</p>
+  <h1>Sổ tay vận hành TimeFlow</h1>
+  <p class="standfirst">Đi trọn một kỳ lương: khai người, chấm công, soát lại, chốt kỳ, ra tiền. Mười chín bước, mỗi bước kèm ảnh chụp từ hệ thống đang chạy.</p>
+  <div class="byline">
+    <span><b>Dành cho</b> chủ doanh nghiệp và người phụ trách nhân sự</span>
+    <span><b>Thời gian đọc</b> khoảng 25 phút</span>
+    <span><b>Cập nhật</b> 26/08/2026</span>
+  </div>
+</header>
+
+<p class="intro-note">Ảnh minh hoạ chụp trên một doanh nghiệp mẫu của hệ thống, nên tên công ty, tên người và các con số trong ảnh không phải của bạn. Màn hình, nút bấm và thứ tự thao tác thì giống hệt.</p>
+
+<nav class="toc">
+  <h2>Nội dung</h2>
+  <ol>
+    <li><a href="#p0"><span class="n">00</span>Đăng nhập và bốn vai trò</a></li>
+    <li><a href="#p1"><span class="n">01</span>Khai một lần: ca, điểm làm việc, cách tính công</a></li>
+    <li><a href="#p2"><span class="n">02</span>Vòng quản trị: từ tạo nhân viên tới bảng lương</a></li>
+    <li><a href="#p3"><span class="n">03</span>Vòng nhân viên trên điện thoại</a></li>
+    <li><a href="#p4"><span class="n">04</span>Nhịp vận hành: hằng ngày và cuối tháng</a></li>
+    <li><a href="#p5"><span class="n">05</span>Sáu chỗ dễ sai</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════ PHẦN 0 ═══════════════ -->
+<section class="part" id="p0">
+  <div class="part-head">
+    <span class="part-num">Phần 00</span>
+    <h2>Đăng nhập và bốn vai trò</h2>
+    <p>Một địa chỉ duy nhất cho cả doanh nghiệp. Ai thấy được gì là do vai trò quyết định.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">01</span><h3>Mở trang và đăng nhập</h3></div>
+    <p>Hệ thống chạy trên trình duyệt, không cần cài đặt gì. Quản trị dùng máy tính, nhân viên dùng điện thoại — <b>cùng một địa chỉ</b>, hệ thống tự nhận ra thiết bị và hiện giao diện phù hợp.</p>
+    <figure>
+      <img src="huong-dan/img/01-dang-nhap.jpeg" alt="Trang đăng nhập TimeFlow: cột trái giới thiệu sản phẩm kèm bảng công mẫu, cột phải là ô Email và Mật khẩu.">
+      <figcaption>Ô "Ghi nhớ đăng nhập" bật sẵn — trên máy tính dùng chung thì nên tắt.</figcaption>
+    </figure>
+    <p>Một người có thể thuộc nhiều doanh nghiệp. Khi đó sau khi đăng nhập sẽ có bước chọn doanh nghiệp, và đổi qua lại được bằng nút <b>Chuyển doanh nghiệp</b> ở thanh trên cùng.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">02</span><h3>Bốn vai trò</h3></div>
+    <p>Vai trò khai ở hồ sơ từng người, sửa được bất cứ lúc nào.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Vai trò</th><th>Thấy và làm được gì</th></tr></thead>
+        <tbody>
+          <tr><td><b>Chủ sở hữu</b></td><td>Toàn quyền: cấu hình doanh nghiệp, mức lương của mọi người, chốt kỳ, chốt lương</td></tr>
+          <tr><td><b>Quản trị viên</b></td><td>Như chủ sở hữu trong vận hành hằng ngày — dành cho người phụ trách nhân sự</td></tr>
+          <tr><td><b>Quản lý</b></td><td>Xem và duyệt trong phạm vi người mình quản lý</td></tr>
+          <tr><td><b>Nhân viên</b></td><td>Chấm công, xem công và phiếu lương của chính mình, gửi yêu cầu</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Nhân viên <b>không nhìn thấy lương của người khác</b>, và mặc định cũng chưa thấy phiếu lương của chính mình — quyền đó phải được bật riêng ở từng hồ sơ. Chi tiết ở bước 07.</p>
+    <div class="note">
+      <span class="label">Doanh nghiệp này không thấy dữ liệu doanh nghiệp kia</span>
+      <p>Cô lập giữa các doanh nghiệp được thực thi ở tầng cơ sở dữ liệu, không phải chỉ ẩn trên giao diện. Dán mã nhân viên của một doanh nghiệp khác vào thanh địa chỉ cũng chỉ nhận được "không tồn tại".</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ PHẦN 1 ═══════════════ -->
+<section class="part" id="p1">
+  <div class="part-head">
+    <span class="part-num">Phần 01</span>
+    <h2>Khai một lần trước khi chạy</h2>
+    <p>Ba màn hình quyết định mọi con số về sau. Khai sai ở đây thì bảng lương sai, và không màn hình nào báo lỗi.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">03</span><h3>Ca làm việc</h3></div>
+    <p>Mỗi ca gồm tên, mã, độ dài, giờ nghỉ giữa ca, mức cho phép đi muộn, và <b>lịch làm việc theo thứ trong tuần</b>. Có hai kiểu ca:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Kiểu ca</th><th>Dùng khi nào</th><th>Tính đi muộn, về sớm?</th></tr></thead>
+        <tbody>
+          <tr><td><b>Có giờ vào, giờ ra</b></td><td>Ca cố định: hành chính, ca sáng, ca chiều, ca đêm</td><td>Có</td></tr>
+          <tr><td><b>Theo số giờ</b></td><td>Làm linh hoạt, chỉ cần đủ số giờ trong ngày</td><td>Không</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/03-ca-lam-viec.jpeg" alt="Màn hình Ca làm việc với các thẻ ca: tên ca, khung giờ, giờ nghỉ, số nhân viên đang áp dụng và dải bảy ngày trong tuần.">
+      <figcaption>Dải "T2 T3 T4 T5 T6 T7 CN" ở cuối mỗi thẻ là lịch làm việc của ca — ô nào sáng là ngày làm. Ca qua đêm (22:00–06:00) được hỗ trợ; toàn bộ giờ làm tính về ngày bắt đầu ca.</figcaption>
+    </figure>
+    <div class="note warn">
+      <span class="label">Dải bảy ngày là chỗ dễ sai nhất</span>
+      <p>Ngày nằm <b>ngoài</b> lịch làm việc của ca được xếp là ngày nghỉ, và <b>toàn bộ giờ làm hôm đó thành tăng ca</b>. Doanh nghiệp mở cả tuần mà quên tích ô Chủ nhật thì mỗi Chủ nhật sẽ đội lên đáng kể — bảng lương vẫn hiện bình thường, không có cảnh báo nào.</p>
+    </div>
+    <p>Có thể <b>nhân bản</b> một ca rồi sửa bản sao, thay vì khai lại từ đầu. Ca không dùng nữa thì chuyển sang <i>Ngừng sử dụng</i> — dữ liệu công cũ vẫn giữ nguyên.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">04</span><h3>Điểm làm việc</h3></div>
+    <p>Toạ độ nơi làm việc cùng bán kính cho phép. Nhân viên chấm công trong bán kính thì hệ thống ghi nhận thẳng; ra ngoài bán kính thì <b>bắt chụp ảnh</b> và đưa bản ghi vào danh sách cần xem lại. Đây là cơ chế chống chấm công hộ.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/04-diem-lam-viec.jpeg" alt="Màn hình Điểm làm việc: một thẻ ghi tên điểm, toạ độ và bán kính đo khoảng cách 150 mét.">
+      <figcaption>Bán kính không chặn ai chấm công — nó quyết định lúc nào cần ảnh và lúc nào cần người quản trị xem lại.</figcaption>
+    </figure>
+    <p><b>Cách lấy toạ độ:</b> đứng tại nơi làm việc, mở Google Maps, bấm giữ vào vị trí, sao chép cặp số hiện ra rồi dán vào <b>Điểm làm việc → Thêm điểm làm việc</b>. Bán kính 100–150 m hợp với một mặt bằng phố; nhà máy hoặc kho rộng thì để lớn hơn. Nhiều chi nhánh thì khai nhiều điểm.</p>
+    <div class="note warn">
+      <span class="label">Chưa khai điểm làm việc thì chống gian lận chưa bật</span>
+      <p>Không có toạ độ thì không có gì để đối chiếu: chấm công vẫn chạy, nhưng hệ thống không bao giờ hỏi ảnh và danh sách <b>Cần xem lại</b> sẽ luôn trống. Đây là việc nên làm trong ngày đầu.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">05</span><h3>Cách tính công</h3></div>
+    <p>Ở <b>Cài đặt → Chung</b>, doanh nghiệp chọn một trong hai cách quy giờ làm ra ngày công. Khác biệt chỉ lộ ra khi có người <b>làm thiếu giờ</b>.</p>
+    <p>Ví dụ một người lương <b>300.000 ₫/ngày</b>, ngày chuẩn <b>8 giờ</b>, tăng ca <b>50.000 ₫/giờ</b>:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Hôm đó làm</th><th>Có ca cụ thể</th><th>Không có ca — theo giờ chuẩn</th></tr></thead>
+        <tbody>
+          <tr><td>8 giờ — đủ công</td><td class="num">300.000 ₫</td><td class="num">300.000 ₫</td></tr>
+          <tr><td>10 giờ</td><td class="num">300.000 + 100.000 = 400.000 ₫</td><td class="num">300.000 + 100.000 = 400.000 ₫</td></tr>
+          <tr><td>6 giờ — về sớm</td><td class="num">300.000 ₫ &nbsp;<i>đủ một công</i></td><td class="num">225.000 ₫ &nbsp;<i>0,75 công</i></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Nói gọn: <b>Có ca cụ thể</b> trả đủ một công dù về sớm — cộng giờ thì tính, trừ giờ thì không. <b>Không có ca</b> thì đối xứng cả hai chiều, và ngày công ra số thập phân.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/05-cai-dat.jpeg" alt="Màn hình Cài đặt với năm tab: Chung, Ca làm việc, Ngày lễ, Tăng ca, Phụ cấp và khấu trừ; tab Chung đang mở với các ngưỡng vận hành.">
+      <figcaption>"Cách tính công" nằm ở tab <b>Chung</b>, dưới phần ngưỡng vận hành. Bốn ngưỡng phía trên chỉ ảnh hưởng tới việc hệ thống <i>đặt câu hỏi</i>, không tự kết luận thay bạn.</figcaption>
+    </figure>
+    <p>Ba tab còn lại khai một lần rồi ít khi đụng tới: <b>Ngày lễ</b> (danh sách ngày lễ của doanh nghiệp), <b>Tăng ca</b> (hệ số theo loại ngày — thường, cuối tuần, ngày lễ), <b>Phụ cấp &amp; khấu trừ</b> (các khoản cố định theo kỳ, áp theo phòng ban hoặc chức vụ).</p>
+  </div>
+</section>
+
+<!-- ═══════════════ PHẦN 2 ═══════════════ -->
+<section class="part" id="p2">
+  <div class="part-head">
+    <span class="part-num">Phần 02</span>
+    <h2>Vòng quản trị: từ tạo nhân viên tới bảng lương</h2>
+    <p>Tám bước, chạy trên máy tính. Đây là phần người quản trị làm.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">06</span><h3>Màn hình Tổng quan — nơi bắt đầu mỗi ngày</h3></div>
+    <p>Đăng nhập xong là vào đây. Bốn con số trên cùng trả lời câu hỏi "hôm nay thế nào": tổng nhân viên, đã chấm công, đi muộn, đang nghỉ. Bên dưới là biểu đồ bảy ngày, hoạt động trong ngày, yêu cầu chờ duyệt, và danh sách <b>ai chưa chấm công</b> kèm nút gọi và nhắn tin ngay tại chỗ.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/02-tong-quan.jpeg" alt="Màn hình Tổng quan: bốn thẻ số liệu, biểu đồ cột bảy ngày, danh sách hoạt động hôm nay, yêu cầu chờ duyệt và danh sách nhân viên chưa chấm công.">
+      <figcaption>Cột trái là thanh điều hướng chính — mười mục, đi được hết, không mục nào là "sắp ra mắt".</figcaption>
+    </figure>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">07</span><h3>Thêm một nhân viên</h3></div>
+    <p>Màn hình <b>Nhân viên</b> là danh sách toàn doanh nghiệp: tìm theo tên có dấu hay không dấu đều ra, lọc theo phòng ban, trạng thái và loại hợp đồng. Tích chọn nhiều dòng thì đổi phòng ban được hàng loạt.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/06-danh-sach-nhan-vien.jpeg" alt="Danh sách nhân viên: ô tìm kiếm, ba bộ lọc, bảng gồm cột nhân viên, mã, phòng ban, chức vụ, loại hợp đồng, ngày bắt đầu và trạng thái.">
+      <figcaption>Cột <b>Trạng thái</b> phân biệt Đang làm việc, Đang nghỉ phép, Chưa kích hoạt tài khoản và Đã nghỉ việc.</figcaption>
+    </figure>
+    <p><b>Nhân viên → Thêm nhân viên.</b> Một biểu mẫu duy nhất, chia bốn khối: thông tin cá nhân, thông tin công việc, mức lương, tài khoản. Mã nhân viên hệ thống tự đề xuất số tiếp theo, sửa được. Mã trùng bị chặn ngay, không phân biệt hoa thường.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/07-them-nhan-vien.jpeg" alt="Biểu mẫu Thêm nhân viên đã điền: họ tên, mã nhân viên, email, số điện thoại, phòng ban, chức vụ, ngày bắt đầu, ca làm việc, đơn vị lương và số tiền, cùng ba công tắc quyền.">
+      <figcaption>Đơn vị lương có ba lựa chọn: <b>Lương tháng</b>, <b>Lương ngày</b>, <b>Lương giờ</b>. "Hiệu lực từ ngày" đặt đúng ngày người đó bắt đầu ăn mức lương ấy.</figcaption>
+    </figure>
+    <div class="note">
+      <span class="label">Ba công tắc cuối biểu mẫu</span>
+      <p><b>Gửi lời mời đăng nhập</b> — nhân viên nhận email kích hoạt ngay sau khi lưu. Tắt đi thì cấp tài khoản bằng tay ở bước sau.</p>
+      <p><b>Cho phép xem phiếu lương</b> — cân nhắc kỹ. Bật nhầm thì người ta đã nhìn thấy lương rồi, không thu lại được; nên để tắt và bật lại từng người khi đã quyết.</p>
+      <p><b>Cho phép chấm công ngoài địa điểm</b> — chỉ bật cho người đi thị trường hoặc làm từ xa. Bật cho tất cả là vô hiệu hoá phần chống gian lận.</p>
+    </div>
+    <p>Nút <b>Nhập từ Excel</b> ở đầu danh sách dùng khi khai lần đầu cho cả doanh nghiệp, thay vì gõ tay từng người.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">08</span><h3>Hồ sơ nhân viên và mức lương</h3></div>
+    <p>Bấm vào một người trong danh sách để mở hồ sơ. Năm tab: <b>Tổng quan</b>, <b>Chấm công</b>, <b>Lịch làm việc</b>, <b>Yêu cầu</b>, <b>Thông tin lương</b>.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/08-ho-so-nhan-vien.jpeg" alt="Hồ sơ nhân viên: tên, trạng thái, mã, chức vụ, các tab, thông tin liên hệ và công việc, hoạt động gần đây, tổng hợp công tháng và ca làm mặc định.">
+      <figcaption>Ô "Công tháng" bên phải cập nhật theo thời gian thực. Ở tab <b>Chấm công</b>, dòng nào có chấm tròn nhỏ là dòng có ảnh bằng chứng — bấm vào để xem lại.</figcaption>
+    </figure>
+    <p>Tab <b>Thông tin lương</b> là nơi khai và xem lịch sử mức lương. Ở đây <b>không có nút sửa và không có nút xoá</b> — mỗi lần đổi lương là thêm một dòng mới có mốc hiệu lực riêng. Nhờ vậy bảng lương của kỳ đã trả không bị tính lại khi lương hôm nay thay đổi.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/09-thong-tin-luong.jpeg" alt="Tab Thông tin lương: mức lương đang hiệu lực, bảng lịch sử mức lương với cột hiệu lực từ, đơn vị, số tiền, người khai, và khối tiền tăng ca riêng.">
+      <figcaption>Khối "Tiền tăng ca riêng" ở dưới dùng khi có thoả thuận riêng với một người — khai bằng <b>số tiền cho mỗi giờ</b>, không phải hệ số nhân với lương gốc.</figcaption>
+    </figure>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">09</span><h3>Cấp tài khoản đăng nhập</h3></div>
+    <p>Hồ sơ mới tạo mà chưa gửi lời mời thì chưa đăng nhập được — trạng thái ghi <i>"Chưa kích hoạt tài khoản"</i>. Bấm <b>Tạo tài khoản đăng nhập</b> ở đầu hồ sơ, hệ thống sinh một mật khẩu tạm.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/10-tao-tai-khoan.jpeg" alt="Hộp thoại Tài khoản đã được tạo, hiển thị email đăng nhập và ô mật khẩu tạm đã được che.">
+      <figcaption>Mật khẩu tạm trong ảnh đã được che. Trên máy bạn nó hiện rõ — và <b>chỉ hiện đúng một lần</b>.</figcaption>
+    </figure>
+    <div class="note warn">
+      <span class="label">Chỉ hiện một lần</span>
+      <p>Đóng hộp thoại là mất mật khẩu tạm, không xem lại được. Chép ra hoặc nhắn thẳng cho nhân viên <b>trước khi bấm đóng</b>, qua tin nhắn riêng hoặc gọi điện — đừng gửi vào nhóm chat chung.</p>
+      <p>Lỡ mất thì không sao: bấm lại <b>Tạo tài khoản đăng nhập</b> để sinh mật khẩu tạm mới. Người dùng mật khẩu tạm bị bắt đổi ngay ở lần đăng nhập đầu.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">10</span><h3>Theo dõi chấm công trong tháng</h3></div>
+    <p><b>Chấm công</b> hiện lưới cả tháng: mỗi hàng một người, mỗi cột một ngày. Ký hiệu đọc nhanh — <span class="mono">✓</span> đúng giờ, <span class="mono">M</span> đi muộn, <span class="mono">S</span> về sớm, <span class="mono">!</span> thiếu giờ ra, <span class="mono">P</span> nghỉ phép, <span class="mono">K</span> nghỉ không phép, <span class="mono">–</span> không có bản ghi. Cột cuối là tổng ngày công.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/11-luoi-cham-cong.jpeg" alt="Lưới chấm công tháng: hàng là nhân viên, cột là ngày trong tháng, mỗi ô một ký hiệu trạng thái, cột cuối là tổng ngày công.">
+      <figcaption>Bấm vào một ô để xem chi tiết lần chấm công đó. Nút chuyển tháng và tình trạng kỳ nằm ở đầu trang; tab <b>Danh sách bản ghi</b> cho cách xem theo dòng thay vì theo lưới.</figcaption>
+    </figure>
+    <p>Việc cần làm ở đây trước khi chốt kỳ: rà những ô <span class="mono">!</span> — người ta quên bấm tan ca — và những ô <span class="mono">–</span> rơi vào ngày đáng lẽ có người làm.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">11</span><h3>Soát những lần chấm công đáng ngờ</h3></div>
+    <p>Màn hình <b>Cần xem lại</b> gom các bản ghi bất thường: chấm công cách xa điểm làm việc, hoặc nằm ngoài khung giờ ca. Hệ thống <b>không tự kết luận ai gian lận</b> — GPS đo sai, đi công tác, làm thêm ngoài ca, hay khai sai ca đều ra dấu hiệu giống nhau. Nó đưa bằng chứng, người quản trị quyết.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/30-can-xem-lai.jpeg" alt="Danh sách Cần xem lại: mỗi hàng là một bản ghi bất thường với tên nhân viên, điểm làm việc, khoảng cách tính bằng mét và số lần bán kính, thời điểm và trạng thái xem xét.">
+      <figcaption>Cột "Dấu hiệu" ghi rõ cách xa bao nhiêu mét và gấp mấy lần bán kính cho phép.</figcaption>
+    </figure>
+    <p>Bấm <b>Xem chi tiết</b> để mở bằng chứng của cả lần vào ca lẫn lần ra ca: ảnh chụp hiện trường, toạ độ thô, độ chính xác GPS mà thiết bị tự khai, và liên kết mở thẳng Google Maps.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/31-bang-chung-cham-cong.jpeg" alt="Hộp thoại bằng chứng chấm công: hai thẻ lần vào ca và lần ra ca, mỗi thẻ ghi thời điểm chụp, điểm làm việc, khoảng cách, độ chính xác GPS, toạ độ thô và liên kết Google Maps.">
+      <figcaption>Lưu ý dòng cuối hộp thoại: <i>ảnh là ảnh hiện trường tại thời điểm chấm công, không dùng để đối chiếu khuôn mặt hay xác nhận danh tính.</i></figcaption>
+    </figure>
+    <p>Xem xong bấm <b>Đánh dấu đã xem xét</b> để bản ghi rời khỏi hàng chờ.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">12</span><h3>Chốt kỳ công — bước không quay lại được</h3></div>
+    <p>Khi đã rà xong cả tháng, bấm <b>Chốt kỳ</b> ở màn hình Chấm công. Sau khi chốt, số liệu công của tháng đó đóng băng: kể cả chấm công hằng ngày cũng bị từ chối, mọi thay đổi phải đi qua một yêu cầu được duyệt.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/12-chot-ky-cong.jpeg" alt="Hộp thoại xác nhận Chốt kỳ công tháng 07/2026, cảnh báo rằng phiên bản này không có đường mở lại kỳ đã chốt, với hai nút Hủy và Chốt kỳ.">
+      <figcaption>Đọc kỹ dòng chữ trong hộp thoại trước khi bấm.</figcaption>
+    </figure>
+    <div class="note warn">
+      <span class="label">Không có nút mở lại</span>
+      <p>Phiên bản hiện tại <b>không có đường mở lại kỳ công đã chốt</b>. Chốt nhầm tháng, hoặc chốt khi tháng chưa hết, là không sửa được bằng giao diện.</p>
+      <p><b>Quy tắc an toàn:</b> chỉ bấm nút này <b>sau ngày cuối cùng của tháng</b>, và sau khi đã rà hết ô <span class="mono">!</span> lẫn danh sách Cần xem lại.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">13</span><h3>Bảng lương và xuất CSV</h3></div>
+    <p><b>Bảng lương</b> mở ra ở tháng trước — đúng thói quen "đầu tháng này tính lương tháng trước". Dòng tóm tắt trên cùng cho biết tổng số người, tổng ngày công, tổng giờ làm, tổng giờ tăng ca và tổng thực nhận.</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/13-bang-luong.jpeg" alt="Bảng lương tháng: dòng tổng hợp phía trên, bảng chi tiết mười ba cột từ ngày công tới thực nhận cho từng nhân viên.">
+      <figcaption>Cột <b>Ngày công quy đổi</b> là con số thật sự dùng để tính tiền, theo cách tính công đã chọn ở bước 05. Bộ lọc "Tình trạng dữ liệu" giúp lọc riêng những dòng còn thiếu dữ kiện.</figcaption>
+    </figure>
+    <p>Bấm vào một dòng để mở <b>chi tiết cách ra con số</b>: cơ sở tính, phụ cấp, khấu trừ, và tiền phát sinh của <b>từng ngày</b> trong tháng. Đây là chỗ để trả lời khi nhân viên hỏi "sao tháng này em ít hơn tháng trước".</p>
+    <figure>
+      <img loading="lazy" decoding="async" src="huong-dan/img/14-chi-tiet-dong-luong.jpeg" alt="Chi tiết một dòng lương: cơ sở tính, lương gốc, tiền tăng ca, thực nhận, các khoản phụ cấp và khấu trừ, và danh sách tiền phát sinh theo từng ngày.">
+      <figcaption>Mỗi ngày ghi rõ loại ngày, số giờ, số giờ tăng ca và số tiền của ngày đó.</figcaption>
+    </figure>
+    <p>Nút <b>Xuất CSV</b> tải toàn bộ bảng về máy — mở bằng Excel để in hoặc gửi kế toán. Nút <b>Chốt lương kỳ</b> chỉ bấm được <b>sau khi kỳ công đã chốt</b>; trước đó hệ thống nói rõ lý do và chỉ đường sang trang Chấm công.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ PHẦN 3 ═══════════════ -->
+<section class="part" id="p3">
+  <div class="part-head">
+    <span class="part-num">Phần 03</span>
+    <h2>Vòng nhân viên trên điện thoại</h2>
+    <p>Không có phần này thì bảng lương không bao giờ có số. Đây là phần cần hướng dẫn tận tay từng người trong ngày đầu.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">14</span><h3>Đăng nhập lần đầu</h3></div>
+    <p>Nhân viên mở cùng địa chỉ trên điện thoại. Giao diện tự chuyển sang khổ dọc, bốn mục dưới đáy: <b>Trang chủ</b>, <b>Bảng lương</b>, <b>Yêu cầu</b>, <b>Cá nhân</b>.</p>
+    <p>Ai đăng nhập bằng <b>mật khẩu tạm</b> sẽ bị chặn ở màn hình đổi mật khẩu — không đổi thì không đi tiếp được. Đây là hành vi đúng, không phải lỗi.</p>
+    <div class="pair">
+      <figure class="phone crop">
+        <img loading="lazy" decoding="async" src="huong-dan/img/20-dien-thoai-dang-nhap.jpeg" alt="Trang đăng nhập trên điện thoại: ô Email, ô Mật khẩu và nút Đăng nhập.">
+        <figcaption>Đăng nhập trên điện thoại.</figcaption>
+      </figure>
+      <figure class="phone crop">
+        <img loading="lazy" decoding="async" src="huong-dan/img/21-doi-mat-khau-lan-dau.jpeg" alt="Màn hình Đổi mật khẩu lần đầu với hai ô mật khẩu mới và nút Đổi mật khẩu.">
+        <figcaption>Bắt buộc đổi khi dùng mật khẩu tạm.</figcaption>
+      </figure>
+    </div>
+    <p>Bảo nhân viên <b>lưu trang vào màn hình chính</b> điện thoại (Safari: nút Chia sẻ → Thêm vào MH chính; Chrome: menu ba chấm → Thêm vào MH chính). Từ đó nó mở như một ứng dụng, không phải gõ địa chỉ mỗi ngày.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">15</span><h3>Vào ca và tan ca</h3></div>
+    <p>Trang chủ hiện đồng hồ chạy, tên ca, điểm làm việc và một nút lớn <b>Vào ca</b>. Bấm nút, điện thoại xin quyền vị trí — <b>phải bấm Cho phép</b>, không có vị trí thì không chấm công được.</p>
+    <div class="pair">
+      <figure class="phone crop">
+        <img loading="lazy" decoding="async" src="huong-dan/img/22-trang-chu-nhan-vien.jpeg" alt="Trang chủ nhân viên: nhãn Chưa vào ca, tên ca và điểm làm việc, đồng hồ, nút Vào ca và ghi chú về việc ghi nhận vị trí GPS.">
+        <figcaption>Trước khi vào ca.</figcaption>
+      </figure>
+      <figure class="phone crop">
+        <img loading="lazy" decoding="async" src="huong-dan/img/27-da-tan-ca.jpeg" alt="Trang chủ nhân viên sau khi tan ca: nhãn Đã tan ca, giờ vào, giờ ra, tổng thời gian và nút Chấm công vào lại.">
+        <figcaption>Sau khi tan ca — vẫn vào ca lại được trong ngày.</figcaption>
+      </figure>
+    </div>
+    <div class="note ok">
+      <span class="label">Đứng đúng chỗ thì không cần chụp ảnh</span>
+      <p>Nếu GPS xác nhận người đó đang trong bán kính của điểm làm việc, hệ thống ghi nhận ngay — không mở camera, không hỏi gì thêm. Nhanh gọn cho việc thường ngày.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">16</span><h3>Khi chấm công ở xa nơi làm việc</h3></div>
+    <p>Ra ngoài bán kính thì camera bật lên và hệ thống nói rõ đang cách bao nhiêu mét. <b>Không chụp ảnh thì không gửi được.</b></p>
+    <div class="pair">
+      <figure class="phone">
+        <img loading="lazy" decoding="async" src="huong-dan/img/25-camera-cham-cong.jpeg" alt="Màn hình camera chấm công với thông báo cách văn phòng chính khoảng 5.113 mét, chip Vị trí đã xác định và nút chụp tròn.">
+        <figcaption>Khung hình trong ảnh là hình giả — máy dùng để chụp tài liệu không có camera. Trên điện thoại thật, chỗ này là hình ảnh trực tiếp.</figcaption>
+      </figure>
+      <figure class="phone">
+        <img loading="lazy" decoding="async" src="huong-dan/img/26-xac-nhan-anh.jpeg" alt="Màn hình xác nhận sau khi chụp, với hai nút Chụp lại và Gửi chấm công.">
+        <figcaption>Chụp xong còn được xem lại và chụp lại trước khi gửi.</figcaption>
+      </figure>
+    </div>
+    <p>Gửi xong, hệ thống báo thẳng: <i>"Đã ghi nhận — cách xa điểm làm việc. Quản trị sẽ xem lại bản ghi này."</i> Bản ghi vẫn được tính, chỉ là nó xuất hiện trong danh sách <b>Cần xem lại</b>. Nhân viên biết mình đang bị ghi nhận — đó là điều tốt, minh bạch hai chiều.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">17</span><h3>Khi điện thoại không lấy được vị trí</h3></div>
+    <figure class="phone">
+      <img loading="lazy" decoding="async" src="huong-dan/img/23-loi-gps.jpeg" alt="Màn hình báo Chưa lấy được vị trí, gợi ý ra chỗ thoáng hoặc bật lại định vị, kèm nút Thử lại.">
+      <figcaption>Trạng thái này gặp khi ở trong nhà kín, hoặc quyền vị trí bị tắt.</figcaption>
+    </figure>
+    <p>Cách xử lý theo thứ tự: bước ra chỗ thoáng rồi bấm <b>Thử lại</b>; nếu vẫn không được thì vào Cài đặt điện thoại bật lại Định vị và cấp quyền vị trí cho trình duyệt. Cùng lắm thì làm việc bình thường rồi <b>gửi yêu cầu bổ sung chấm công</b> ở bước 19.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">18</span><h3>Nhân viên tự xem công và lương của mình</h3></div>
+    <p>Mục <b>Bảng lương</b> hiện thực nhận của tháng, tổng hợp ngày công, giờ làm, giờ tăng ca, số lần đi muộn — và chi tiết từng ngày. Chỉ thấy của chính mình.</p>
+    <figure class="phone">
+      <img loading="lazy" decoding="async" src="huong-dan/img/28-phieu-luong-nhan-vien.jpeg" alt="Phiếu lương của nhân viên trên điện thoại: thực nhận, nhãn chưa chốt lương, lương cơ bản, tổng hợp tháng và chi tiết theo ngày.">
+      <figcaption>Nhãn "Chưa chốt lương" cho biết con số còn thay đổi. Chỉ người được bật quyền <i>Cho phép xem phiếu lương</i> mới thấy mục này.</figcaption>
+    </figure>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">19</span><h3>Gửi yêu cầu</h3></div>
+    <p>Mục <b>Yêu cầu → Tạo yêu cầu</b>. Bốn loại: <b>Xin nghỉ phép</b>, <b>Bổ sung chấm công</b> (quên bấm), <b>Điều chỉnh giờ vào/ra</b> (bấm sai giờ), <b>Đăng ký tăng ca</b>.</p>
+    <figure class="phone">
+      <img loading="lazy" decoding="async" src="huong-dan/img/29-tao-yeu-cau.jpeg" alt="Biểu mẫu Tạo yêu cầu trên điện thoại: chọn loại yêu cầu, từ ngày, đến ngày, lý do và nút Gửi yêu cầu.">
+      <figcaption>Yêu cầu đi thẳng vào hàng chờ duyệt ở màn hình <b>Yêu cầu</b> phía quản trị.</figcaption>
+    </figure>
+    <p>Phía quản trị: mở <b>Yêu cầu</b>, người chờ lâu nhất xếp lên đầu. Duyệt hay từ chối đều ghi lại người quyết định và thời điểm. Nếu doanh nghiệp có khai trần tăng ca, việc duyệt một yêu cầu làm nhân viên vượt trần sẽ kèm cảnh báo — nhưng người duyệt vẫn quyết.</p>
+  </div>
+</section>
+
+<!-- ═══════════════ PHẦN 4 ═══════════════ -->
+<section class="part" id="p4">
+  <div class="part-head">
+    <span class="part-num">Phần 04</span>
+    <h2>Nhịp vận hành</h2>
+    <p>Ai làm gì, vào lúc nào. In phần này dán ở nơi làm việc là đủ dùng.</p>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Khi nào</th><th>Ai</th><th>Làm gì</th></tr></thead>
+      <tbody>
+        <tr><td>Đầu mỗi ca</td><td>Nhân viên</td><td>Mở ứng dụng, bấm <b>Vào ca</b></td></tr>
+        <tr><td>Cuối mỗi ca</td><td>Nhân viên</td><td>Bấm <b>Tan ca</b>. Quên thì hôm sau gửi yêu cầu bổ sung chấm công</td></tr>
+        <tr><td>Mỗi sáng, 2 phút</td><td>Quản trị</td><td>Mở <b>Tổng quan</b>, xem ai chưa chấm công, gọi ngay từ danh sách</td></tr>
+        <tr><td>Trong tuần, khi có</td><td>Quản trị</td><td>Duyệt <b>Yêu cầu</b>; xử lý <b>Cần xem lại</b></td></tr>
+        <tr><td>Ngày cuối tháng</td><td>Quản trị</td><td>Mở <b>Chấm công</b>, rà hết ô <span class="mono">!</span> và ô <span class="mono">–</span> bất thường</td></tr>
+        <tr><td>Sau khi rà xong</td><td>Quản trị</td><td>Bấm <b>Chốt kỳ</b> — nhớ là không mở lại được</td></tr>
+        <tr><td>Đầu tháng sau</td><td>Quản trị</td><td>Mở <b>Bảng lương</b>, đối chiếu, <b>Xuất CSV</b>, rồi <b>Chốt lương kỳ</b></td></tr>
+        <tr><td>Khi có người mới</td><td>Quản trị</td><td>Thêm nhân viên → khai mức lương → cấp tài khoản đăng nhập</td></tr>
+        <tr><td>Khi có người nghỉ</td><td>Quản trị</td><td>Mở hồ sơ → Chỉnh sửa → đổi trạng thái sang <b>Đã nghỉ việc</b></td></tr>
+        <tr><td>Khi đổi lương</td><td>Quản trị</td><td>Tab <b>Thông tin lương</b> → Khai mức lương mới, đặt đúng ngày hiệu lực</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════ PHẦN 5 ═══════════════ -->
+<section class="part" id="p5">
+  <div class="part-head">
+    <span class="part-num">Phần 05</span>
+    <h2>Sáu chỗ dễ sai</h2>
+    <p>Cái chung của cả sáu: hệ thống <b>không báo lỗi</b>, con số vẫn hiện ra bình thường — chỉ là sai.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">01</span><h3>Quên khai mức lương</h3></div>
+    <p>Người chưa khai mức lương thì bảng lương ghi <b>"chưa khai mức lương"</b> ở mọi cột tiền, và người đó <b>không được cộng vào tổng</b> — dòng tóm tắt sẽ ghi "chưa gồm N người chưa đủ dữ kiện". Đọc lướt rất dễ tưởng tổng đã đủ. Cách kiểm: so con số N ấy với số người đáng lẽ có lương.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">02</span><h3>Chốt kỳ công nhầm</h3></div>
+    <p>Không có nút mở lại. Chốt giữa tháng là khoá luôn phần còn lại của tháng — nhân viên chấm công sẽ bị từ chối. Chỉ chốt sau ngày cuối tháng.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">03</span><h3>Khai thiếu ngày trong lịch làm việc của ca</h3></div>
+    <p>Ngày ngoài lịch làm việc bị xếp là ngày nghỉ, và <b>toàn bộ giờ làm hôm đó thành tăng ca</b>. Mỗi lần tạo ca mới, kiểm lại dải bảy ô ngày trước khi lưu.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">04</span><h3>Mức tăng ca riêng thay thế toàn bộ hệ số theo loại ngày</h3></div>
+    <p>Khi một người đã được khai <b>tiền tăng ca riêng</b>, hệ thống <b>bỏ qua hệ số theo loại ngày</b> của doanh nghiệp — nghĩa là làm ngày lễ vẫn ăn đúng số tiền mỗi giờ ấy, <b>không</b> nhân theo Điều 98 Bộ luật Lao động.</p>
+    <p>Đó là hành vi có chủ ý: một mức, không phải bốn. Nhưng nếu doanh nghiệp muốn trả theo hệ số ngày lễ thì phải <b>bỏ mức riêng</b> của từng người và khai hệ số chung ở <b>Cài đặt → Tăng ca</b>. Nên hỏi kế toán trước khi chọn.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">05</span><h3>Chưa khai điểm làm việc</h3></div>
+    <p>Không có toạ độ thì không có cảnh báo "chấm ngoài vùng", và màn hình <b>Cần xem lại</b> luôn trống. Hệ thống vẫn chạy, nhưng phần chống gian lận — lý do chính để dùng phần mềm này — chưa bật.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><span class="step-n">06</span><h3>Không xoá được nhân viên</h3></div>
+    <p>Hệ thống <b>không có chức năng xoá hồ sơ nhân viên</b>. Tạo nhầm một người thì cách duy nhất là mở hồ sơ, bấm <b>Chỉnh sửa</b> và đổi trạng thái sang <b>Đã nghỉ việc</b> — hồ sơ vẫn nằm đó, chỉ bị lọc khỏi bộ lọc mặc định.</p>
+    <p>Vì vậy: <b>kiểm lại tên và mã trước khi bấm Thêm nhân viên</b>, và đừng dùng dữ liệu thật để thử nghiệm.</p>
+  </div>
+</section>
+
+<footer>
+  <p><b>Sổ tay vận hành TimeFlow</b> — cập nhật 26/08/2026.</p>
+  <p>Ảnh minh hoạ chụp trên một doanh nghiệp mẫu của hệ thống; giao diện và thao tác giống hệt bản của doanh nghiệp bạn. Các con số trong ảnh là dữ liệu mẫu.</p>
+</footer>
+
+</div>
+</body>
+</html>
