@@ -22,7 +22,7 @@ chúng vào một script chạy lại được.
 | V-04 | Tài khoản | Cả 11 người (Yến + 10 nhân viên) |
 | V-05 | Mật khẩu ban đầu | `12345678`, **không** bắt đổi ở lần đăng nhập đầu |
 | V-06 | Ngày hiệu lực lương | **2026-08-01** |
-| V-07 | Email | tên không dấu + viết tắt họ đệm `@vinhyenfood.com` |
+| V-07 | Email | tên không dấu + viết tắt họ đệm, viết liền `@vinhyenfood.com` |
 | V-08 | Lịch làm việc | **cả 7 ngày** trong tuần |
 
 ### V-01 kéo theo một rủi ro phải chặn bằng máy
@@ -115,18 +115,18 @@ Cả 11 dòng: `status='active'`, `start_date='2026-08-01'`, `shift_id` là ca l
 | Mã | Họ tên | Email `@vinhyenfood.com` | Vai trò | Lương/ngày | Tăng ca/giờ |
 |---|---|---|---|---|---|
 | QL01 | Nguyễn Yến | `yen` | `owner` | — | — |
-| NV001 | Nguyễn Thị Hiền | `hien.nt` | `employee` | 250.000 | 40.000 |
-| NV002 | Trần Thị Anh | `anh.tt` | `employee` | 270.000 | 40.000 |
-| NV003 | Nguyễn Văn Thái | `thai.nv` | `employee` | 300.000 | 40.000 |
-| NV004 | Nguyễn Thị Minh Thu | `thu.ntm` | `employee` | 270.000 | 40.000 |
-| NV005 | Lê Thị Hiếu | `hieu.lt` | `employee` | 250.000 | 40.000 |
-| NV006 | Nguyễn Thị Yên | `yen.nt` | `employee` | 270.000 | 40.000 |
-| NV007 | Đinh Thị Mười | `muoi.dt` | `employee` | 250.000 | 40.000 |
-| NV008 | Hà Việt Anh | `vietanh.hv` | `employee` | 220.000 | 40.000 |
-| NV009 | Nguyễn Thị Sáu | `sau.nt` | `employee` | 270.000 | 40.000 |
-| NV010 | Đường Văn Hưng | `hung.dv` | `employee` | 200.000 | 40.000 |
+| NV001 | Nguyễn Thị Hiền | `hiennt` | `employee` | 250.000 | 40.000 |
+| NV002 | Trần Thị Anh | `anhtt` | `employee` | 270.000 | 40.000 |
+| NV003 | Nguyễn Văn Thái | `thainv` | `employee` | 300.000 | 40.000 |
+| NV004 | Nguyễn Thị Minh Thu | `thuntm` | `employee` | 270.000 | 40.000 |
+| NV005 | Lê Thị Hiếu | `hieult` | `employee` | 250.000 | 40.000 |
+| NV006 | Nguyễn Thị Yên | `yennt` | `employee` | 270.000 | 40.000 |
+| NV007 | Đinh Thị Mười | `muoidt` | `employee` | 250.000 | 40.000 |
+| NV008 | Hà Việt Anh | `vietanhhv` | `employee` | 220.000 | 40.000 |
+| NV009 | Nguyễn Thị Sáu | `saunt` | `employee` | 270.000 | 40.000 |
+| NV010 | Đường Văn Hưng | `hungdv` | `employee` | 200.000 | 40.000 |
 
-Quy tắc email là *tên + viết tắt họ đệm*, áp cho **cả mười người** chứ không phải
+Quy tắc email là *tên + viết tắt họ đệm, viết liền không dấu chấm*, áp cho **cả mười người** chứ không phải
 chỉ hai chỗ trùng (Trần Thị **Anh** / Hà Việt **Anh**, Nguyễn Thị **Yên** / chủ
 **Yến**). Một quy tắc có hai ngoại lệ là quy tắc người ta gõ sai.
 
@@ -263,3 +263,19 @@ thiết kế này.
 - **Phụ cấp / khấu trừ** (`pay_adjustments`) — chưa ai nêu khoản nào.
 - **Phòng ban, chức vụ** — chưa ai nêu.
 - **Số điện thoại và địa chỉ thật** — chủ dự án tự sửa ở `/admin/settings`.
+
+## Đổi email — 26/08/2026
+
+Chủ doanh nghiệp yêu cầu **bỏ dấu chấm** giữa tên và viết tắt họ đệm:
+`hien.nt@vinhyenfood.com` → `hiennt@vinhyenfood.com`. Lý do: dấu chấm giữa hai
+cụm không dấu là chỗ người ta gõ nhầm nhiều nhất khi đọc qua điện thoại.
+
+Áp cho **mười nhân viên**; chủ `yen@vinhyenfood.com` vốn không có dấu chấm nên
+giữ nguyên. Đã đổi ở **cả hai nơi** — `auth.users.email` (cái người ta gõ khi
+đăng nhập) và `employees.email` (cái hiện trên giao diện) — bằng
+`scripts/tmp/fix-vinhyen-emails.mjs`, chạy lại được và mặc định chỉ đọc.
+
+Đối chiếu: 10/10 dòng đổi ở mỗi bảng; chạy lại lần hai báo "đã xong từ trước"
+cho cả mười; đăng nhập thật `hiennt@vinhyenfood.com` vào được `/employee`.
+`scripts/seed-vinh-yen-food.mjs` đã sửa theo để lần chạy sau hội tụ chứ không
+tạo thêm một bộ mười tài khoản thứ hai.

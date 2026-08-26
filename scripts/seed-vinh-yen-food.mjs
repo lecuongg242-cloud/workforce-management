@@ -57,21 +57,28 @@ const STANDARD_HOURS_PER_DAY = 9.5;
  * Muoi nguoi an luong ngay. `otHourly` la SO TIEN mot gio tang ca (dong),
  * khong phai he so — xem migration 0026 §B.
  *
- * Email theo quy tac "ten + viet tat ho dem", ap cho CA MUOI NGUOI chu khong
- * chi hai cho trung (Tran Thi Anh / Ha Viet Anh, Nguyen Thi Yen / chu Yen).
- * Mot quy tac co hai ngoai le la quy tac nguoi ta go sai.
+ * Email theo quy tac "ten + viet tat ho dem, VIET LIEN KHONG DAU CHAM", ap cho
+ * CA MUOI NGUOI chu khong chi hai cho trung (Tran Thi Anh / Ha Viet Anh,
+ * Nguyen Thi Yen / chu Yen). Mot quy tac co hai ngoai le la quy tac nguoi ta
+ * go sai.
+ *
+ * Bo dau cham ngay 26/08/2026 theo yeu cau cua chu doanh nghiep: dau cham giua
+ * hai cum khong dau la cho nguoi ta go nham nhieu nhat khi doc qua dien thoai.
+ * Du lieu tren database DA duoc doi truoc bang scripts/tmp/fix-vinhyen-emails.mjs
+ * (ca auth.users lan employees), nen chay lai file nay se HOI TU chu khong tao
+ * them mot bo muoi tai khoan thu hai.
  */
 const EMPLOYEES = [
-  { code: "NV001", name: "Nguyễn Thị Hiền", local: "hien.nt", dayRate: 250000, otHourly: 40000 },
-  { code: "NV002", name: "Trần Thị Anh", local: "anh.tt", dayRate: 270000, otHourly: 40000 },
-  { code: "NV003", name: "Nguyễn Văn Thái", local: "thai.nv", dayRate: 300000, otHourly: 40000 },
-  { code: "NV004", name: "Nguyễn Thị Minh Thu", local: "thu.ntm", dayRate: 270000, otHourly: 40000 },
-  { code: "NV005", name: "Lê Thị Hiếu", local: "hieu.lt", dayRate: 250000, otHourly: 40000 },
-  { code: "NV006", name: "Nguyễn Thị Yên", local: "yen.nt", dayRate: 270000, otHourly: 40000 },
-  { code: "NV007", name: "Đinh Thị Mười", local: "muoi.dt", dayRate: 250000, otHourly: 40000 },
-  { code: "NV008", name: "Hà Việt Anh", local: "vietanh.hv", dayRate: 220000, otHourly: 40000 },
-  { code: "NV009", name: "Nguyễn Thị Sáu", local: "sau.nt", dayRate: 270000, otHourly: 40000 },
-  { code: "NV010", name: "Đường Văn Hưng", local: "hung.dv", dayRate: 200000, otHourly: 40000 },
+  { code: "NV001", name: "Nguyễn Thị Hiền", local: "hiennt", dayRate: 250000, otHourly: 40000 },
+  { code: "NV002", name: "Trần Thị Anh", local: "anhtt", dayRate: 270000, otHourly: 40000 },
+  { code: "NV003", name: "Nguyễn Văn Thái", local: "thainv", dayRate: 300000, otHourly: 40000 },
+  { code: "NV004", name: "Nguyễn Thị Minh Thu", local: "thuntm", dayRate: 270000, otHourly: 40000 },
+  { code: "NV005", name: "Lê Thị Hiếu", local: "hieult", dayRate: 250000, otHourly: 40000 },
+  { code: "NV006", name: "Nguyễn Thị Yên", local: "yennt", dayRate: 270000, otHourly: 40000 },
+  { code: "NV007", name: "Đinh Thị Mười", local: "muoidt", dayRate: 250000, otHourly: 40000 },
+  { code: "NV008", name: "Hà Việt Anh", local: "vietanhhv", dayRate: 220000, otHourly: 40000 },
+  { code: "NV009", name: "Nguyễn Thị Sáu", local: "saunt", dayRate: 270000, otHourly: 40000 },
+  { code: "NV010", name: "Đường Văn Hưng", local: "hungdv", dayRate: 200000, otHourly: 40000 },
 ];
 
 /**
