@@ -56,7 +56,7 @@ export function FilterBar({
     >
       {search ? <div className="lg:w-72">{search}</div> : null}
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-wrap lg:items-center">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 lg:flex lg:flex-1 lg:flex-wrap lg:items-center">
         {filters.map((filter) => (
           <div key={filter.id} className="min-w-0">
             <label htmlFor={filter.id} className="sr-only">

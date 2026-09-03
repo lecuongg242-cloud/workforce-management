@@ -1198,7 +1198,24 @@ export const PAYROLL_LABEL = {
   detailEmptyAdjustments: "Không có khoản nào áp cho người này.",
   detailPerLateSuffix: "lần",
   detailMissingTitle: "Chưa tính được, vì:",
+  // Dưới `lg` bảng rút bớt cột, và những cột đó về đây — KHÔNG mất đi. Một
+  // con số bị ẩn mà không có chỗ nào đọc được thì màn hình đã nói thiếu.
+  detailOtherColumnsTitle: "Các cột khác của dòng này",
   expandHint: "Bấm vào dòng để xem chi tiết",
+  // Dưới `lg` bảng chỉ giữ lại cột là CĂN CỨ ra quyết định (xem spec
+  // 2026-08-29). Câu này nói rõ phần còn lại nằm ở đâu: một cột bị ẩn mà
+  // người dùng không biết đường tìm thì không khác gì mất.
+  expandHintCompact: "Bấm vào dòng để xem đủ các cột tiền và ngày công quy đổi",
+  expandColumnLabel: "Chi tiết",
+  expandRowLabel: "Xem chi tiết dòng lương của",
+  // Nhãn cho lưới tóm tắt ở màn hẹp — cùng những con số của câu tóm tắt trên
+  // máy tính, xếp thành lưới để đọc được trong một lần nhìn.
+  summaryEmployees: "Nhân viên",
+  summaryWorkedDays: "Ngày công",
+  summaryHours: "Giờ làm",
+  summaryOvertime: "Giờ tăng ca",
+  summaryNetPay: "Thực nhận",
+  summaryIncomplete: "Chưa gồm {n} người chưa đủ dữ kiện",
 
   /* ---- D-42/D-45 (plan 05-2-05): chốt lương kỳ ---------------------------- */
   payrollClosed: "Đã chốt lương — con số đã đóng khung",
