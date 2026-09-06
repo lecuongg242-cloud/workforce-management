@@ -122,6 +122,50 @@ export const changePasswordSchema = z
 
 export type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
 
+/**
+ * Nguoi dung TU doi mat khau khi da biet mat khau cu (spec 2026-09-06).
+ *
+ * Tach hoan toan khoi `changePasswordSchema` o tren, KHONG mo rong no: luong
+ * doi bat buoc lan dau khong he co mat khau cu de nhap, ep chung mot schema la
+ * lam hong luong do.
+ */
+export const changeOwnPasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Vui lòng nhập mật khẩu hiện tại."),
+    newPassword: z
+      .string()
+      .min(1, "Vui lòng nhập mật khẩu mới.")
+      .min(8, "Mật khẩu mới phải có ít nhất 8 ký tự."),
+    confirmPassword: z.string().min(1, "Vui lòng nhập lại mật khẩu mới."),
+  })
+  .refine((values) => values.newPassword === values.confirmPassword, {
+    message: "Mật khẩu nhập lại không khớp.",
+    path: ["confirmPassword"],
+  })
+  .refine((values) => values.newPassword !== values.currentPassword, {
+    message: "Mật khẩu mới phải khác mật khẩu hiện tại.",
+    path: ["newPassword"],
+  });
+
+export type ChangeOwnPasswordFormValues = z.infer<typeof changeOwnPasswordSchema>;
+
+/**
+ * Quan tri DAT mat khau cho nguoi khac — luc tao tai khoan hoac luc dat lai
+ * (spec 2026-09-06).
+ *
+ * Chi MOT o, khong co "nhap lai": o nhap lai ton tai de bat loi go nham khi o
+ * bi che, ma o day gia tri hien duoc ngay tren man hinh (nut hien/an cua
+ * `PasswordField`). Khi doc duoc thi go hai lan khong bat them duoc gi.
+ */
+export const setPasswordSchema = z.object({
+  password: z
+    .string()
+    .min(1, "Vui lòng nhập mật khẩu.")
+    .min(8, "Mật khẩu phải có ít nhất 8 ký tự."),
+});
+
+export type SetPasswordFormValues = z.infer<typeof setPasswordSchema>;
+
 /* -------------------------------------------------------------------------- */
 /* Onboarding                                                                  */
 /* -------------------------------------------------------------------------- */

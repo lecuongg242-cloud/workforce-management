@@ -1,22 +1,28 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
-
 import { getSessionContext, requireRole } from "@/lib/auth/session-context";
-import { CHANGE_PASSWORD_LABELS, RESET_PASSWORD_LABELS } from "@/lib/constants";
+import {
+  ACCOUNT_LABELS,
+  CHANGE_OWN_PASSWORD_LABELS,
+  CHANGE_PASSWORD_LABELS,
+  RESET_PASSWORD_LABELS,
+} from "@/lib/constants";
 import { logMutation } from "@/lib/data/audit";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createVerificationSupabase } from "@/lib/supabase/verify";
 import { employeeRowSchema } from "@/lib/validation/api/employees";
 
 /**
  * Server Actions vong doi tai khoan nhan vien (plan 02-10):
- * - `createEmployeeAccount` — quan tri tao tai khoan dang nhap + mat khau tam
- *   cho mot nhan vien chua co tai khoan.
+ * - `createEmployeeAccount` — quan tri tao tai khoan dang nhap cho mot nhan
+ *   vien chua co tai khoan, voi mat khau do quan tri dat.
  * - `completeForcedPasswordChange` — nguoi dung tu hoan tat doi mat khau bat
  *   buoc lan dau (D-16/D-16a).
  * - `setEmployeePassword` — quan tri dat lai mat khau cho nhan vien quen mat
  *   khau (spec 2026-09-06).
+ * - `changeOwnPassword` — nguoi dung tu doi mat khau cua chinh minh khi da
+ *   biet mat khau cu (spec 2026-09-06).
  *
  * Khuon giong `mutations/employees.ts`: `getSessionContext()` -> kiem quyen
  * -> doc/ghi voi `company_id` tu session -> `logMutation` NGAY TRONG cung
@@ -27,7 +33,6 @@ import { employeeRowSchema } from "@/lib/validation/api/employees";
 
 export interface CreateEmployeeAccountResult {
   email: string;
-  temporaryPassword: string;
 }
 
 /**
@@ -49,20 +54,29 @@ function assertNoSensitiveAuditKeys(row: Record<string, unknown>): void {
   }
 }
 
-function generateTemporaryPassword(): string {
-  return randomBytes(18).toString("base64url");
-}
-
 /**
- * Tao tai khoan dang nhap cho MOT nhan vien chua co tai khoan. Tra ve email
- * va mat khau tam — day la LAN DUY NHAT mat khau tam roi khoi ham nay, khong
- * bao gio ghi xuong audit_log, cot nao cua `employees`, hay log server.
+ * Tao tai khoan dang nhap cho MOT nhan vien chua co tai khoan, voi mat khau do
+ * QUAN TRI dat (spec 2026-09-06 — tao tai khoan mat khau admin dat).
+ *
+ * KHONG bat doi mat khau lan dau: `must_change_password` dat `false`. Nhan vien
+ * muon doi thi tu vao man hinh Ca nhan. Xem muc "Rui ro da chap nhan" cua spec
+ * — day la lua chon co y thuc, khong phai sot.
+ *
+ * Mat khau KHONG bao gio ghi xuong audit_log, cot nao cua `employees`, hay log
+ * server — cung rang buoc voi hai ham mat khau con lai trong file nay.
  */
 export async function createEmployeeAccount(
   employeeId: string,
+  password: string,
 ): Promise<CreateEmployeeAccountResult> {
   const { companyId, userId, role } = await getSessionContext();
   requireRole(role, ["owner", "admin"]);
+
+  // Kiem o tang server TRUOC khi doc du lieu — bieu mau da kiem, nhung Server
+  // Action khong duoc tin tham so tu client.
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(ACCOUNT_LABELS.tooShortError);
+  }
 
   const supabase = await createServerSupabase();
 
@@ -85,7 +99,6 @@ export async function createEmployeeAccount(
   }
 
   const employee = employeeRowSchema.parse(beforeRow);
-  const temporaryPassword = generateTemporaryPassword();
 
   // Tu day tro di dung khoa bi mat -- moi kiem quyen (requireRole) va kiem
   // ranh gioi doanh nghiep (.eq("company_id") o tren) da xong TRUOC khi cham
@@ -93,9 +106,14 @@ export async function createEmployeeAccount(
   const admin = createAdminSupabase();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email: employee.email,
-    password: temporaryPassword,
+    password,
     email_confirm: true, // D-14a: khong thi tai khoan ket o cho xac nhan email.
-    app_metadata: { must_change_password: true }, // D-16: nhanh server, client khong sua duoc.
+    /**
+     * `false` chu khong phai `true` (thay the D-16 cho RIENG luong nay). Bo
+     * may doi-bat-buoc van song va van duoc `resetTempPasswordForUser()` cua
+     * super admin dung — chi luong tao tai khoan thoi khong dung nua.
+     */
+    app_metadata: { must_change_password: false },
   });
 
   if (createError || !created?.user) {
@@ -164,7 +182,7 @@ export async function createEmployeeAccount(
     reason: null,
   });
 
-  return { email: employee.email, temporaryPassword };
+  return { email: employee.email };
 }
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -368,4 +386,74 @@ export async function setEmployeePassword(
   });
 
   return { email: employee.email };
+}
+
+/**
+ * Nguoi dung TU doi mat khau cua chinh minh, biet mat khau cu (spec
+ * 2026-09-06). Khac ba ham tren:
+ * - `completeForcedPasswordChange` chi chay khi co `must_change_password` bat
+ * - `setEmployeePassword` doi cho NGUOI KHAC va can quyen quan tri
+ * - ham nay: ai dang nhap cung dung duoc, KHONG goi `requireRole`
+ */
+export async function changeOwnPassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const { userId, companyId, email } = await getSessionContext();
+
+  // Kiem o server TRUOC khi cham bat cu thu gi — bieu mau da kiem qua
+  // `changeOwnPasswordSchema`, nhung Server Action khong duoc tin tham so tu
+  // client. Duong hong khong duoc tao ra mot lan dang nhap xac minh nao.
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(CHANGE_OWN_PASSWORD_LABELS.tooShortError);
+  }
+  if (newPassword === currentPassword) {
+    throw new Error(CHANGE_OWN_PASSWORD_LABELS.sameAsCurrentError);
+  }
+
+  /**
+   * Xac minh mat khau hien tai tren client TACH ROI — xem
+   * `src/lib/supabase/verify.ts`. TUYET DOI khong duoc goi
+   * `signInWithPassword` tren client cookie-bound: no ghi de cookie phien,
+   * bien mot lan xac minh thanh mot lan dang nhap lai.
+   */
+  const verifier = createVerificationSupabase();
+  const { error: verifyError } = await verifier.auth.signInWithPassword({
+    email,
+    password: currentPassword,
+  });
+
+  if (verifyError) {
+    throw new Error(CHANGE_OWN_PASSWORD_LABELS.wrongCurrentError);
+  }
+
+  // Doi mat khau tren client cookie-bound cua CHINH nguoi dung — Supabase tu
+  // doi chieu voi phien hien hanh, khong can truyen id.
+  const supabase = await createServerSupabase();
+  const { error: updateError } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (updateError) {
+    throw new Error(CHANGE_OWN_PASSWORD_LABELS.genericError);
+  }
+
+  /**
+   * KHONG can `refreshSession()` nhu `completeForcedPasswordChange`: buoc do
+   * ton tai vi `app_metadata` chi vao JWT SAU khi refresh. O day khong co gi
+   * trong JWT doi ca, phien hien hanh van dung.
+   *
+   * `before`/`after` khong phai nguyen dong (cung ngoai le co chu dich): ghi
+   * nguyen dong nghia la sao chep bam mat khau vao audit_log.
+   */
+  await logMutation({
+    companyId,
+    actorUserId: userId,
+    action: "update",
+    entityTable: "auth.users",
+    entityId: userId,
+    before: null,
+    after: { credential_reset: true },
+    reason: "Người dùng tự đổi mật khẩu",
+  });
 }

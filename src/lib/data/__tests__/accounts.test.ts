@@ -2,14 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getSessionContext } from "@/lib/auth/session-context";
 import {
+  changeOwnPassword,
   completeForcedPasswordChange,
   createEmployeeAccount,
   setEmployeePassword,
 } from "@/lib/data/mutations/accounts";
-import { CHANGE_PASSWORD_LABELS, RESET_PASSWORD_LABELS } from "@/lib/constants";
+import {
+  ACCOUNT_LABELS,
+  CHANGE_OWN_PASSWORD_LABELS,
+  CHANGE_PASSWORD_LABELS,
+  RESET_PASSWORD_LABELS,
+} from "@/lib/constants";
 import { logMutation } from "@/lib/data/audit";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { createVerificationSupabase } from "@/lib/supabase/verify";
 
 /**
  * Nam khang dinh cua Task 3 (02-10-PLAN.md) tap trung vao THU TU va CHONG
@@ -20,6 +27,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabase: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminSupabase: vi.fn() }));
+vi.mock("@/lib/supabase/verify", () => ({ createVerificationSupabase: vi.fn() }));
 
 vi.mock("@/lib/auth/session-context", async (importOriginal) => {
   const actual =
@@ -232,7 +240,7 @@ describe("createEmployeeAccount — chan tao trung (T-02-10)", () => {
     const admin = fakeAdminSupabaseForPasswordChange({ callOrder: [] });
     vi.mocked(createAdminSupabase).mockReturnValue(admin);
 
-    await expect(createEmployeeAccount("emp-1")).rejects.toThrow(
+    await expect(createEmployeeAccount("emp-1", VALID_PASSWORD)).rejects.toThrow(
       "Nhân viên này đã có tài khoản đăng nhập.",
     );
 
@@ -365,7 +373,7 @@ describe("createEmployeeAccount — hồ sơ thôi 'chưa kích hoạt' ngay khi
     const { client, updates } = fakeServerSupabaseForAccountCreate(employeeRow());
     vi.mocked(createServerSupabase).mockResolvedValue(client);
 
-    await createEmployeeAccount("emp-1");
+    await createEmployeeAccount("emp-1", VALID_PASSWORD);
 
     expect(updates).toHaveLength(1);
     // Mot lan ghi duy nhat mang CA HAI cot: hai lan ghi rieng se de lai mot
@@ -382,7 +390,7 @@ describe("createEmployeeAccount — hồ sơ thôi 'chưa kích hoạt' ngay khi
     );
     vi.mocked(createServerSupabase).mockResolvedValue(client);
 
-    await createEmployeeAccount("emp-1");
+    await createEmployeeAccount("emp-1", VALID_PASSWORD);
 
     expect(updates).toHaveLength(1);
     expect(updates[0]).toEqual({ user_id: "user-new" });
@@ -559,5 +567,236 @@ describe("setEmployeePassword — quyen, ranh gioi va thu tu (spec 2026-09-06)",
         expect(key.toLowerCase()).not.toContain(needle);
       }
     }
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* changeOwnPassword — nguoi dung tu doi mat khau (spec 2026-09-06)           */
+/* -------------------------------------------------------------------------- */
+
+const OWN_SESSION = {
+  userId: "user-self",
+  email: "self@timeflow.test",
+  companyId: "cty-01",
+  role: "employee" as const,
+  employeeId: "emp-self",
+  isPlatformAdmin: false,
+  mustChangePassword: false,
+};
+
+const CURRENT_PASSWORD = "matkhau-cu-2026";
+const NEW_PASSWORD = "matkhau-moi-2026";
+
+/**
+ * Client cookie-bound gia. Co CA `signInWithPassword` — khong phai vi ham that
+ * duoc phep goi no, ma NGUOC LAI: de bai 19 khang dinh duoc rang no khong bao
+ * gio bi goi. Mot mock thieu ham do se nem TypeError va bai test do vi ly do
+ * sai.
+ */
+function fakeCookieClientForOwnChange(options: {
+  callOrder: string[];
+  updateUserError?: { message?: string } | null;
+}): FakeServerClient {
+  return {
+    auth: {
+      signInWithPassword: vi.fn(async () => {
+        options.callOrder.push("cookieSignIn");
+        return { data: {}, error: null };
+      }),
+      updateUser: vi.fn(async () => {
+        options.callOrder.push("updatePassword");
+        return { data: {}, error: options.updateUserError ?? null };
+      }),
+    },
+  } as unknown as FakeServerClient;
+}
+
+function fakeVerifierClient(options: {
+  callOrder: string[];
+  signInError?: { message?: string } | null;
+}): ReturnType<typeof createVerificationSupabase> {
+  return {
+    auth: {
+      signInWithPassword: vi.fn(async () => {
+        options.callOrder.push("verify");
+        return { data: {}, error: options.signInError ?? null };
+      }),
+    },
+  } as unknown as ReturnType<typeof createVerificationSupabase>;
+}
+
+describe("changeOwnPassword — xac minh truoc, doi sau (spec 2026-09-06)", () => {
+  beforeEach(() => {
+    vi.mocked(logMutation).mockClear();
+    vi.mocked(createVerificationSupabase).mockReset();
+    vi.mocked(getSessionContext).mockResolvedValue(OWN_SESSION);
+  });
+
+  it("15. Mat khau hien tai sai -> bao loi VA khong doi mat khau", async () => {
+    const callOrder: string[] = [];
+    const cookieClient = fakeCookieClientForOwnChange({ callOrder });
+    vi.mocked(createServerSupabase).mockResolvedValue(cookieClient);
+    vi.mocked(createVerificationSupabase).mockReturnValue(
+      fakeVerifierClient({ callOrder, signInError: { message: "Invalid login" } }),
+    );
+
+    await expect(
+      changeOwnPassword("mat-khau-sai-roi", NEW_PASSWORD),
+    ).rejects.toThrow(CHANGE_OWN_PASSWORD_LABELS.wrongCurrentError);
+
+    expect(cookieClient.auth.updateUser).not.toHaveBeenCalled();
+    expect(callOrder).toEqual(["verify"]);
+  });
+
+  it("16. Mat khau moi ngan hon 8 ky tu -> chan O SERVER, khong xac minh, khong doi", async () => {
+    const callOrder: string[] = [];
+    const cookieClient = fakeCookieClientForOwnChange({ callOrder });
+    vi.mocked(createServerSupabase).mockResolvedValue(cookieClient);
+    const verifier = fakeVerifierClient({ callOrder });
+    vi.mocked(createVerificationSupabase).mockReturnValue(verifier);
+
+    await expect(changeOwnPassword(CURRENT_PASSWORD, "1234567")).rejects.toThrow(
+      CHANGE_OWN_PASSWORD_LABELS.tooShortError,
+    );
+
+    // Duong hong khong duoc tao ra mot lan dang nhap xac minh nao.
+    expect(verifier.auth.signInWithPassword).not.toHaveBeenCalled();
+    expect(cookieClient.auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("17. Mat khau moi trung mat khau cu -> chan, khong xac minh, khong doi", async () => {
+    const callOrder: string[] = [];
+    const cookieClient = fakeCookieClientForOwnChange({ callOrder });
+    vi.mocked(createServerSupabase).mockResolvedValue(cookieClient);
+    const verifier = fakeVerifierClient({ callOrder });
+    vi.mocked(createVerificationSupabase).mockReturnValue(verifier);
+
+    await expect(
+      changeOwnPassword(CURRENT_PASSWORD, CURRENT_PASSWORD),
+    ).rejects.toThrow(CHANGE_OWN_PASSWORD_LABELS.sameAsCurrentError);
+
+    expect(verifier.auth.signInWithPassword).not.toHaveBeenCalled();
+    expect(cookieClient.auth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it("18. Duong thanh cong -> xac minh TRUOC, doi mat khau SAU", async () => {
+    const callOrder: string[] = [];
+    const cookieClient = fakeCookieClientForOwnChange({ callOrder });
+    vi.mocked(createServerSupabase).mockResolvedValue(cookieClient);
+    const verifier = fakeVerifierClient({ callOrder });
+    vi.mocked(createVerificationSupabase).mockReturnValue(verifier);
+
+    await changeOwnPassword(CURRENT_PASSWORD, NEW_PASSWORD);
+
+    expect(callOrder).toEqual(["verify", "updatePassword"]);
+    expect(verifier.auth.signInWithPassword).toHaveBeenCalledWith({
+      email: OWN_SESSION.email,
+      password: CURRENT_PASSWORD,
+    });
+    expect(cookieClient.auth.updateUser).toHaveBeenCalledWith({
+      password: NEW_PASSWORD,
+    });
+  });
+
+  it("19. Xac minh dung client TACH ROI, KHONG dung client cookie-bound", async () => {
+    /**
+     * Bai quan trong nhat cua nhom nay. `signInWithPassword` goi tren client
+     * cookie-bound se GHI DE cookie phien — nguoi dung dang doi mat khau bong
+     * dung bi cap lai phien, hoac mat phien khi go sai. Loi do khong lam bai
+     * nao khac do, va trieu chung ngoai doi (thinh thoang mat phien) rat kho
+     * lan ra nguon.
+     */
+    const callOrder: string[] = [];
+    const cookieClient = fakeCookieClientForOwnChange({ callOrder });
+    vi.mocked(createServerSupabase).mockResolvedValue(cookieClient);
+    const verifier = fakeVerifierClient({ callOrder });
+    vi.mocked(createVerificationSupabase).mockReturnValue(verifier);
+
+    await changeOwnPassword(CURRENT_PASSWORD, NEW_PASSWORD);
+
+    expect(verifier.auth.signInWithPassword).toHaveBeenCalledTimes(1);
+    expect(cookieClient.auth.signInWithPassword).not.toHaveBeenCalled();
+    expect(callOrder).not.toContain("cookieSignIn");
+  });
+
+  it("20. Ban ghi audit khong chua mat khau o BAT KY khoa hay gia tri nao", async () => {
+    const callOrder: string[] = [];
+    vi.mocked(createServerSupabase).mockResolvedValue(
+      fakeCookieClientForOwnChange({ callOrder }),
+    );
+    vi.mocked(createVerificationSupabase).mockReturnValue(
+      fakeVerifierClient({ callOrder }),
+    );
+
+    await changeOwnPassword(CURRENT_PASSWORD, NEW_PASSWORD);
+
+    expect(logMutation).toHaveBeenCalledTimes(1);
+    const entry = vi.mocked(logMutation).mock.calls[0][0];
+    expect(entry.entityTable).toBe("auth.users");
+    expect(entry.entityId).toBe(OWN_SESSION.userId);
+
+    const serialized = JSON.stringify(entry);
+    expect(serialized).not.toContain(NEW_PASSWORD);
+    expect(serialized).not.toContain(CURRENT_PASSWORD);
+    for (const needle of ["password", "secret", "token"]) {
+      for (const key of Object.keys(entry.after ?? {})) {
+        expect(key.toLowerCase()).not.toContain(needle);
+      }
+    }
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* createEmployeeAccount — mat khau do quan tri dat (spec 2026-09-06)         */
+/* -------------------------------------------------------------------------- */
+
+describe("createEmployeeAccount — mat khau quan tri dat, khong bat doi lan dau", () => {
+  beforeEach(() => {
+    vi.mocked(getSessionContext).mockResolvedValue(adminSession("admin"));
+  });
+
+  it("21. Mat khau ngan hon 8 ky tu -> chan O SERVER VA khong goi createUser", async () => {
+    const admin = adminThatCreatesUser("user-new");
+    vi.mocked(createAdminSupabase).mockReturnValue(admin);
+    const { client } = fakeServerSupabaseForAccountCreate(employeeRow());
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    await expect(createEmployeeAccount("emp-1", "1234567")).rejects.toThrow(
+      ACCOUNT_LABELS.tooShortError,
+    );
+
+    expect(admin.auth.admin.createUser).not.toHaveBeenCalled();
+  });
+
+  it("22. Tao tai khoan bang DUNG mat khau quan tri dua vao, va KHONG bat doi lan dau", async () => {
+    const admin = adminThatCreatesUser("user-new");
+    vi.mocked(createAdminSupabase).mockReturnValue(admin);
+    const { client } = fakeServerSupabaseForAccountCreate(employeeRow());
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    const result = await createEmployeeAccount("emp-1", VALID_PASSWORD);
+
+    expect(result).toEqual({ email: "cuonglm@pamoteam.com" });
+    expect(admin.auth.admin.createUser).toHaveBeenCalledWith({
+      email: "cuonglm@pamoteam.com",
+      password: VALID_PASSWORD,
+      email_confirm: true,
+      // `false`, KHONG phai `true`: bo buoc doi mat khau lan dau la quyet dinh
+      // co chu dich cua spec 2026-09-06, khong phai sot.
+      app_metadata: { must_change_password: false },
+    });
+  });
+
+  it("23. Ket qua tra ve KHONG mang mat khau di theo", async () => {
+    // Truoc day ham nay tra ve `temporaryPassword`. Gio quan tri tu go nen
+    // khong con ly do gi de mat khau roi khoi ham.
+    vi.mocked(createAdminSupabase).mockReturnValue(adminThatCreatesUser("user-new"));
+    const { client } = fakeServerSupabaseForAccountCreate(employeeRow());
+    vi.mocked(createServerSupabase).mockResolvedValue(client);
+
+    const result = await createEmployeeAccount("emp-1", VALID_PASSWORD);
+
+    expect(JSON.stringify(result)).not.toContain(VALID_PASSWORD);
+    expect(Object.keys(result)).toEqual(["email"]);
   });
 });

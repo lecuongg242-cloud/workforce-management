@@ -368,13 +368,24 @@ export const ACCOUNT_LABELS = {
   createButtonIdle: "Tạo tài khoản đăng nhập",
   createButtonPending: "Đang tạo tài khoản…",
   createSuccessToast: "Đã tạo tài khoản đăng nhập.",
-  dialogTitle: "Tài khoản đã được tạo",
+  dialogTitle: "Tạo tài khoản đăng nhập",
   dialogDescription:
-    "Mật khẩu tạm dưới đây chỉ hiển thị đúng một lần ở màn hình này. Hãy chuyển cho nhân viên qua một kênh an toàn (nhắn tin trực tiếp, gọi điện...), không gửi qua email hay kênh công khai.",
-  emailLabel: "Email đăng nhập",
-  temporaryPasswordLabel: "Mật khẩu tạm",
-  closeButton: "Đã lưu lại, đóng",
+    "Đặt mật khẩu đăng nhập cho nhân viên, hoặc bấm tạo một mật khẩu ngẫu nhiên. Hãy chuyển cho họ qua một kênh riêng (nhắn tin trực tiếp, gọi điện...), không gửi qua email hay kênh công khai.",
+  employeeLabel: "Tạo cho",
+  passwordLabel: "Mật khẩu đăng nhập",
+  cancelButton: "Huỷ",
+  tooShortError: "Mật khẩu phải có ít nhất 8 ký tự.",
   genericError: "Không thể tạo tài khoản cho nhân viên này.",
+} as const;
+
+/* -------------------------------------------------------------------------- */
+/* O nhap mat khau dat cho NGUOI KHAC (spec 2026-09-06)                       */
+/* -------------------------------------------------------------------------- */
+
+export const PASSWORD_FIELD_LABELS = {
+  generateButton: "Tạo mật khẩu",
+  showPassword: "Hiện mật khẩu",
+  hidePassword: "Ẩn mật khẩu",
 } as const;
 
 /* -------------------------------------------------------------------------- */
@@ -388,7 +399,6 @@ export const RESET_PASSWORD_LABELS = {
     "Nhân viên sẽ dùng luôn mật khẩu này để đăng nhập, không bị hỏi đổi lại. Hãy chuyển cho họ qua một kênh riêng (nhắn tin trực tiếp, gọi điện...), không gửi qua email hay kênh công khai.",
   employeeLabel: "Đổi cho",
   newPasswordLabel: "Mật khẩu mới",
-  confirmPasswordLabel: "Nhập lại mật khẩu mới",
   submitIdle: "Đổi mật khẩu",
   submitPending: "Đang đổi mật khẩu…",
   cancelButton: "Huỷ",
@@ -397,6 +407,28 @@ export const RESET_PASSWORD_LABELS = {
   noAccountError:
     "Nhân viên này chưa có tài khoản đăng nhập. Hãy tạo tài khoản trước.",
   genericError: "Không đổi được mật khẩu cho nhân viên này.",
+} as const;
+
+/* -------------------------------------------------------------------------- */
+/* Nguoi dung tu doi mat khau cua chinh minh (spec 2026-09-06)                 */
+/* -------------------------------------------------------------------------- */
+
+export const CHANGE_OWN_PASSWORD_LABELS = {
+  menuItem: "Đổi mật khẩu",
+  dialogTitle: "Đổi mật khẩu",
+  dialogDescription:
+    "Nhập mật khẩu hiện tại để xác nhận đây là bạn, rồi đặt mật khẩu mới.",
+  currentPasswordLabel: "Mật khẩu hiện tại",
+  newPasswordLabel: "Mật khẩu mới",
+  confirmPasswordLabel: "Nhập lại mật khẩu mới",
+  submitIdle: "Đổi mật khẩu",
+  submitPending: "Đang đổi mật khẩu…",
+  cancelButton: "Huỷ",
+  successToast: "Đã đổi mật khẩu.",
+  wrongCurrentError: "Mật khẩu hiện tại không đúng.",
+  tooShortError: "Mật khẩu mới phải có ít nhất 8 ký tự.",
+  sameAsCurrentError: "Mật khẩu mới phải khác mật khẩu hiện tại.",
+  genericError: "Không đổi được mật khẩu. Vui lòng thử lại.",
 } as const;
 
 /* -------------------------------------------------------------------------- */

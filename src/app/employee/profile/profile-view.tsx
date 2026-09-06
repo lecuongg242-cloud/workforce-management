@@ -14,6 +14,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { ChangeOwnPasswordDialog } from "@/components/account/change-own-password-dialog";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { EmployeeAvatar } from "@/components/common/employee-avatar";
 import { ErrorState } from "@/components/common/error-state";
@@ -24,7 +25,7 @@ import {
   useEmployeeSession,
   useSession,
 } from "@/lib/auth/session-provider";
-import { NOT_DECLARED } from "@/lib/constants";
+import { CHANGE_OWN_PASSWORD_LABELS, NOT_DECLARED } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { formatShiftLabel } from "@/lib/shifts/schedule";
 import { listDepartments } from "@/lib/data/departments";
@@ -35,6 +36,7 @@ export function ProfileView(): React.ReactElement {
   const { session, employeeId } = useEmployeeSession();
   const { signOut } = useSession();
   const [confirmSignOut, setConfirmSignOut] = React.useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = React.useState(false);
 
   const { data, isLoading, error, reload } = useDataQuery(
     async () => {
@@ -63,8 +65,8 @@ export function ProfileView(): React.ReactElement {
     },
     {
       icon: KeyRound,
-      label: "Đổi mật khẩu",
-      onClick: () => toast.info("Đổi mật khẩu sẽ có khi kết nối máy chủ thật."),
+      label: CHANGE_OWN_PASSWORD_LABELS.menuItem,
+      onClick: () => setIsChangePasswordOpen(true),
     },
     {
       icon: Bell,
@@ -213,6 +215,11 @@ export function ProfileView(): React.ReactElement {
           setConfirmSignOut(false);
           void signOut();
         }}
+      />
+
+      <ChangeOwnPasswordDialog
+        open={isChangePasswordOpen}
+        onOpenChange={setIsChangePasswordOpen}
       />
     </div>
   );

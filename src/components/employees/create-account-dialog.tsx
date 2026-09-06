@@ -4,7 +4,6 @@ import * as React from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, TriangleAlert } from "lucide-react";
-import { toast } from "sonner";
 
 import { PasswordField } from "@/components/account/password-field";
 import { Button } from "@/components/ui/button";
@@ -16,31 +15,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { RESET_PASSWORD_LABELS } from "@/lib/constants";
-import { setEmployeePassword } from "@/lib/data/mutations/accounts";
+import { ACCOUNT_LABELS } from "@/lib/constants";
 import { setPasswordSchema, type SetPasswordFormValues } from "@/lib/validation/schemas";
 
 /**
- * Hop thoai quan tri dat lai mat khau cho mot nhan vien (spec 2026-09-06).
+ * Hop thoai tao tai khoan dang nhap cho nhan vien (spec 2026-09-06).
  *
- * Dung chung `PasswordField` voi hop thoai tao tai khoan — hai tinh huong giong
- * het nhau: quan tri dat mat khau cho nguoi khac roi doc cho ho.
+ * Truoc day nut "Tao tai khoan" tao ngay va he thong sinh mat khau tam; gio
+ * quan tri dat mat khau, va nhan vien KHONG bi bat doi lan dau.
  *
- * Hien ten + email nhan vien ngay trong hop thoai: day la thao tac khong hoan
- * tac duoc, quan tri phai nhin thay minh dang doi cho AI truoc khi bam.
+ * Component chi lo bieu mau — viec goi Server Action va xu ly ket qua do trang
+ * chi tiet nhan vien lam, giong khuon cua `ResetPasswordDialog`.
  */
-export function ResetPasswordDialog({
+export function CreateAccountDialog({
   employeeName,
   employeeEmail,
-  employeeId,
   open,
   onOpenChange,
+  onSubmit,
 }: {
   employeeName: string;
   employeeEmail: string;
-  employeeId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSubmit: (password: string) => Promise<void>;
 }): React.ReactElement {
   const [submitError, setSubmitError] = React.useState<string | null>(null);
 
@@ -63,15 +61,14 @@ export function ResetPasswordDialog({
     onOpenChange(next);
   };
 
-  const onSubmit = handleSubmit(async (values) => {
+  const submit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
-      await setEmployeePassword(employeeId, values.password);
-      toast.success(RESET_PASSWORD_LABELS.successToast);
+      await onSubmit(values.password);
       handleOpenChange(false);
     } catch (cause) {
       setSubmitError(
-        cause instanceof Error ? cause.message : RESET_PASSWORD_LABELS.genericError,
+        cause instanceof Error ? cause.message : ACCOUNT_LABELS.genericError,
       );
     }
   });
@@ -80,17 +77,13 @@ export function ResetPasswordDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{RESET_PASSWORD_LABELS.dialogTitle}</DialogTitle>
-          <DialogDescription>
-            {RESET_PASSWORD_LABELS.dialogDescription}
-          </DialogDescription>
+          <DialogTitle>{ACCOUNT_LABELS.dialogTitle}</DialogTitle>
+          <DialogDescription>{ACCOUNT_LABELS.dialogDescription}</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={onSubmit} noValidate className="grid gap-4">
+        <form onSubmit={submit} noValidate className="grid gap-4">
           <div className="rounded-control border border-hairline bg-canvas-soft px-3 py-2.5">
-            <p className="text-[13px] text-ink-muted">
-              {RESET_PASSWORD_LABELS.employeeLabel}
-            </p>
+            <p className="text-[13px] text-ink-muted">{ACCOUNT_LABELS.employeeLabel}</p>
             <p className="mt-0.5 text-sm font-medium text-ink">{employeeName}</p>
             <p className="text-[13px] text-ink-secondary">{employeeEmail}</p>
           </div>
@@ -110,8 +103,8 @@ export function ResetPasswordDialog({
             name="password"
             render={({ field }) => (
               <PasswordField
-                id="resetEmployeePassword"
-                label={RESET_PASSWORD_LABELS.newPasswordLabel}
+                id="createAccountPassword"
+                label={ACCOUNT_LABELS.passwordLabel}
                 value={field.value}
                 onChange={field.onChange}
                 error={errors.password?.message}
@@ -126,16 +119,16 @@ export function ResetPasswordDialog({
               onClick={() => handleOpenChange(false)}
               disabled={isSubmitting}
             >
-              {RESET_PASSWORD_LABELS.cancelButton}
+              {ACCOUNT_LABELS.cancelButton}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 aria-hidden="true" className="animate-spin" />
-                  {RESET_PASSWORD_LABELS.submitPending}
+                  {ACCOUNT_LABELS.createButtonPending}
                 </>
               ) : (
-                RESET_PASSWORD_LABELS.submitIdle
+                ACCOUNT_LABELS.createButtonIdle
               )}
             </Button>
           </DialogFooter>

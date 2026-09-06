@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, ChevronRight, Menu, PanelsTopLeft } from "lucide-react";
 
+import { ChangeOwnPasswordDialog } from "@/components/account/change-own-password-dialog";
 import { CompanySwitcher } from "@/components/layout/company-switcher";
 import { EmployeeAvatar } from "@/components/common/employee-avatar";
 import { SearchInput } from "@/components/common/search-input";
@@ -20,6 +21,7 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { useDataQuery } from "@/hooks/use-data-query";
 import { useSession } from "@/lib/auth/session-provider";
+import { CHANGE_OWN_PASSWORD_LABELS } from "@/lib/constants";
 import { BREADCRUMB_LABELS } from "@/lib/nav";
 import { listAllEmployees } from "@/lib/data/employees";
 import { normalizeText } from "@/lib/format";
@@ -65,6 +67,7 @@ export function AdminTopbar({
   const crumbs = buildCrumbs(pathname);
 
   const [search, setSearch] = React.useState("");
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = React.useState(false);
   const debouncedSearch = useDebounce(search, 250);
 
   const { data: employees } = useDataQuery(
@@ -223,12 +226,20 @@ export function AdminTopbar({
             <DropdownMenuItem asChild>
               <Link href="/select-company">Chọn doanh nghiệp</Link>
             </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setIsChangePasswordOpen(true)}>
+              {CHANGE_OWN_PASSWORD_LABELS.menuItem}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={onSignOut}>
               Đăng xuất
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <ChangeOwnPasswordDialog
+          open={isChangePasswordOpen}
+          onOpenChange={setIsChangePasswordOpen}
+        />
       </div>
     </header>
   );

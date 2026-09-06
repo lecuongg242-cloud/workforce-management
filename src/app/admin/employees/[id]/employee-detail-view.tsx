@@ -10,7 +10,6 @@ import {
   Clock,
   ImageIcon,
   KeyRound,
-  Loader2,
   Mail,
   MailPlus,
   MoreHorizontal,
@@ -28,6 +27,7 @@ import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { StatusBadge } from "@/components/common/status-badge";
 import { EmployeeForm } from "@/components/employees/employee-form";
+import { CreateAccountDialog } from "@/components/employees/create-account-dialog";
 import { OvertimeRatePanel } from "@/components/employees/overtime-rate-panel";
 import { PayRatePanel } from "@/components/employees/pay-rate-panel";
 import { ResetPasswordDialog } from "@/components/employees/reset-password-dialog";
@@ -114,12 +114,8 @@ export function EmployeeDetailView({
   const [realignPreview, setRealignPreview] =
     React.useState<ShiftRealignPreview | null>(null);
   const [isPending, setIsPending] = React.useState(false);
-  const [isCreatingAccount, setIsCreatingAccount] = React.useState(false);
+  const [isCreateAccountOpen, setIsCreateAccountOpen] = React.useState(false);
   const [isResetPasswordOpen, setIsResetPasswordOpen] = React.useState(false);
-  const [newAccount, setNewAccount] = React.useState<{
-    email: string;
-    temporaryPassword: string;
-  } | null>(null);
   const [photoRecordId, setPhotoRecordId] = React.useState<string | null>(null);
 
   const { data, isLoading, error, reload } = useDataQuery(
@@ -176,18 +172,15 @@ export function EmployeeDetailView({
     [employeeId, session.companyId, session.role, month],
   );
 
-  const handleCreateAccount = async (): Promise<void> => {
-    setIsCreatingAccount(true);
-    try {
-      const result = await createEmployeeAccount(employeeId);
-      setNewAccount(result);
-      invalidate();
-      toast.success(ACCOUNT_LABELS.createSuccessToast);
-    } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : ACCOUNT_LABELS.genericError);
-    } finally {
-      setIsCreatingAccount(false);
-    }
+  /**
+   * Nem loi tiep ra ngoai thay vi nuot bang toast: hop thoai dang goi can biet
+   * that bai de GIU NGUYEN o nhap va hien loi ngay trong do — dong hop thoai
+   * roi bao loi bang toast se lam mat mat khau quan tri vua go.
+   */
+  const handleCreateAccount = async (password: string): Promise<void> => {
+    await createEmployeeAccount(employeeId, password);
+    invalidate();
+    toast.success(ACCOUNT_LABELS.createSuccessToast);
   };
 
   /**
@@ -338,22 +331,9 @@ export function EmployeeDetailView({
               Chỉnh sửa
             </Button>
             {canCreateAccount ? (
-              <Button
-                variant="outline"
-                onClick={handleCreateAccount}
-                disabled={isCreatingAccount}
-              >
-                {isCreatingAccount ? (
-                  <>
-                    <Loader2 aria-hidden="true" className="animate-spin" />
-                    {ACCOUNT_LABELS.createButtonPending}
-                  </>
-                ) : (
-                  <>
-                    <KeyRound aria-hidden="true" />
-                    {ACCOUNT_LABELS.createButtonIdle}
-                  </>
-                )}
+              <Button variant="outline" onClick={() => setIsCreateAccountOpen(true)}>
+                <KeyRound aria-hidden="true" />
+                {ACCOUNT_LABELS.createButtonIdle}
               </Button>
             ) : null}
             {canResetPassword ? (
@@ -858,33 +838,16 @@ export function EmployeeDetailView({
         onConfirm={handleTerminate}
       />
 
-      {/* Hop thoai hien mat khau tam MOT LAN DUY NHAT — dong roi khong hien
-          lai (T-02-10, prohibition). Khong luu `newAccount` vao dau ke ngoai
-          state cua chinh component nay. */}
-      <Dialog
-        open={newAccount !== null}
-        onOpenChange={(open) => {
-          if (!open) setNewAccount(null);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{ACCOUNT_LABELS.dialogTitle}</DialogTitle>
-            <DialogDescription>{ACCOUNT_LABELS.dialogDescription}</DialogDescription>
-          </DialogHeader>
-          {newAccount ? (
-            <div className="grid gap-3">
-              <InfoRow label={ACCOUNT_LABELS.emailLabel} value={newAccount.email} />
-              <InfoRow
-                label={ACCOUNT_LABELS.temporaryPasswordLabel}
-                value={newAccount.temporaryPassword}
-                numeric
-              />
-            </div>
-          ) : null}
-          <Button onClick={() => setNewAccount(null)}>{ACCOUNT_LABELS.closeButton}</Button>
-        </DialogContent>
-      </Dialog>
+      {/* Quan tri dat mat khau dang nhap dau tien cho nhan vien (spec
+          2026-09-06). Khong con hop thoai "hien mat khau tam mot lan": mat
+          khau do chinh quan tri go nen khong co gi de lo ra. */}
+      <CreateAccountDialog
+        employeeName={employee.fullName}
+        employeeEmail={employee.email}
+        open={isCreateAccountOpen}
+        onOpenChange={setIsCreateAccountOpen}
+        onSubmit={handleCreateAccount}
+      />
 
       {/* Quan tri dat lai mat khau cho nhan vien quen mat khau (spec
           2026-09-06). Khong can `invalidate()` sau khi thanh cong: mat khau
