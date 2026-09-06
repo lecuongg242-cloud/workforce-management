@@ -234,6 +234,13 @@ export interface AttendanceRecord {
   /** Ban ghi can nhan vien bo sung thong tin */
   needsSupplement: boolean;
   note: string | null;
+  /* ---- Spec 2026-09-06: dau hieu "quan tri da chinh tay ban ghi nay" ------
+   * `null` nghia la CHUA AI CHINH — con so do may ghi. Tuy chon vi mot so
+   * duong doc noi bo khong lay hai cot nay ve. */
+  editedAt?: string | null;
+  editedBy?: string | null;
+  /** Ten nguoi chinh, tra o tang doc; `null` khi khong tra cuu duoc. */
+  editedByName?: string | null;
 }
 
 export interface WorkSite {

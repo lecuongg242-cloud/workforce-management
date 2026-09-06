@@ -2,7 +2,15 @@
 
 import * as React from "react";
 
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+
 import { StatusBadge } from "@/components/common/status-badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -12,8 +20,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { displayAttendanceStatus } from "@/lib/attendance/display-status";
-import { ADMIN_ATTENDANCE_LABEL } from "@/lib/constants";
-import { formatDate, formatDurationShort, formatTime } from "@/lib/format";
+import { ADMIN_ATTENDANCE_LABEL, ATTENDANCE_EDIT_LABELS } from "@/lib/constants";
+import {
+  formatDate,
+  formatDurationShort,
+  formatInstant,
+  formatTime,
+} from "@/lib/format";
 import type { AttendanceRecord, Employee } from "@/lib/types/domain";
 
 /**
@@ -34,6 +47,8 @@ export function AttendanceRecordTable({
   shiftNameById,
   today,
   onOpenRecord,
+  onEditRecord,
+  onDeleteRecord,
 }: {
   records: AttendanceRecord[];
   employeeById: Map<string, Employee>;
@@ -47,7 +62,11 @@ export function AttendanceRecordTable({
    *  "thiếu giờ ra". Xem `display-status.ts`. */
   today: string;
   onOpenRecord: (recordId: string) => void;
+  /** `null` = nguoi dang xem khong co quyen sua; cot hanh dong bi an han. */
+  onEditRecord: ((record: AttendanceRecord) => void) | null;
+  onDeleteRecord: ((record: AttendanceRecord) => void) | null;
 }): React.ReactElement {
+  const canEdit = onEditRecord !== null && onDeleteRecord !== null;
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -61,6 +80,7 @@ export function AttendanceRecordTable({
             <TableHead>Ca</TableHead>
             <TableHead>Trạng thái</TableHead>
             <TableHead>Nơi chấm</TableHead>
+            {canEdit ? <TableHead className="w-12" /> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -112,10 +132,50 @@ export function AttendanceRecordTable({
                     })}
                     size="sm"
                   />
+                  {record.editedAt ? (
+                    <span
+                      className="mt-1 block text-[11px] text-ink-muted"
+                      title={`${ATTENDANCE_EDIT_LABELS.editedBadge} bởi ${
+                        record.editedByName ?? ATTENDANCE_EDIT_LABELS.editedByUnknown
+                      } lúc ${formatInstant(record.editedAt)}`}
+                    >
+                      {ATTENDANCE_EDIT_LABELS.editedBadge}
+                    </span>
+                  ) : null}
                 </TableCell>
                 <TableCell className="max-w-[14rem] truncate text-ink-secondary">
                   {record.location}
                 </TableCell>
+                {canEdit ? (
+                  <TableCell>
+                    {/* `stopPropagation` BAT BUOC: ca dong la mot nut mo hop
+                        thoai bang chung cham cong. Thieu no thi bam "Xoá" se
+                        vua mo anh len vua hoi xoa. */}
+                    <div onClick={(event) => event.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          aria-label={ATTENDANCE_EDIT_LABELS.rowActionsLabel}
+                          className="inline-flex size-8 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-canvas-soft hover:text-ink"
+                        >
+                          <MoreHorizontal aria-hidden="true" className="size-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onSelect={() => onEditRecord(record)}>
+                            <Pencil aria-hidden="true" />
+                            {ATTENDANCE_EDIT_LABELS.editAction}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onSelect={() => onDeleteRecord(record)}
+                          >
+                            <Trash2 aria-hidden="true" />
+                            {ATTENDANCE_EDIT_LABELS.deleteAction}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                ) : null}
               </TableRow>
             );
           })}

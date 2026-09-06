@@ -61,6 +61,13 @@ export const attendanceRecordSchema = z
     location: z.string(),
     needs_supplement: z.boolean(),
     note: z.string().nullable(),
+    /* Spec 2026-09-06 — dau hieu "ban ghi da bi quan tri chinh tay".
+     * `.optional()` CO CHU DICH: nhieu Route Handler khac (classification,
+     * summary, overtime-usage, payroll-rows) chon danh sach cot RIENG cua
+     * chung va khong lay hai cot nay. Bat buoc o day se lam vo dung nhung
+     * duong doc do — chung khong lien quan gi toi viec chinh tay. */
+    edited_at: z.string().nullable().optional(),
+    edited_by: z.string().nullable().optional(),
   })
   .transform((row) => ({
     id: row.id,
@@ -77,6 +84,8 @@ export const attendanceRecordSchema = z
     location: row.location,
     needsSupplement: row.needs_supplement,
     note: row.note,
+    editedAt: row.edited_at ?? null,
+    editedBy: row.edited_by ?? null,
   }));
 
 /**
@@ -99,6 +108,12 @@ export const attendanceRecordPlainSchema = z.object({
   location: z.string(),
   needsSupplement: z.boolean(),
   note: z.string().nullable(),
+  /* `.default(null)` de mot phan hoi tu phien ban cu (chua co hai truong nay)
+   * van parse duoc, thay vi lam vo ca man hinh cham cong. */
+  editedAt: z.string().nullable().default(null),
+  editedBy: z.string().nullable().default(null),
+  /** Ten quan tri da chinh — Route Handler doi chieu `employees.user_id`. */
+  editedByName: z.string().nullable().default(null),
 });
 
 export const attendanceListResponseSchema = z.array(attendanceRecordPlainSchema);

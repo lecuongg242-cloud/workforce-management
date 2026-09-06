@@ -1,5 +1,6 @@
 import {
   DEFAULT_LOCALE,
+  DEFAULT_TIMEZONE,
   WEEKDAY_LABEL_LONG,
 } from "@/lib/constants";
 import type { WeekdayNumber } from "@/lib/types/domain";
@@ -8,6 +9,33 @@ import type { WeekdayNumber } from "@/lib/types/domain";
 /* Ngay thang — lam viec truc tiep tren chuoi "YYYY-MM-DD" de tranh lech       */
 /* mui gio giua server (UTC) va trinh duyet (Asia/Ho_Chi_Minh).                */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * TIMESTAMPTZ tho -> "17:05 27/07/2026" theo gio Viet Nam.
+ *
+ * Khac moi ham con lai cua nhom nay: chung lam viec tren chuoi "YYYY-MM-DD"
+ * de KHONG dung toi mui gio, con ham nay bat buoc phai doi mui gio vi dau vao
+ * la mot khoanh khac that. `timeZone` khai TUONG MINH — de mac dinh se lay mui
+ * gio cua may nguoi xem va cho hai ket qua khac nhau tren hai may.
+ *
+ * `new Date(value)` CO tham so nen khong pham D-19a (chi doc dong ho may moi bi
+ * cam), va ham nay dung duoc o ca client component.
+ */
+export function formatInstant(value: string): string {
+  const formatter = new Intl.DateTimeFormat(DEFAULT_LOCALE, {
+    timeZone: DEFAULT_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(new Date(value));
+  const get = (type: string): string =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("hour")}:${get("minute")} ${get("day")}/${get("month")}/${get("year")}`;
+}
 
 /** "2026-07-27" -> "27/07/2026" */
 export function formatDate(isoDate: string): string {

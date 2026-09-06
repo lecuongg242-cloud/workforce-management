@@ -7,11 +7,14 @@ import {
   ChevronRight,
   CircleDot,
   Lock,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AttendanceMonthGrid, type GridRow } from "@/components/attendance/attendance-month-grid";
 import { AttendancePhotoDialog } from "@/components/attendance/attendance-photo-dialog";
+import { AttendanceCreateDialog } from "@/components/attendance/attendance-create-dialog";
+import { AttendanceEditDialog } from "@/components/attendance/attendance-edit-dialog";
 import { AttendanceRecordTable } from "@/components/attendance/attendance-record-table";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { DataTableSkeleton } from "@/components/common/data-table-skeleton";
@@ -33,7 +36,12 @@ import { useDataQuery } from "@/hooks/use-data-query";
 import { useDebounce } from "@/hooks/use-debounce";
 import { groupAttendanceByDay, shiftBreakInfoById } from "@/lib/attendance/day";
 import { useAuthenticatedSession } from "@/lib/auth/session-provider";
-import { ADMIN_ATTENDANCE_LABEL, PERIOD_LABEL } from "@/lib/constants";
+import {
+  ADMIN_ATTENDANCE_LABEL,
+  ATTENDANCE_EDIT_LABELS,
+  PERIOD_LABEL,
+} from "@/lib/constants";
+import { deleteAttendanceRecord } from "@/lib/data/mutations/attendance";
 import { listAttendance } from "@/lib/data/attendance";
 import { listDepartments } from "@/lib/data/departments";
 import { listAllEmployees } from "@/lib/data/employees";
@@ -73,6 +81,15 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
   const [search, setSearch] = React.useState("");
   const debouncedSearch = useDebounce(search, 300);
   const [openRecordId, setOpenRecordId] = React.useState<string | null>(null);
+  /* --- Quan tri chinh cham cong (spec 2026-09-06) ------------------------- */
+  const [editingRecord, setEditingRecord] =
+    React.useState<AttendanceRecord | null>(null);
+  const [deletingRecord, setDeletingRecord] =
+    React.useState<AttendanceRecord | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const canEditAttendance =
+    session.role === "owner" || session.role === "admin";
 
   const { invalidate } = useDataStore();
 
@@ -354,14 +371,23 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
           />
         ) : (
           <Tabs defaultValue="grid">
-            <TabsList className="m-3">
-              <TabsTrigger value="grid">
-                {ADMIN_ATTENDANCE_LABEL.gridTab}
-              </TabsTrigger>
-              <TabsTrigger value="list">
-                {ADMIN_ATTENDANCE_LABEL.listTab}
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex flex-wrap items-center justify-between gap-2 m-3">
+              <TabsList>
+                <TabsTrigger value="grid">
+                  {ADMIN_ATTENDANCE_LABEL.gridTab}
+                </TabsTrigger>
+                <TabsTrigger value="list">
+                  {ADMIN_ATTENDANCE_LABEL.listTab}
+                </TabsTrigger>
+              </TabsList>
+
+              {canEditAttendance ? (
+                <Button variant="outline" onClick={() => setIsCreateOpen(true)}>
+                  <Plus aria-hidden="true" />
+                  {ATTENDANCE_EDIT_LABELS.createButton}
+                </Button>
+              ) : null}
+            </div>
 
             <TabsContent value="grid">
               <AttendanceMonthGrid
@@ -379,11 +405,73 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
                 shiftNameById={shiftNameById}
                 today={today}
                 onOpenRecord={setOpenRecordId}
+                onEditRecord={canEditAttendance ? setEditingRecord : null}
+                onDeleteRecord={canEditAttendance ? setDeletingRecord : null}
               />
             </TabsContent>
           </Tabs>
         )}
       </div>
+
+      {/* --- Quan tri chinh cham cong (spec 2026-09-06) -------------------- */}
+      <AttendanceEditDialog
+        record={editingRecord}
+        employeeName={
+          editingRecord
+            ? (employeeById.get(editingRecord.employeeId)?.fullName ??
+              editingRecord.employeeId)
+            : "—"
+        }
+        shiftName={
+          editingRecord
+            ? (shiftNameById.get(editingRecord.shiftId) ?? "—")
+            : "—"
+        }
+        open={editingRecord !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingRecord(null);
+        }}
+        onSaved={reload}
+      />
+
+      <AttendanceCreateDialog
+        employees={data?.employees ?? []}
+        shifts={data?.shifts ?? []}
+        defaultDate={today}
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onCreated={reload}
+      />
+
+      <ConfirmDialog
+        open={deletingRecord !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeletingRecord(null);
+        }}
+        title={ATTENDANCE_EDIT_LABELS.deleteTitle}
+        description={ATTENDANCE_EDIT_LABELS.deleteDescription}
+        confirmLabel={ATTENDANCE_EDIT_LABELS.deleteConfirm}
+        tone="destructive"
+        isPending={isDeleting}
+        onConfirm={async () => {
+          if (!deletingRecord) return;
+          setIsDeleting(true);
+          try {
+            await deleteAttendanceRecord(deletingRecord.id);
+            toast.success(ATTENDANCE_EDIT_LABELS.deleteSuccessToast);
+            setDeletingRecord(null);
+            reload();
+          } catch (cause) {
+            toast.error(
+              cause instanceof Error
+                ? cause.message
+                : ATTENDANCE_EDIT_LABELS.deleteError,
+            );
+          } finally {
+            setIsDeleting(false);
+          }
+        }}
+      />
 
       {/* Dung lai Dialog bang chung cua 03-05 — khong dung mot ban thu hai. */}
       {/* Chot ky la MOT CHIEU (D-32b) — hop thoai noi ro dieu do, va noi ca

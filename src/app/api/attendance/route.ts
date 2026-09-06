@@ -39,7 +39,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const ATTENDANCE_COLUMNS =
-  "id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at, worked_minutes, late_minutes, early_leave_minutes, status, location, needs_supplement, note";
+  "id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at, worked_minutes, late_minutes, early_leave_minutes, status, location, needs_supplement, note, edited_at, edited_by";
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
@@ -111,7 +111,53 @@ export async function GET(request: Request): Promise<NextResponse> {
     const items = ((data ?? []) as unknown[]).map((row) =>
       attendanceRecordSchema.parse(row),
     );
-    return NextResponse.json(attendanceListResponseSchema.parse(items));
+
+    /**
+     * Ten quan tri da chinh tay ban ghi (spec 2026-09-06).
+     *
+     * Mot truy van phu DUY NHAT cho ca trang, va chi khi that su co ban ghi bi
+     * chinh — da so ky khong co ban ghi nao, va khi do khong ton them mot vong
+     * goi nao. Tra cuu theo `employees.user_id` chu khong luu ban sao ten o
+     * `attendance_records`: ten la du lieu cua ho so nhan vien, khong phai cua
+     * ban ghi cham cong.
+     */
+    const editorUserIds = [
+      ...new Set(
+        items
+          .map((item) => item.editedBy)
+          .filter((value): value is string => typeof value === "string"),
+      ),
+    ];
+
+    const editorNameByUserId = new Map<string, string>();
+    if (editorUserIds.length > 0) {
+      const { data: editorRows } = await supabase
+        .from("employees")
+        .select("user_id, full_name")
+        .eq("company_id", companyId)
+        .in("user_id", editorUserIds);
+
+      for (const row of (editorRows ?? []) as {
+        user_id: string | null;
+        full_name: string;
+      }[]) {
+        if (row.user_id) editorNameByUserId.set(row.user_id, row.full_name);
+      }
+    }
+
+    return NextResponse.json(
+      attendanceListResponseSchema.parse(
+        items.map((item) => ({
+          ...item,
+          // Khong tra cuu duoc (quan tri khong co ho so nhan vien, hoac da
+          // nghi) van phai noi ro la CO NGUOI chinh — nhan tren bang doc theo
+          // `editedAt`, khong doc theo ten.
+          editedByName: item.editedBy
+            ? (editorNameByUserId.get(item.editedBy) ?? null)
+            : null,
+        })),
+      ),
+    );
   } catch (cause) {
     if (cause instanceof UnauthenticatedError) {
       return NextResponse.json({ error: cause.message }, { status: 401 });

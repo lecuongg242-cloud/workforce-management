@@ -2,7 +2,11 @@
 
 import { randomUUID } from "node:crypto";
 
-import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
+import {
+  ForbiddenError,
+  getSessionContext,
+  requireRole,
+} from "@/lib/auth/session-context";
 import { periodGuardError } from "@/lib/attendance/period-guard";
 import { AttendanceRejectedError } from "@/lib/attendance/rejection";
 import { requiresPunchPhoto } from "@/lib/attendance/suspicious";
@@ -25,7 +29,7 @@ import type {
 } from "@/lib/types/domain";
 
 const ATTENDANCE_COLUMNS =
-  "id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at, worked_minutes, late_minutes, early_leave_minutes, status, location, needs_supplement, note";
+  "id, company_id, employee_id, work_date, shift_id, check_in_at, check_out_at, worked_minutes, late_minutes, early_leave_minutes, status, location, needs_supplement, note, edited_at, edited_by";
 
 interface RawAttendanceRow {
   id: string;
@@ -498,6 +502,181 @@ async function writePunchEvidence({
  * KHONG CO LY DO THU TU: khoang cach vuot ban kinh KHONG BAO GIO la mot ly
  * do tu choi (D-20/D-20a) o bat ky nhanh nao trong file nay.
  */
+type SupabaseServerClient = Awaited<ReturnType<typeof createServerSupabase>>;
+
+export interface DerivedAttendance {
+  workedMinutes: number;
+  lateMinutes: number;
+  earlyLeaveMinutes: number;
+  status: AttendanceRecord["status"];
+}
+
+/**
+ * NGUON SU THAT DUY NHAT cho bon cot dan xuat cua mot luot cham cong
+ * (spec 2026-09-06). Truoc khi co ham nay, phep tinh nam rai trong `checkIn`
+ * (do muon) va `checkOut` (thoi luong, ve som, trang thai).
+ *
+ * Ly do gom lai: tu luc quan tri sua duoc gio tay, se co BA duong cung ghi
+ * bon cot nay. Ba ban sao cua mot quy tac se troi khoi nhau, va hau qua khong
+ * hien ra ngay — no hien ra o bang luong cuoi thang duoi dang mot con so sai
+ * ma khong ai truy duoc.
+ *
+ * Moi phep tinh thoi gian deu di qua RPC cua Postgres (`tf_local_instant`,
+ * `tf_worked_minutes`, `tf_shift_minutes`), khong tinh o JavaScript — dung
+ * mot quy uoc mui gio thu hai chinh la dieu D-19 cam.
+ *
+ * `knownLateMinutes`: khi da biet so phut muon (duong `checkOut` — do muon
+ * thuoc ve LAN VAO, khong duoc tinh lai o lan ra), truyen vao de bo qua nhanh
+ * tinh muon. Khong truyen thi tinh lai tu dau (duong `checkIn` va duong quan
+ * tri sua gio).
+ */
+async function computeDerivedAttendance({
+  supabase,
+  shift,
+  workDate,
+  checkInAt,
+  checkOutAt,
+  isFirstPunchOfDay,
+  knownLateMinutes,
+}: {
+  supabase: SupabaseServerClient;
+  shift: RawShiftRow;
+  workDate: string;
+  checkInAt: string;
+  checkOutAt: string | null;
+  isFirstPunchOfDay: boolean;
+  knownLateMinutes?: number;
+}): Promise<DerivedAttendance> {
+  /* ---------- Di muon ---------------------------------------------------- */
+  let lateMinutes = knownLateMinutes ?? 0;
+
+  // Do muon CHI tinh cho LUOT DAU TIEN cua ngay: cac luot sau la quay lai sau
+  // khi ra ngoai giua ca, so voi gio bat dau ca thi luon "muon" — tinh do muon
+  // cho chung se bien moi lan di an trua ve thanh mot lan di muon.
+  //
+  // Ca linh hoat khong co gio bat dau de do muon SO VOI (xem `isHoursShift`).
+  if (knownLateMinutes === undefined && isFirstPunchOfDay && !isHoursShift(shift)) {
+    // CA QUA DEM: moc bat dau ca co the nam o HOM QUA.
+    //
+    // Voi ca 22:00-06:00, mot luot cham luc 00:09 co `work_date` la hom nay,
+    // nen giai gio bat dau ca tren chinh ngay do se ra 22:00 TOI NAY: mot moc
+    // trong TUONG LAI. So phut muon thanh am, bi kep ve 0, va nguoi vao muon
+    // hai tieng duoc ghi `on_time`.
+    //
+    // `scheduledStartDayOffset()` chi doi MOC DUOC DEM MUON SO VOI — mot phep
+    // do. No khong dung toi `work_date`, khong dung toi D-08, va khong dung
+    // toi bat ky cot nao duoc luu.
+    let shiftEndInstantOnWorkDate: string | null = null;
+    if (shift.overnight && shift.end_time !== null) {
+      const { data: endInstant, error: endInstantError } = await supabase.rpc(
+        "tf_local_instant",
+        { p_date: workDate, p_time: shift.end_time },
+      );
+      if (endInstantError || !endInstant) {
+        throw new Error("Không thể tính thời gian kết thúc ca.");
+      }
+      shiftEndInstantOnWorkDate = endInstant as string;
+    }
+
+    const dayOffset = scheduledStartDayOffset({
+      overnight: shift.overnight,
+      punchInstant: checkInAt,
+      shiftEndInstantOnWorkDate,
+    });
+    const scheduledStartDate =
+      dayOffset === 0 ? workDate : addDays(workDate, dayOffset);
+
+    const { data: scheduledStart, error: scheduledStartError } = await supabase.rpc(
+      "tf_local_instant",
+      { p_date: scheduledStartDate, p_time: shift.start_time },
+    );
+    if (scheduledStartError || !scheduledStart) {
+      throw new Error("Không thể tính thời gian bắt đầu ca.");
+    }
+
+    // Do muon = hieu (check_in_at - gio bat dau ca THEO KE HOACH), tinh tren
+    // TIMESTAMPTZ THAT qua tf_worked_minutes — den som tu dong ve 0 (khong can
+    // nguong chan 720 phut nhu tang gia lap, vi day la hieu tuyet doi giua hai
+    // khoanh khac, khong phai phep tru gio-trong-ngay co the wrap quanh nua
+    // dem).
+    const { data: lateRaw, error: lateError } = await supabase.rpc(
+      "tf_worked_minutes",
+      { p_check_in: scheduledStart, p_check_out: checkInAt, p_break_minutes: 0 },
+    );
+    if (lateError || lateRaw === null) {
+      throw new Error("Không thể tính số phút đi muộn.");
+    }
+    lateMinutes = Math.max((lateRaw as number) - shift.late_tolerance_minutes, 0);
+  }
+
+  /* ---------- Thoi luong luot -------------------------------------------- */
+  // `p_break_minutes: 0` CO CHU DICH (migration 0014): cot `worked_minutes`
+  // luu THOI LUONG THO cua rieng luot nay. Gio nghi thuoc ve CA NGAY, khong
+  // thuoc ve mot luot — tru no o day se tru lap lai o moi luot cua ngay, va se
+  // lam mot luot ngan hon gio nghi ra 0 phut. Phep tru dung mot lan cho ca
+  // ngay nam o `src/lib/attendance/day.ts`.
+  let workedMinutes = 0;
+  if (checkOutAt !== null) {
+    const { data: worked, error: workedError } = await supabase.rpc(
+      "tf_worked_minutes",
+      { p_check_in: checkInAt, p_check_out: checkOutAt, p_break_minutes: 0 },
+    );
+    if (workedError || worked === null) {
+      throw new Error("Không thể tính số phút làm việc.");
+    }
+    workedMinutes = worked as number;
+  }
+
+  /* ---------- Ve som ------------------------------------------------------ */
+  // Ca linh hoat khong co gio ket thuc theo ke hoach, nen khong co moc nao de
+  // "ve som" so voi.
+  //
+  // GIU NGUYEN mot khac biet co san voi nhanh do muon o tren: moc bat dau ca o
+  // day dat tren CHINH `work_date`, khong qua `scheduledStartDayOffset`. Do la
+  // hanh vi cua `checkOut` truoc lan gom nay; sua no o day se lang le doi cach
+  // tinh ve som cua ca qua dem — mot thay doi nghiep vu khong thuoc pham vi
+  // spec 2026-09-06.
+  let earlyLeaveMinutes = 0;
+  if (checkOutAt !== null && !isHoursShift(shift)) {
+    const { data: scheduledStart, error: scheduledStartError } = await supabase.rpc(
+      "tf_local_instant",
+      { p_date: workDate, p_time: shift.start_time },
+    );
+    if (scheduledStartError || !scheduledStart) {
+      throw new Error("Không thể tính thời gian bắt đầu ca.");
+    }
+
+    // Thoi luong TRON CA (ke ca gio nghi -- p_break_minutes=0) da xu ly wrap
+    // qua nua dem cho ca qua dem (D-08) o CHINH tf_shift_minutes(), khong phai
+    // tu viet lai o day.
+    const { data: rawShiftMinutes, error: shiftMinutesError } = await supabase.rpc(
+      "tf_shift_minutes",
+      { p_start: shift.start_time, p_end: shift.end_time, p_break_minutes: 0 },
+    );
+    if (shiftMinutesError || rawShiftMinutes === null) {
+      throw new Error("Không thể tính thời lượng ca.");
+    }
+    const scheduledEnd = addMinutesToInstant(
+      scheduledStart as string,
+      rawShiftMinutes as number,
+    );
+
+    const { data: earlyRaw, error: earlyError } = await supabase.rpc(
+      "tf_worked_minutes",
+      { p_check_in: checkOutAt, p_check_out: scheduledEnd, p_break_minutes: 0 },
+    );
+    if (earlyError || earlyRaw === null) {
+      throw new Error("Không thể tính số phút về sớm.");
+    }
+    earlyLeaveMinutes = earlyRaw as number;
+  }
+
+  const status: AttendanceRecord["status"] =
+    lateMinutes > 0 ? "late" : earlyLeaveMinutes > 0 ? "early_leave" : "on_time";
+
+  return { workedMinutes, lateMinutes, earlyLeaveMinutes, status };
+}
+
 export async function checkIn(
   employeeId: string,
   evidence?: PunchEvidence,
@@ -632,80 +811,22 @@ export async function checkIn(
   // do muon cho chung se bien moi lan di an trua ve thanh mot lan di muon.
   const isFirstPunchOfDay = punchesToday.length === 0;
 
-  let lateMinutes = 0;
-  // Ca linh hoat khong co gio bat dau de do muon SO VOI — xem `isHoursShift`.
-  // Bo qua CA phep goi `tf_local_instant` o day: goi no voi `p_time = null` se
-  // tra null va roi vao nhanh nem loi ben duoi, tuc mot nhan vien ca linh hoat
-  // se khong cham cong duoc.
-  if (isFirstPunchOfDay && !isHoursShift(shift)) {
-    // CA QUA DEM: moc bat dau ca co the nam o HOM QUA.
-    //
-    // `work_date` cua mot khoanh khac la ngay lich cua chinh no (D-08, ep
-    // bang CHECK constraint o 0004:109) — dung, va KHONG doi o day. Nhung
-    // voi ca 22:00-06:00, mot luot cham luc 00:09 co `work_date` la hom nay,
-    // nen giai gio bat dau ca tren chinh ngay do se ra 22:00 TOI NAY: mot moc
-    // trong TUONG LAI. So phut muon thanh am, bi kep ve 0, va nguoi vao muon
-    // hai tieng duoc ghi `on_time`.
-    //
-    // `scheduledStartDayOffset()` chi doi MOC DUOC DEM MUON SO VOI — mot phep
-    // do. No khong dung toi `work_date`, khong dung toi D-08, va khong dung
-    // toi bat ky cot nao duoc luu.
-    // Gio KET THUC ca dat tren chinh ngay cong — moc de biet luot cham nay
-    // dang o nua truoc hay nua sau khung gio ca. Chi hoi database khi ca that
-    // su qua dem: ca trong ngay khong can them mot vong goi nao.
-    let shiftEndInstantOnWorkDate: string | null = null;
-    if (shift.overnight && shift.end_time !== null) {
-      const { data: endInstant, error: endInstantError } = await supabase.rpc(
-        "tf_local_instant",
-        { p_date: workDate, p_time: shift.end_time },
-      );
-      if (endInstantError || !endInstant) {
-        throw new Error("Không thể tính thời gian kết thúc ca.");
-      }
-      shiftEndInstantOnWorkDate = endInstant as string;
-    }
-
-    const dayOffset = scheduledStartDayOffset({
-      overnight: shift.overnight,
-      punchInstant: nowIso as string,
-      shiftEndInstantOnWorkDate,
-    });
-    const scheduledStartDate =
-      dayOffset === 0
-        ? (workDate as string)
-        : addDays(workDate as string, dayOffset);
-
-    const { data: scheduledStart, error: scheduledStartError } = await supabase.rpc(
-      "tf_local_instant",
-      { p_date: scheduledStartDate, p_time: shift.start_time },
-    );
-    if (scheduledStartError || !scheduledStart) {
-      throw new Error("Không thể tính thời gian bắt đầu ca.");
-    }
-
-    // Do muon = hieu (check_in_at - gio bat dau ca THEO KE HOACH), tinh tren
-    // TIMESTAMPTZ THAT qua tf_worked_minutes — den som tu dong ve 0 (khong can
-    // nguong chan 720 phut nhu tang gia lap, vi day la hieu tuyet doi giua hai
-    // khoanh khac, khong phai phep tru gio-trong-ngay co the wrap quanh nua
-    // dem).
-    const { data: lateRaw, error: lateError } = await supabase.rpc(
-      "tf_worked_minutes",
-      { p_check_in: scheduledStart, p_check_out: nowIso, p_break_minutes: 0 },
-    );
-    if (lateError || lateRaw === null) {
-      throw new Error("Không thể tính số phút đi muộn.");
-    }
-    lateMinutes = Math.max((lateRaw as number) - shift.late_tolerance_minutes, 0);
-  }
-  const status: AttendanceRecord["status"] = lateMinutes > 0 ? "late" : "on_time";
+  const derived = await computeDerivedAttendance({
+    supabase,
+    shift,
+    workDate: workDate as string,
+    checkInAt: nowIso as string,
+    checkOutAt: null,
+    isFirstPunchOfDay,
+  });
 
   const writeRow = {
     check_in_at: nowIso,
     check_out_at: null,
-    worked_minutes: 0,
-    late_minutes: lateMinutes,
-    early_leave_minutes: 0,
-    status,
+    worked_minutes: derived.workedMinutes,
+    late_minutes: derived.lateMinutes,
+    early_leave_minutes: derived.earlyLeaveMinutes,
+    status: derived.status,
     location: employeeRow.work_location as string,
     needs_supplement: false,
     note: null,
@@ -844,78 +965,24 @@ export async function checkOut(
     throw new Error("Không thể xác định thời gian máy chủ.");
   }
 
-  // `p_break_minutes: 0` CO CHU DICH (migration 0014): cot `worked_minutes`
-  // luu THOI LUONG THO cua rieng luot nay. Gio nghi thuoc ve CA NGAY, khong
-  // thuoc ve mot luot — tru no o day se tru lap lai o moi luot cua ngay, va
-  // se lam mot luot ngan hon gio nghi ra 0 phut. Phep tru dung mot lan cho
-  // ca ngay nam o `src/lib/attendance/day.ts`.
-  const { data: workedMinutes, error: workedError } = await supabase.rpc(
-    "tf_worked_minutes",
-    {
-      p_check_in: beforeRow.check_in_at,
-      p_check_out: nowIso,
-      p_break_minutes: 0,
-    },
-  );
-  if (workedError || workedMinutes === null) {
-    throw new Error("Không thể tính số phút làm việc.");
-  }
-
-  // Ca linh hoat khong co gio ket thuc theo ke hoach, nen khong co moc nao de
-  // "ve som" so voi (xem `isHoursShift`). Ba loi goi RPC duoi day deu nhan
-  // `shift.start_time`/`shift.end_time` — voi ca linh hoat chung deu null, nen
-  // day cung la nhanh giu cho `checkOut` khong nem loi giua chung.
-  let earlyLeaveMinutes = 0;
-  if (!isHoursShift(shift)) {
-    const { data: scheduledStart, error: scheduledStartError } = await supabase.rpc(
-      "tf_local_instant",
-      { p_date: beforeRow.work_date, p_time: shift.start_time },
-    );
-    if (scheduledStartError || !scheduledStart) {
-      throw new Error("Không thể tính thời gian bắt đầu ca.");
-    }
-
-    // Thoi luong TRON CA (ke ca gio nghi -- p_break_minutes=0) da xu ly wrap
-    // qua nua dem cho ca qua dem (D-08) o CHINH tf_shift_minutes(), khong phai
-    // tu viet lai o day. Cong so phut nay vao thoi diem bat dau THEO KE HOACH
-    // qua addMinutesToInstant() (phep cong EPOCH DON THUAN, khong phai mot quy
-    // uoc mui gio thu hai) de ra thoi diem KET THUC CA THEO KE HOACH.
-    const { data: rawShiftMinutes, error: shiftMinutesError } = await supabase.rpc(
-      "tf_shift_minutes",
-      { p_start: shift.start_time, p_end: shift.end_time, p_break_minutes: 0 },
-    );
-    if (shiftMinutesError || rawShiftMinutes === null) {
-      throw new Error("Không thể tính thời lượng ca.");
-    }
-    const scheduledEnd = addMinutesToInstant(
-      scheduledStart as string,
-      rawShiftMinutes as number,
-    );
-
-    const { data: earlyRaw, error: earlyError } = await supabase.rpc(
-      "tf_worked_minutes",
-      { p_check_in: nowIso, p_check_out: scheduledEnd, p_break_minutes: 0 },
-    );
-    if (earlyError || earlyRaw === null) {
-      throw new Error("Không thể tính số phút về sớm.");
-    }
-    earlyLeaveMinutes = earlyRaw as number;
-  }
-
-  const status: AttendanceRecord["status"] =
-    beforeRow.status === "late"
-      ? "late"
-      : earlyLeaveMinutes > 0
-        ? "early_leave"
-        : "on_time";
+  // `knownLateMinutes`: do muon thuoc ve LAN VAO, khong duoc tinh lai o lan ra.
+  const derived = await computeDerivedAttendance({
+    supabase,
+    shift,
+    workDate: beforeRow.work_date,
+    checkInAt: beforeRow.check_in_at,
+    checkOutAt: nowIso as string,
+    isFirstPunchOfDay: false,
+    knownLateMinutes: beforeRow.late_minutes as number,
+  });
 
   const { data: afterRow, error: updateError } = await supabase
     .from("attendance_records")
     .update({
       check_out_at: nowIso,
-      worked_minutes: workedMinutes,
-      early_leave_minutes: earlyLeaveMinutes,
-      status,
+      worked_minutes: derived.workedMinutes,
+      early_leave_minutes: derived.earlyLeaveMinutes,
+      status: derived.status,
     })
     .eq("id", recordId)
     .eq("company_id", companyId)
@@ -957,4 +1024,446 @@ export async function checkOut(
     ...attendanceRecordSchema.parse(afterRow),
     ...photoResult,
   };
+}
+
+/* ========================================================================== */
+/* Quan tri chinh cham cong (spec 2026-09-06)                                 */
+/* ========================================================================== */
+
+/**
+ * Ba ham duoi day la duong SUA TRUC TIEP cua quan tri — khac han `checkIn`/
+ * `checkOut` o mot diem can nho: gio o day den TU THAM SO, khong tu
+ * `tf_server_now()`. D-19 cam nhan dau thoi gian tu client cho mot LAN CHAM
+ * CONG that; mot lan sua tay thi ban chat la nguoi dat so, va viec do duoc ghi
+ * lai bang `edited_at`/`edited_by` cong mot dong `audit_log` nguyen dong.
+ *
+ * KY DA CHOT: khong ham nao o day tu kiem. Trigger `attendance_period_guard`
+ * (migration 0021) chan o tang database, va `periodGuardError()` doi loi do
+ * thanh cau chi duong tiep ("Hãy gửi yêu cầu bổ sung công..."). Kiem lai o
+ * tang ung dung se tao nguon su that thu hai cho cung mot quy tac.
+ */
+
+/** Loi cua partial unique index `attendance_records_open_punch_uidx` (0013). */
+const UNIQUE_VIOLATION_SQLSTATE = "23505";
+
+const OPEN_PUNCH_MESSAGE =
+  "Nhân viên này đã có một lượt chưa có giờ ra trong ngày đó. Hãy điền giờ ra cho lượt đó trước.";
+
+/**
+ * Doi loi ghi cua bang cham cong thanh mot cau doc duoc, theo dung THU TU uu
+ * tien: ky da chot truoc (no chan ca nhung thao tac ma index kia cho qua), roi
+ * moi den trung lap luot dang mo.
+ */
+function attendanceWriteError(
+  cause: { code?: string; message?: string } | null | undefined,
+  fallbackMessage: string,
+): Error {
+  if (cause?.code === UNIQUE_VIOLATION_SQLSTATE) {
+    return new Error(OPEN_PUNCH_MESSAGE);
+  }
+  return periodGuardError(cause, fallbackMessage);
+}
+
+/**
+ * "HH:mm" tren mot ngay -> TIMESTAMPTZ that, qua RPC cua Postgres.
+ *
+ * KHONG tu ghep chuoi ISO o JavaScript: do la dung mot quy uoc mui gio thu hai
+ * ben canh quy uoc cua database (D-19), va no se lech dung vao nhung ngay it
+ * ai thu.
+ */
+async function localInstant(
+  supabase: SupabaseServerClient,
+  date: string,
+  time: string,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("tf_local_instant", {
+    p_date: date,
+    p_time: time,
+  });
+  if (error || !data) {
+    throw new Error("Không thể quy đổi giờ đã nhập.");
+  }
+  return data as string;
+}
+
+/**
+ * Ngay cong cua mot khoanh khac, theo dung ham ma CHECK constraint cua bang
+ * dung (`work_date = tf_work_date(check_in_at)`, 0004:109). Sua gio vao ma giu
+ * nguyen `work_date` cu se bi database tu choi — nen ngay cong luon duoc tinh
+ * LAI o day chu khong suy ra o tang ung dung.
+ */
+async function workDateOf(
+  supabase: SupabaseServerClient,
+  instant: string,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("tf_work_date", {
+    p_instant: instant,
+  });
+  if (error || !data) {
+    throw new Error("Không thể xác định ngày công của giờ đã nhập.");
+  }
+  return data as string;
+}
+
+/**
+ * Giai cap gio vao/ra tren mot ngay cong thanh hai khoanh khac.
+ *
+ * QUA DEM: gio ra SOM HON hoac BANG gio vao nghia la ca keo sang hom sau
+ * (18:00 -> 02:00). Khong xu ly truong hop nay se cho ra thoi luong am, va
+ * `tf_worked_minutes` se kep no ve 0 — mot ca dem tron ven bi ghi thanh 0 phut
+ * ma khong bao loi gi.
+ */
+async function resolvePunchInstants({
+  supabase,
+  date,
+  checkIn,
+  checkOut,
+}: {
+  supabase: SupabaseServerClient;
+  date: string;
+  checkIn: string;
+  checkOut: string | null;
+}): Promise<{ checkInAt: string; checkOutAt: string | null }> {
+  const checkInAt = await localInstant(supabase, date, checkIn);
+  if (checkOut === null) {
+    return { checkInAt, checkOutAt: null };
+  }
+
+  const sameDayOut = await localInstant(supabase, date, checkOut);
+  const checkOutAt =
+    new Date(sameDayOut).getTime() <= new Date(checkInAt).getTime()
+      ? await localInstant(supabase, addDays(date, 1), checkOut)
+      : sameDayOut;
+
+  return { checkInAt, checkOutAt };
+}
+
+/** Ca cua mot ban ghi — dung de tinh lai bon cot dan xuat. */
+async function loadPunchShift(
+  supabase: SupabaseServerClient,
+  companyId: string,
+  shiftId: string,
+): Promise<RawShiftRow> {
+  const { data, error } = await supabase
+    .from("shifts")
+    .select(SHIFT_PUNCH_COLUMNS)
+    .eq("id", shiftId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (error || !data) {
+    throw new Error("Không tìm thấy ca làm việc của bản ghi này.");
+  }
+  return data as RawShiftRow;
+}
+
+/**
+ * Luot dang xet co phai luot DAU TIEN cua ngay khong — quyet dinh co tinh di
+ * muon hay khong (cac luot sau la quay lai giua ca, xem
+ * `computeDerivedAttendance`).
+ *
+ * `excludeRecordId` de chinh ban ghi dang sua khong tu tinh la "mot luot khac
+ * som hon minh".
+ */
+async function isFirstPunchOfWorkDay({
+  supabase,
+  companyId,
+  employeeId,
+  workDate,
+  shiftId,
+  checkInAt,
+  excludeRecordId,
+}: {
+  supabase: SupabaseServerClient;
+  companyId: string;
+  employeeId: string;
+  workDate: string;
+  shiftId: string;
+  checkInAt: string;
+  excludeRecordId: string | null;
+}): Promise<boolean> {
+  let query = supabase
+    .from("attendance_records")
+    .select("id, check_in_at")
+    .eq("company_id", companyId)
+    .eq("employee_id", employeeId)
+    .eq("work_date", workDate)
+    .eq("shift_id", shiftId)
+    .not("check_in_at", "is", null)
+    .lt("check_in_at", checkInAt);
+
+  if (excludeRecordId !== null) {
+    query = query.neq("id", excludeRecordId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error("Không thể kiểm tra các lượt chấm công trong ngày.");
+  }
+  return (data ?? []).length === 0;
+}
+
+/** Doc mot ban ghi trong PHAM VI doanh nghiep cua phien dang dang nhap. */
+async function loadOwnAttendanceRecord(
+  supabase: SupabaseServerClient,
+  companyId: string,
+  recordId: string,
+): Promise<RawAttendanceRow> {
+  const { data, error } = await supabase
+    .from("attendance_records")
+    .select(ATTENDANCE_COLUMNS)
+    .eq("id", recordId)
+    // Ranh gioi doanh nghiep nam O DAY; RLS la lop phong thu thu hai.
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (error || !data) {
+    throw new Error("Không tìm thấy bản ghi chấm công.");
+  }
+  return data as RawAttendanceRow;
+}
+
+export interface AttendanceTimesInput {
+  /** "HH:mm" theo gio Viet Nam, tren ngay cong cua ban ghi. */
+  checkIn: string;
+  /** "HH:mm", hoac `null` khi luot con dang mo (chua tan ca). */
+  checkOut: string | null;
+}
+
+/**
+ * Quan tri sua gio vao/ra cua mot luot cham cong da co.
+ *
+ * KHONG doi duoc ngay cong: muon chuyen mot luot sang ngay khac thi xoa roi
+ * them lai. Ranh gioi nay giu cho rang buoc `work_date` khoi bien thanh mot mo
+ * truong hop dac biet, va no phan anh dung nghiep vu — doi ngay cua mot luot
+ * la mot su that khac, khong phai mot cho go nham.
+ *
+ * Ngay cong VAN duoc tinh lai tu gio vao moi: voi ca qua dem, sua gio vao tu
+ * 23:50 sang 00:10 lam ngay cong doi that, va CHECK constraint cua bang se tu
+ * choi neu ta giu nguyen gia tri cu.
+ */
+export async function updateAttendanceRecord(
+  recordId: string,
+  times: AttendanceTimesInput,
+): Promise<AttendanceRecord> {
+  const { companyId, userId, role } = await getSessionContext();
+  requireRole(role, ["owner", "admin"]);
+
+  const supabase = await createServerSupabase();
+  const beforeRow = await loadOwnAttendanceRecord(supabase, companyId, recordId);
+
+  const shift = await loadPunchShift(supabase, companyId, beforeRow.shift_id);
+
+  const { checkInAt, checkOutAt } = await resolvePunchInstants({
+    supabase,
+    date: beforeRow.work_date,
+    checkIn: times.checkIn,
+    checkOut: times.checkOut,
+  });
+
+  const workDate = await workDateOf(supabase, checkInAt);
+
+  const isFirstPunchOfDay = await isFirstPunchOfWorkDay({
+    supabase,
+    companyId,
+    employeeId: beforeRow.employee_id,
+    workDate,
+    shiftId: beforeRow.shift_id,
+    checkInAt,
+    excludeRecordId: recordId,
+  });
+
+  const derived = await computeDerivedAttendance({
+    supabase,
+    shift,
+    workDate,
+    checkInAt,
+    checkOutAt,
+    isFirstPunchOfDay,
+  });
+
+  const { data: nowIso, error: nowError } = await supabase.rpc("tf_server_now");
+  if (nowError || !nowIso) {
+    throw new Error("Không thể xác định thời gian máy chủ.");
+  }
+
+  const { data: afterRow, error: updateError } = await supabase
+    .from("attendance_records")
+    .update({
+      work_date: workDate,
+      check_in_at: checkInAt,
+      check_out_at: checkOutAt,
+      worked_minutes: derived.workedMinutes,
+      late_minutes: derived.lateMinutes,
+      early_leave_minutes: derived.earlyLeaveMinutes,
+      status: derived.status,
+      // Da co gio ra thi khong con gi de nhan vien bo sung nua.
+      needs_supplement: checkOutAt === null ? beforeRow.needs_supplement : false,
+      edited_at: nowIso,
+      edited_by: userId,
+    })
+    .eq("id", recordId)
+    .eq("company_id", companyId)
+    .select(ATTENDANCE_COLUMNS)
+    .single();
+
+  if (updateError || !afterRow) {
+    throw attendanceWriteError(updateError, "Không thể sửa bản ghi chấm công.");
+  }
+
+  await logMutation({
+    companyId,
+    actorUserId: userId,
+    action: "update",
+    entityTable: "attendance_records",
+    entityId: recordId,
+    before: beforeRow,
+    after: afterRow,
+    reason: null,
+  });
+
+  return attendanceRecordSchema.parse(afterRow);
+}
+
+export interface CreateAttendanceInput extends AttendanceTimesInput {
+  employeeId: string;
+  /** "YYYY-MM-DD" — ngay cong quan tri chon. */
+  date: string;
+  shiftId: string;
+}
+
+/**
+ * Quan tri them mot luot cham cong cho ngay nhan vien quen bam han.
+ *
+ * `location` lay tu `work_location` cua ho so nhan vien — cot nay `not null`,
+ * va mot ban ghi do nguoi tao thi khong co toa do do duoc. Khong co bang chung
+ * anh/vi tri di kem: day dung la mot ban ghi do nguoi dat, va `edited_at` noi
+ * ro dieu do.
+ */
+export async function createAttendanceRecord(
+  input: CreateAttendanceInput,
+): Promise<AttendanceRecord> {
+  const { companyId, userId, role } = await getSessionContext();
+  requireRole(role, ["owner", "admin"]);
+
+  const supabase = await createServerSupabase();
+
+  const { data: employeeRow, error: employeeError } = await supabase
+    .from("employees")
+    .select("id, work_location")
+    .eq("id", input.employeeId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+  if (employeeError || !employeeRow) {
+    throw new Error("Không tìm thấy nhân viên.");
+  }
+
+  const shift = await loadPunchShift(supabase, companyId, input.shiftId);
+
+  const { checkInAt, checkOutAt } = await resolvePunchInstants({
+    supabase,
+    date: input.date,
+    checkIn: input.checkIn,
+    checkOut: input.checkOut,
+  });
+
+  const workDate = await workDateOf(supabase, checkInAt);
+
+  const isFirstPunchOfDay = await isFirstPunchOfWorkDay({
+    supabase,
+    companyId,
+    employeeId: input.employeeId,
+    workDate,
+    shiftId: input.shiftId,
+    checkInAt,
+    excludeRecordId: null,
+  });
+
+  const derived = await computeDerivedAttendance({
+    supabase,
+    shift,
+    workDate,
+    checkInAt,
+    checkOutAt,
+    isFirstPunchOfDay,
+  });
+
+  const { data: nowIso, error: nowError } = await supabase.rpc("tf_server_now");
+  if (nowError || !nowIso) {
+    throw new Error("Không thể xác định thời gian máy chủ.");
+  }
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("attendance_records")
+    .insert({
+      id: randomUUID(),
+      company_id: companyId,
+      employee_id: input.employeeId,
+      work_date: workDate,
+      shift_id: input.shiftId,
+      check_in_at: checkInAt,
+      check_out_at: checkOutAt,
+      worked_minutes: derived.workedMinutes,
+      late_minutes: derived.lateMinutes,
+      early_leave_minutes: derived.earlyLeaveMinutes,
+      status: derived.status,
+      location: employeeRow.work_location as string,
+      needs_supplement: false,
+      note: null,
+      edited_at: nowIso,
+      edited_by: userId,
+    })
+    .select(ATTENDANCE_COLUMNS)
+    .single();
+
+  if (insertError || !inserted) {
+    throw attendanceWriteError(insertError, "Không thể thêm bản ghi chấm công.");
+  }
+
+  await logMutation({
+    companyId,
+    actorUserId: userId,
+    action: "insert",
+    entityTable: "attendance_records",
+    entityId: (inserted as RawAttendanceRow).id,
+    before: null,
+    after: inserted,
+    reason: null,
+  });
+
+  return attendanceRecordSchema.parse(inserted);
+}
+
+/**
+ * Quan tri xoa mot luot bam thua (bam nham hai lan lien nhau).
+ *
+ * Xoa THAT chu khong danh dau: mot luot bam nham khong phai mot su that can
+ * giu lai tren bang cong. Dau vet van con nguyen o `audit_log` — anh chup
+ * nguyen dong nam o `before`, nen khoi phuc duoc neu xoa nham.
+ */
+export async function deleteAttendanceRecord(recordId: string): Promise<void> {
+  const { companyId, userId, role } = await getSessionContext();
+  requireRole(role, ["owner", "admin"]);
+
+  const supabase = await createServerSupabase();
+  const beforeRow = await loadOwnAttendanceRecord(supabase, companyId, recordId);
+
+  const { error: deleteError } = await supabase
+    .from("attendance_records")
+    .delete()
+    .eq("id", recordId)
+    .eq("company_id", companyId);
+
+  if (deleteError) {
+    throw attendanceWriteError(deleteError, "Không thể xoá bản ghi chấm công.");
+  }
+
+  await logMutation({
+    companyId,
+    actorUserId: userId,
+    action: "delete",
+    entityTable: "attendance_records",
+    entityId: recordId,
+    before: beforeRow,
+    after: null,
+    reason: null,
+  });
 }

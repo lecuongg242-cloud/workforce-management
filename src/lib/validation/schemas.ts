@@ -607,3 +607,52 @@ export const workRequestSchema = z
   );
 
 export type WorkRequestFormValues = z.infer<typeof workRequestSchema>;
+
+/* -------------------------------------------------------------------------- */
+/* Quan tri chinh cham cong (spec 2026-09-06)                                 */
+/* -------------------------------------------------------------------------- */
+
+const timeField = z
+  .string()
+  .min(1, "Vui lòng nhập giờ.")
+  .regex(TIME_PATTERN, "Giờ phải theo dạng HH:mm, ví dụ 07:30.");
+
+/**
+ * Gio vao/ra cua mot luot cham cong.
+ *
+ * `checkOut` cho phep de TRONG (luot chua tan ca) — chuoi rong duoc doi thanh
+ * `null` ngay trong schema, de noi goi khong phai nho phan biet "" voi null.
+ *
+ * KHONG kiem "gio ra phai sau gio vao": gio ra som hon nghia la CA QUA DEM, va
+ * do la truong hop that (ca 22:00-06:00). Phep giai nam o Server Action, noi
+ * co ngay cong de cong them mot ngay.
+ */
+export const attendanceTimesSchema = z.object({
+  checkIn: timeField,
+  checkOut: z
+    .string()
+    .refine((value) => value === "" || TIME_PATTERN.test(value), {
+      message: "Giờ phải theo dạng HH:mm, ví dụ 17:00.",
+    })
+    .transform((value) => (value === "" ? null : value)),
+});
+
+export type AttendanceTimesFormValues = z.input<typeof attendanceTimesSchema>;
+
+export const createAttendanceSchema = z.object({
+  employeeId: z.string().min(1, "Vui lòng chọn nhân viên."),
+  date: z
+    .string()
+    .min(1, "Vui lòng chọn ngày công.")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Ngày không hợp lệ."),
+  shiftId: z.string().min(1, "Vui lòng chọn ca làm việc."),
+  checkIn: timeField,
+  checkOut: z
+    .string()
+    .refine((value) => value === "" || TIME_PATTERN.test(value), {
+      message: "Giờ phải theo dạng HH:mm, ví dụ 17:00.",
+    })
+    .transform((value) => (value === "" ? null : value)),
+});
+
+export type CreateAttendanceFormValues = z.input<typeof createAttendanceSchema>;

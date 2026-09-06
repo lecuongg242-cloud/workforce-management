@@ -1594,3 +1594,50 @@ export const OVERTIME_DISPLAY_LABEL = {
   nightPortionPrefix: "trong đó",
   nightPortionSuffix: "giờ đêm",
 } as const;
+
+/* -------------------------------------------------------------------------- */
+/* Quan tri chinh cham cong (spec 2026-09-06)                                 */
+/* -------------------------------------------------------------------------- */
+
+export const ATTENDANCE_EDIT_LABELS = {
+  editAction: "Sửa giờ",
+  deleteAction: "Xoá lượt này",
+  rowActionsLabel: "Hành động cho bản ghi",
+  createButton: "Thêm bản ghi",
+
+  editTitle: "Sửa giờ chấm công",
+  editDescription:
+    "Giờ sửa tay được ghi lại kèm tên bạn và thời điểm sửa. Ngày công không đổi được ở đây — muốn chuyển sang ngày khác thì xoá bản ghi rồi thêm lại.",
+  createTitle: "Thêm bản ghi chấm công",
+  createDescription:
+    "Dùng khi nhân viên đi làm nhưng quên bấm hoàn toàn. Bản ghi này do bạn tạo, không có ảnh và vị trí đi kèm.",
+
+  employeeLabel: "Nhân viên",
+  dateLabel: "Ngày công",
+  shiftLabel: "Ca làm việc",
+  checkInLabel: "Giờ vào",
+  checkOutLabel: "Giờ ra",
+  checkOutHint: "Để trống nếu lượt này chưa tan ca.",
+  overnightHint: "Giờ ra sớm hơn giờ vào được hiểu là ca qua đêm.",
+
+  saveIdle: "Lưu",
+  savePending: "Đang lưu…",
+  createIdle: "Thêm bản ghi",
+  createPending: "Đang thêm…",
+  cancelButton: "Huỷ",
+
+  editSuccessToast: "Đã sửa bản ghi chấm công.",
+  createSuccessToast: "Đã thêm bản ghi chấm công.",
+  deleteSuccessToast: "Đã xoá bản ghi chấm công.",
+  editError: "Không thể sửa bản ghi chấm công.",
+  createError: "Không thể thêm bản ghi chấm công.",
+  deleteError: "Không thể xoá bản ghi chấm công.",
+
+  deleteTitle: "Xoá lượt chấm công này?",
+  deleteDescription:
+    "Lượt này sẽ biến mất khỏi bảng công và bảng lương. Thao tác vẫn để lại vết trong nhật ký, nhưng không hoàn tác được từ màn hình.",
+  deleteConfirm: "Xoá lượt",
+
+  editedBadge: "Đã chỉnh",
+  editedByUnknown: "một quản trị viên",
+} as const;
