@@ -3,7 +3,7 @@
 import { randomBytes } from "node:crypto";
 
 import { getSessionContext, requireRole } from "@/lib/auth/session-context";
-import { CHANGE_PASSWORD_LABELS } from "@/lib/constants";
+import { CHANGE_PASSWORD_LABELS, RESET_PASSWORD_LABELS } from "@/lib/constants";
 import { logMutation } from "@/lib/data/audit";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -15,6 +15,8 @@ import { employeeRowSchema } from "@/lib/validation/api/employees";
  *   cho mot nhan vien chua co tai khoan.
  * - `completeForcedPasswordChange` — nguoi dung tu hoan tat doi mat khau bat
  *   buoc lan dau (D-16/D-16a).
+ * - `setEmployeePassword` — quan tri dat lai mat khau cho nhan vien quen mat
+ *   khau (spec 2026-09-06).
  *
  * Khuon giong `mutations/employees.ts`: `getSessionContext()` -> kiem quyen
  * -> doc/ghi voi `company_id` tu session -> `logMutation` NGAY TRONG cung
@@ -272,4 +274,98 @@ export async function completeForcedPasswordChange(newPassword: string): Promise
     after: { must_change_password: false },
     reason: null,
   });
+}
+
+/**
+ * Quan tri dat lai mat khau cho MOT nhan vien da co tai khoan — dung khi nhan
+ * vien quen mat khau va lien he quan ly (spec 2026-09-06).
+ *
+ * Khac `createEmployeeAccount`: khong sinh mat khau tam, admin tu go. Khac
+ * `completeForcedPasswordChange`: doi mat khau cua NGUOI KHAC, nen bat buoc di
+ * qua Admin API va bat buoc kiem ranh gioi doanh nghiep truoc.
+ *
+ * KHONG bat doi lai lan dau (quyet dinh co chu dich cua spec): xem muc "Rui ro
+ * da chap nhan" — admin biet mat khau nhan vien dang dung that.
+ */
+export async function setEmployeePassword(
+  employeeId: string,
+  newPassword: string,
+): Promise<{ email: string }> {
+  const { companyId, userId, role } = await getSessionContext();
+  requireRole(role, ["owner", "admin"]);
+
+  // Kiem o tang server (defense-in-depth): form da kiem qua
+  // `changePasswordSchema`, nhung Server Action khong duoc tin tham so tu
+  // client. Kiem TRUOC khi doc du lieu de duong hong khong cham gi ca.
+  if (newPassword.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(RESET_PASSWORD_LABELS.tooShortError);
+  }
+
+  const supabase = await createServerSupabase();
+
+  // Ranh gioi doanh nghiep nam O DAY (`.eq("company_id")`), RLS la lop phong
+  // thu thu hai. Admin cua cong ty khac goi voi id nay se khong doc duoc gi.
+  const { data: row, error: readError } = await supabase
+    .from("employees")
+    .select("*")
+    .eq("id", employeeId)
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (readError || !row) {
+    throw new Error("Không tìm thấy nhân viên.");
+  }
+
+  const employee = employeeRowSchema.parse(row);
+  const targetUserId = (row as Record<string, unknown>).user_id;
+
+  if (typeof targetUserId !== "string" || targetUserId.length === 0) {
+    throw new Error(RESET_PASSWORD_LABELS.noAccountError);
+  }
+
+  // Tu day tro di moi dung khoa bi mat — kiem quyen va kiem ranh gioi doanh
+  // nghiep deu da xong, dung khuon "tu kiem quyen truoc" cua
+  // src/lib/supabase/admin.ts.
+  const admin = createAdminSupabase();
+  const { error: updateError } = await admin.auth.admin.updateUserById(
+    targetUserId,
+    {
+      password: newPassword,
+      /**
+       * PHAI ghi thang `false`, khong duoc bo trong. Nhan vien duoc tao tai
+       * khoan nhung chua dang nhap lan nao van dang mang co `true` tu
+       * `createEmployeeAccount` — de nguyen thi ho dang nhap bang mat khau
+       * admin vua dat roi bi da sang man hinh bat doi, trai voi quyet dinh
+       * "dung luon mat khau do" va lam hai nhan vien co hai trai nghiem khac
+       * nhau ma admin khong hieu vi sao.
+       */
+      app_metadata: { must_change_password: false },
+    },
+  );
+
+  if (updateError) {
+    throw new Error(RESET_PASSWORD_LABELS.genericError);
+  }
+
+  /**
+   * `before`/`after` KHONG phai nguyen dong (cung ngoai le co chu dich nhu
+   * `completeForcedPasswordChange`): bang nguoi dung cua Supabase khong thuoc
+   * quyen doc cua tang ung dung, va ghi nguyen dong nghia la sao chep bam mat
+   * khau vao audit_log.
+   *
+   * Ten khoa co tinh tranh chu "password" de ban ghi nay cung vuot qua duoc
+   * `assertNoSensitiveAuditKeys` neu sau nay co ai quet no.
+   */
+  await logMutation({
+    companyId,
+    actorUserId: userId,
+    action: "update",
+    entityTable: "auth.users",
+    entityId: targetUserId,
+    before: null,
+    after: { credential_reset: true },
+    reason: `Quản trị đặt lại mật khẩu cho nhân viên ${employee.code}`,
+  });
+
+  return { email: employee.email };
 }

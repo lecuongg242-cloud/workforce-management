@@ -378,6 +378,28 @@ export const ACCOUNT_LABELS = {
 } as const;
 
 /* -------------------------------------------------------------------------- */
+/* Quan tri dat lai mat khau cho nhan vien (spec 2026-09-06)                   */
+/* -------------------------------------------------------------------------- */
+
+export const RESET_PASSWORD_LABELS = {
+  triggerButton: "Đổi mật khẩu",
+  dialogTitle: "Đổi mật khẩu nhân viên",
+  dialogDescription:
+    "Nhân viên sẽ dùng luôn mật khẩu này để đăng nhập, không bị hỏi đổi lại. Hãy chuyển cho họ qua một kênh riêng (nhắn tin trực tiếp, gọi điện...), không gửi qua email hay kênh công khai.",
+  employeeLabel: "Đổi cho",
+  newPasswordLabel: "Mật khẩu mới",
+  confirmPasswordLabel: "Nhập lại mật khẩu mới",
+  submitIdle: "Đổi mật khẩu",
+  submitPending: "Đang đổi mật khẩu…",
+  cancelButton: "Huỷ",
+  successToast: "Đã đổi mật khẩu cho nhân viên.",
+  tooShortError: "Mật khẩu mới phải có ít nhất 8 ký tự.",
+  noAccountError:
+    "Nhân viên này chưa có tài khoản đăng nhập. Hãy tạo tài khoản trước.",
+  genericError: "Không đổi được mật khẩu cho nhân viên này.",
+} as const;
+
+/* -------------------------------------------------------------------------- */
 /* Doi mat khau bat buoc lan dau (02-10, D-16/D-16a)                          */
 /* -------------------------------------------------------------------------- */
 

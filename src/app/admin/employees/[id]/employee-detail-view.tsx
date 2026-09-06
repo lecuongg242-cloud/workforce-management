@@ -30,6 +30,7 @@ import { StatusBadge } from "@/components/common/status-badge";
 import { EmployeeForm } from "@/components/employees/employee-form";
 import { OvertimeRatePanel } from "@/components/employees/overtime-rate-panel";
 import { PayRatePanel } from "@/components/employees/pay-rate-panel";
+import { ResetPasswordDialog } from "@/components/employees/reset-password-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -63,6 +64,7 @@ import {
   GENDER_LABEL,
   NOT_DECLARED,
   REQUEST_TYPE_LABEL,
+  RESET_PASSWORD_LABELS,
   SHIFT_REALIGN_LABEL,
   SYSTEM_ROLE_LABEL,
   WEEKDAY_LABEL,
@@ -113,6 +115,7 @@ export function EmployeeDetailView({
     React.useState<ShiftRealignPreview | null>(null);
   const [isPending, setIsPending] = React.useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = React.useState(false);
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = React.useState(false);
   const [newAccount, setNewAccount] = React.useState<{
     email: string;
     temporaryPassword: string;
@@ -292,6 +295,12 @@ export function EmployeeDetailView({
   const manager = allEmployees.find((item) => item.id === employee.managerId);
   const isAdminRole = session.role === "owner" || session.role === "admin";
   const canCreateAccount = isAdminRole && !employee.hasAccount;
+  /**
+   * Loai tru nhau voi `canCreateAccount` theo dung nghia: chua co tai khoan
+   * thi khong co gi de doi mat khau, co roi thi khong tao them duoc nua. Hai
+   * nut dung CHUNG mot cho tren hang hanh dong, khong them nut thu ba.
+   */
+  const canResetPassword = isAdminRole && employee.hasAccount;
 
   return (
     <div className="grid gap-6">
@@ -345,6 +354,12 @@ export function EmployeeDetailView({
                     {ACCOUNT_LABELS.createButtonIdle}
                   </>
                 )}
+              </Button>
+            ) : null}
+            {canResetPassword ? (
+              <Button variant="outline" onClick={() => setIsResetPasswordOpen(true)}>
+                <KeyRound aria-hidden="true" />
+                {RESET_PASSWORD_LABELS.triggerButton}
               </Button>
             ) : null}
             <DropdownMenu>
@@ -870,6 +885,17 @@ export function EmployeeDetailView({
           <Button onClick={() => setNewAccount(null)}>{ACCOUNT_LABELS.closeButton}</Button>
         </DialogContent>
       </Dialog>
+
+      {/* Quan tri dat lai mat khau cho nhan vien quen mat khau (spec
+          2026-09-06). Khong can `invalidate()` sau khi thanh cong: mat khau
+          khong phai du lieu trang nay dang hien. */}
+      <ResetPasswordDialog
+        employeeId={employeeId}
+        employeeName={employee.fullName}
+        employeeEmail={employee.email}
+        open={isResetPasswordOpen}
+        onOpenChange={setIsResetPasswordOpen}
+      />
     </div>
   );
 }

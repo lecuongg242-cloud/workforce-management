@@ -4,8 +4,10 @@ import { getSessionContext } from "@/lib/auth/session-context";
 import {
   completeForcedPasswordChange,
   createEmployeeAccount,
+  setEmployeePassword,
 } from "@/lib/data/mutations/accounts";
-import { CHANGE_PASSWORD_LABELS } from "@/lib/constants";
+import { CHANGE_PASSWORD_LABELS, RESET_PASSWORD_LABELS } from "@/lib/constants";
+import { logMutation } from "@/lib/data/audit";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { createServerSupabase } from "@/lib/supabase/server";
 
@@ -384,5 +386,178 @@ describe("createEmployeeAccount — hồ sơ thôi 'chưa kích hoạt' ngay khi
 
     expect(updates).toHaveLength(1);
     expect(updates[0]).toEqual({ user_id: "user-new" });
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* setEmployeePassword — quan tri dat lai mat khau (spec 2026-09-06)          */
+/* -------------------------------------------------------------------------- */
+
+function adminSession(role: "owner" | "admin" | "manager" | "employee") {
+  return {
+    userId: "user-admin",
+    email: "admin@timeflow.test",
+    companyId: "cty-01",
+    role,
+    employeeId: null,
+    isPlatformAdmin: false,
+    mustChangePassword: false,
+  };
+}
+
+/** Admin client gia chi phuc vu duong dat lai mat khau. */
+function adminThatUpdatesUser(
+  error: { message?: string } | null = null,
+): FakeAdminClient {
+  return {
+    auth: {
+      admin: {
+        updateUserById: vi.fn().mockResolvedValue({
+          data: { user: { id: "user-target" } },
+          error,
+        }),
+        createUser: vi.fn(),
+      },
+    },
+  } as unknown as FakeAdminClient;
+}
+
+const VALID_PASSWORD = "matkhau-moi-2026";
+
+describe("setEmployeePassword — quyen, ranh gioi va thu tu (spec 2026-09-06)", () => {
+  beforeEach(() => {
+    // `logMutation` la mock cap module (khong phai spy), nen `restoreAllMocks`
+    // khong xoa lich su goi cua cac describe truoc — phai tu xoa de khang dinh
+    // "goi dung 1 lan" o bai 14 noi ve DUNG bai do.
+    vi.mocked(logMutation).mockClear();
+  });
+
+  /**
+   * Moi khang dinh o day deu di kem "VA khong goi updateUserById". Kiem tra
+   * loi duoc nem la CHUA DU: mot ban cai dat chan sai thu tu van nem dung loi
+   * nhung DA KIP doi mat khau roi — dung thu can chan.
+   */
+
+  it("8. Manager goi -> bi tu choi VA khong cham Admin API", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(adminSession("manager"));
+    const admin = adminThatUpdatesUser();
+    vi.mocked(createAdminSupabase).mockReturnValue(admin);
+
+    await expect(
+      setEmployeePassword("emp-1", VALID_PASSWORD),
+    ).rejects.toThrow();
+
+    expect(admin.auth.admin.updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("9. Employee goi -> bi tu choi VA khong cham Admin API", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(adminSession("employee"));
+    const admin = adminThatUpdatesUser();
+    vi.mocked(createAdminSupabase).mockReturnValue(admin);
+
+    await expect(
+      setEmployeePassword("emp-1", VALID_PASSWORD),
+    ).rejects.toThrow();
+
+    expect(admin.auth.admin.updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("10. Nhan vien cua doanh nghiep khac -> khong tim thay VA khong cham Admin API", async () => {
+    // `.eq("company_id")` cua ham that lam dong nay khong tra ve gi. Client
+    // gia dung `beforeRow: null` de dien ta dung tinh huong do.
+    vi.mocked(getSessionContext).mockResolvedValue(adminSession("admin"));
+    vi.mocked(createServerSupabase).mockResolvedValue(
+      fakeServerSupabaseForAccountLookup({ beforeRow: null }),
+    );
+    const admin = adminThatUpdatesUser();
+    vi.mocked(createAdminSupabase).mockReturnValue(admin);
+
+    await expect(setEmployeePassword("emp-cty-02", VALID_PASSWORD)).rejects.toThrow(
+      "Không tìm thấy nhân viên.",
+    );
+
+    expect(admin.auth.admin.updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("11. Nhan vien chua co tai khoan -> bao loi VA khong cham Admin API", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(adminSession("admin"));
+    vi.mocked(createServerSupabase).mockResolvedValue(
+      fakeServerSupabaseForAccountLookup({ beforeRow: employeeRow({ user_id: null }) }),
+    );
+    const admin = adminThatUpdatesUser();
+    vi.mocked(createAdminSupabase).mockReturnValue(admin);
+
+    await expect(setEmployeePassword("emp-1", VALID_PASSWORD)).rejects.toThrow(
+      RESET_PASSWORD_LABELS.noAccountError,
+    );
+
+    expect(admin.auth.admin.updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("12. Mat khau ngan hon 8 ky tu -> bi chan O SERVER VA khong cham Admin API", async () => {
+    // Form da kiem, nhung Server Action khong duoc tin tham so tu client.
+    vi.mocked(getSessionContext).mockResolvedValue(adminSession("admin"));
+    vi.mocked(createServerSupabase).mockResolvedValue(
+      fakeServerSupabaseForAccountLookup({
+        beforeRow: employeeRow({ user_id: "user-target" }),
+      }),
+    );
+    const admin = adminThatUpdatesUser();
+    vi.mocked(createAdminSupabase).mockReturnValue(admin);
+
+    await expect(setEmployeePassword("emp-1", "1234567")).rejects.toThrow(
+      RESET_PASSWORD_LABELS.tooShortError,
+    );
+
+    expect(admin.auth.admin.updateUserById).not.toHaveBeenCalled();
+  });
+
+  it("13. Duong thanh cong -> doi mat khau VA xoa co must_change_password", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(adminSession("admin"));
+    vi.mocked(createServerSupabase).mockResolvedValue(
+      fakeServerSupabaseForAccountLookup({
+        beforeRow: employeeRow({ user_id: "user-target" }),
+      }),
+    );
+    const admin = adminThatUpdatesUser();
+    vi.mocked(createAdminSupabase).mockReturnValue(admin);
+
+    const result = await setEmployeePassword("emp-1", VALID_PASSWORD);
+
+    expect(result).toEqual({ email: "cuonglm@pamoteam.com" });
+    expect(admin.auth.admin.updateUserById).toHaveBeenCalledWith("user-target", {
+      password: VALID_PASSWORD,
+      // PHAI la `false` chu khong duoc vang mat: nhan vien duoc tao tai khoan
+      // nhung chua dang nhap lan nao van dang mang co `true`, de nguyen thi ho
+      // bi da sang man hinh bat doi mat khau.
+      app_metadata: { must_change_password: false },
+    });
+  });
+
+  it("14. Ban ghi audit khong chua mat khau o BAT KY khoa hay gia tri nao", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(adminSession("owner"));
+    vi.mocked(createServerSupabase).mockResolvedValue(
+      fakeServerSupabaseForAccountLookup({
+        beforeRow: employeeRow({ user_id: "user-target" }),
+      }),
+    );
+    vi.mocked(createAdminSupabase).mockReturnValue(adminThatUpdatesUser());
+
+    await setEmployeePassword("emp-1", VALID_PASSWORD);
+
+    expect(logMutation).toHaveBeenCalledTimes(1);
+    const entry = vi.mocked(logMutation).mock.calls[0][0];
+    expect(entry.entityTable).toBe("auth.users");
+    expect(entry.entityId).toBe("user-target");
+
+    // Quet TOAN BO ban ghi da tuan tu hoa: mat khau khong duoc nam o khoa nao,
+    // gia tri nao, du long den dau.
+    const serialized = JSON.stringify(entry);
+    expect(serialized).not.toContain(VALID_PASSWORD);
+    for (const needle of ["password", "secret", "token"]) {
+      for (const key of Object.keys(entry.after ?? {})) {
+        expect(key.toLowerCase()).not.toContain(needle);
+      }
+    }
   });
 });
