@@ -359,7 +359,8 @@ function OvertimeRateDialog({
           >
             <Input
               type="number"
-              step={valueType === "fixed_hourly" ? 1000 : 0.1}
+              // Xem chu thich o `pay-rate-panel.tsx`.
+              step="any"
               min={0}
               className="num"
               {...register("value", { valueAsNumber: true })}

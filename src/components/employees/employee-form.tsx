@@ -851,7 +851,9 @@ export function EmployeeForm({
                 <Input
                   id="payRateAmount"
                   type="number"
-                  step="1000"
+                  // Xem chu thich o `pay-rate-panel.tsx`: mot `step` co dinh
+                  // chan moi con so thuc te, khong chi lam tron mui ten.
+                  step="any"
                   min="1"
                   className="num"
                   value={field.value ?? ""}
@@ -924,9 +926,9 @@ export function EmployeeForm({
                     <Input
                       id="overtimeRateValue"
                       type="number"
-                      step={
-                        overtimeRateValueType === "fixed_hourly" ? "1000" : "0.1"
-                      }
+                      // `step="0.1"` chan he so 1,25 va `step="1000"` chan moi
+                      // muc tien le — ca hai deu khong phai quy tac nghiep vu.
+                      step="any"
                       min="0"
                       className="num"
                       value={field.value ?? ""}

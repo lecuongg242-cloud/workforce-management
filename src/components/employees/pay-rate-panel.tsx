@@ -320,7 +320,15 @@ function PayRateDialog({
           >
             <Input
               type="number"
-              step="1000"
+              // `step` KHONG phai buoc nhay cua mui ten — no la mot RANG BUOC
+              // VALIDATE, va moc goc cua no la `min`. `step="1000"` di kem
+              // `min="1"` tung thu hep tap hop hop le thanh 1, 1001, 2001...:
+              // mot muc luong tron nhu 10.000.000 bi chan, va don gia gio
+              // 28.422 bi trinh duyet doi thanh "28001 hoac 29001" — bang mot
+              // thong bao tieng Anh khong noi nao trong du an viet ra.
+              // Quy tac nghiep vu that chi co MOT ("lon hon 0",
+              // `payRateInputSchema`), va `min` da giu no roi.
+              step="any"
               min="1"
               className="num"
               {...register("amount", { valueAsNumber: true })}

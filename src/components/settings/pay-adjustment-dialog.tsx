@@ -337,7 +337,10 @@ export function PayAdjustmentDialog({
             >
               <Input
                 type="number"
-                step={draft.valueType === "fixed_amount" ? "1000" : "0.5"}
+                // `min="0.01"` lam moc goc, nen `step="1000"` tung chi cho
+                // 0,01 / 1000,01 / 2000,01 — moi so tien tron deu bi chan, va
+                // `step="0.5"` chan ca muc 5%.
+                step="any"
                 min="0.01"
                 max={draft.valueType === "fixed_amount" ? undefined : "100"}
                 className="num"
