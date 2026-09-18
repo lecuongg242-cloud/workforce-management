@@ -30,9 +30,10 @@ const OVERTIME_RATE_COLUMNS =
 /** Ma loi Postgres cho vi pham rang buoc unique. */
 const UNIQUE_VIOLATION = "23505";
 
+/** Khong kem `createdByName` — cung quy uoc voi `createPayRate`. */
 export async function createEmployeeOvertimeRate(
   input: EmployeeOvertimeRateInput,
-): Promise<EmployeeOvertimeRate> {
+): Promise<Omit<EmployeeOvertimeRate, "createdByName">> {
   const { companyId, userId, role } = await getSessionContext();
   // D-44: `owner` VA `admin` — khong siet rieng ve `owner`, de khong them mot
   // chieu phan quyen thu hai chi cho mot man hinh (AUTH-03 da ve xong ranh

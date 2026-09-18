@@ -205,9 +205,9 @@ export function OvertimeRatePanel({
                         ? formatVnd(version.value)
                         : `${formatNumber(version.value)}×`}
                     </TableCell>
-                    <TableCell className="num text-ink-muted">
+                    <TableCell className="text-ink-muted">
                       {version.createdBy
-                        ? version.createdBy.slice(0, 8)
+                        ? (version.createdByName ?? LABEL.unresolvedAuthor)
                         : LABEL.unknownAuthor}
                     </TableCell>
                   </TableRow>

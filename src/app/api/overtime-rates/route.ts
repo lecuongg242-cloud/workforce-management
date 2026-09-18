@@ -8,6 +8,7 @@ import {
   getSessionContext,
   canReadCompanyData,
 } from "@/lib/auth/session-context";
+import { resolveActorNames } from "@/lib/data/actor-names";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
   employeeOvertimeRateHistorySchema,
@@ -78,9 +79,22 @@ export async function GET(request: Request): Promise<NextResponse> {
       throw new Error("Không thể tải lịch sử mức tăng ca riêng.");
     }
 
-    const versions = ((data ?? []) as unknown[]).map((row) =>
+    const rows = ((data ?? []) as unknown[]).map((row) =>
       employeeOvertimeRateRowSchema.parse(row),
     );
+
+    // Ten nguoi khai thay cho `created_by` — cung ly do voi `/api/pay-rates`.
+    const authorNames = await resolveActorNames(
+      supabase,
+      companyId,
+      rows.map((row) => row.createdBy),
+    );
+    const versions = rows.map((row) => ({
+      ...row,
+      createdByName: row.createdBy
+        ? (authorNames.get(row.createdBy) ?? null)
+        : null,
+    }));
 
     // Phien ban DANG HIEU LUC: effective_from lon nhat ma van <= hom nay. Ngay
     // hom nay nam TRUOC moi phien ban -> `null`, cung quy tac voi

@@ -28,7 +28,14 @@ const PAY_RATE_COLUMNS =
 /** Ma loi Postgres cho vi pham rang buoc unique. */
 const UNIQUE_VIOLATION = "23505";
 
-export async function createPayRate(input: PayRateInput): Promise<PayRate> {
+/**
+ * Tra ve DONG vua chen, khong kem `createdByName`: ten nguoi khai la du lieu
+ * cua ho so nhan vien, do `GET /api/pay-rates` ghep vao khi doc lai. Khai xong
+ * man hinh doc lai ca lich su, nen khong co gia tri nao bi thieu tren man hinh.
+ */
+export async function createPayRate(
+  input: PayRateInput,
+): Promise<Omit<PayRate, "createdByName">> {
   const { companyId, userId, role } = await getSessionContext();
   // D-44: `owner` VA `admin` — khong siet rieng ve `owner`, de khong them mot
   // chieu phan quyen thu hai chi cho mot man hinh (AUTH-03 da ve xong ranh

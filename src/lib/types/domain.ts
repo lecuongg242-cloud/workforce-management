@@ -322,6 +322,12 @@ export interface PayRate {
   /** ISO date-time */
   createdAt: string;
   createdBy: string | null;
+  /**
+   * Ten nguoi khai, tang truy van ghep vao tu `employees.user_id` — khong phai
+   * mot cot cua `employee_pay_rates`. `null` khi khong ai khai (`createdBy`
+   * cung `null`) HOAC khi nguoi khai khong co ho so nhan vien de tra ra ten.
+   */
+  createdByName: string | null;
 }
 
 /**
@@ -1230,6 +1236,8 @@ export interface EmployeeOvertimeRate {
   /** ISO date-time */
   createdAt: string;
   createdBy: string | null;
+  /** Ten nguoi khai, ghep tu `employees.user_id` — cung quy uoc voi `PayRate`. */
+  createdByName: string | null;
 }
 
 export type ShiftInput = Omit<Shift, "id" | "companyId" | "breakMinutes">;
@@ -1247,13 +1255,13 @@ export type OvertimeRuleInput = Omit<OvertimeRule, "id" | "companyId">;
  */
 export type PayRateInput = Omit<
   PayRate,
-  "id" | "companyId" | "createdAt" | "createdBy"
+  "id" | "companyId" | "createdAt" | "createdBy" | "createdByName"
 >;
 
 /** Dau vao GHI muc tang ca rieng — cung quy uoc voi `PayRateInput`. */
 export type EmployeeOvertimeRateInput = Omit<
   EmployeeOvertimeRate,
-  "id" | "companyId" | "createdAt" | "createdBy"
+  "id" | "companyId" | "createdAt" | "createdBy" | "createdByName"
 >;
 
 /** MOT dong pham vi trong dau vao ghi — chua co `id`, chua gan vao khoan nao. */

@@ -9,6 +9,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { GET } from "@/app/api/pay-rates/route";
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
+import { resolveActorNames } from "@/lib/data/actor-names";
 import { createPayRate } from "@/lib/data/mutations/pay-rates";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { payRateInputSchema } from "@/lib/validation/api/pay-rates";
@@ -350,5 +351,64 @@ describe("Mức lương append-only theo effective_from (PAY-06)", () => {
     // `work_mode` thi NGUOC LAI: co mac dinh `shift`, de doanh nghiep dang
     // chay giu nguyen hanh vi tu Phase 4.
     expect(data?.work_mode).toBe("shift");
+  });
+
+  it("12. GET không bao giờ trả id thay cho tên ở 'Người khai'", async () => {
+    // Man hinh tung do 8 ky tu dau cua uuid ra cot nay. Khang dinh o day la
+    // ve HINH DANG cua du lieu: `createdByName` hoac la mot cai ten, hoac la
+    // `null` de tang tren hien nhan "mot quan tri vien" — khong bao gio la
+    // chinh `createdBy`.
+    const history = (await (await readHistory(EMPLOYEE_ID)).json()) as PayRateHistory;
+
+    expect(history.versions.length).toBeGreaterThan(0);
+    for (const version of history.versions) {
+      expect(version).toHaveProperty("createdByName");
+      expect(version.createdByName).not.toBe(version.createdBy);
+      if (version.createdBy === null) {
+        expect(version.createdByName).toBeNull();
+      }
+    }
+  });
+
+  it("13. resolveActorNames tra ten theo employees.user_id, và CHỈ trong doanh nghiệp của phiên", async () => {
+    // Gan tam `user_id` cua mot nhan vien seed ve nguoi khai roi tra lai
+    // nguyen trang: du lieu seed nay dung chung, khong phai fixture rieng cua
+    // bai nay. Khong dong `employee_pay_rates` nao duoc tao them — bang do
+    // append-only, moi dong test viet ra la o lai vinh vien.
+    const { data: employeeRow } = await admin
+      .from("employees")
+      .select("user_id, full_name")
+      .eq("id", EMPLOYEE_ID)
+      .single();
+    const originalUserId = (employeeRow as { user_id: string | null }).user_id;
+    const fullName = (employeeRow as { full_name: string }).full_name;
+
+    try {
+      await admin
+        .from("employees")
+        .update({ user_id: actorUserId })
+        .eq("id", EMPLOYEE_ID);
+
+      const names = await resolveActorNames(
+        admin as unknown as Awaited<ReturnType<typeof createServerSupabase>>,
+        COMPANY_ID,
+        [actorUserId, null],
+      );
+      expect(names.get(actorUserId)).toBe(fullName);
+
+      // Cung mot `user_id`, hoi tu doanh nghiep KHAC -> khong ra ten. Cot
+      // "Nguoi khai" khong duoc phep la duong doc ten nguoi cua cong ty khac.
+      const foreign = await resolveActorNames(
+        admin as unknown as Awaited<ReturnType<typeof createServerSupabase>>,
+        "cty-01",
+        [actorUserId],
+      );
+      expect(foreign.size).toBe(0);
+    } finally {
+      await admin
+        .from("employees")
+        .update({ user_id: originalUserId })
+        .eq("id", EMPLOYEE_ID);
+    }
   });
 });

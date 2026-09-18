@@ -201,9 +201,10 @@ export function PayRatePanel({
                     <TableCell className="num text-right font-medium text-ink">
                       {formatVnd(version.amount)}
                     </TableCell>
-                    <TableCell className="num text-ink-muted">
+                    <TableCell className="text-ink-muted">
                       {version.createdBy
-                        ? version.createdBy.slice(0, 8)
+                        ? (version.createdByName ??
+                          PAY_RATE_LABEL.unresolvedAuthor)
                         : PAY_RATE_LABEL.unknownAuthor}
                     </TableCell>
                   </TableRow>

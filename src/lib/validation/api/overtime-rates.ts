@@ -52,6 +52,8 @@ export const employeeOvertimeRateSchema = z.object({
   effectiveFrom: z.string(),
   createdAt: z.string(),
   createdBy: z.string().nullable(),
+  /** Ten nguoi khai, ghep tu `employees.user_id` — cung quy uoc voi `payRateSchema`. */
+  createdByName: z.string().nullable(),
 });
 
 /**

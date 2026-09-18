@@ -53,6 +53,14 @@ export const payRateSchema = z.object({
   effectiveFrom: z.string(),
   createdAt: z.string(),
   createdBy: z.string().nullable(),
+  /**
+   * Ten nguoi khai, tang tren ghep vao tu `employees.user_id` — KHONG phai mot
+   * cot cua `employee_pay_rates`, nen no khong co trong `payRateRowSchema`.
+   * `null` khi `createdBy` cung `null` (khong ai khai) HOAC khi tra cuu khong
+   * ra ten (nguoi khai khong co ho so nhan vien) — man hinh phan biet hai
+   * truong hop nay bang chinh `createdBy`.
+   */
+  createdByName: z.string().nullable(),
 });
 
 /**

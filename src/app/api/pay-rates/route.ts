@@ -8,6 +8,7 @@ import {
   getSessionContext,
   canReadCompanyData,
 } from "@/lib/auth/session-context";
+import { resolveActorNames } from "@/lib/data/actor-names";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
   payRateHistorySchema,
@@ -81,9 +82,25 @@ export async function GET(request: Request): Promise<NextResponse> {
       throw new Error("Không thể tải lịch sử mức lương.");
     }
 
-    const versions = ((data ?? []) as unknown[]).map((row) =>
+    const rows = ((data ?? []) as unknown[]).map((row) =>
       payRateRowSchema.parse(row),
     );
+
+    // Ten nguoi khai thay cho `created_by`. Man hinh tung do 8 ky tu dau cua
+    // uuid ra cot "Nguoi khai" — mot chuoi hex khong noi duoc ai da doi luong
+    // cua nguoi khac, tuc la cot do khong tra loi duoc cau hoi duy nhat no
+    // sinh ra de tra loi.
+    const authorNames = await resolveActorNames(
+      supabase,
+      companyId,
+      rows.map((row) => row.createdBy),
+    );
+    const versions = rows.map((row) => ({
+      ...row,
+      createdByName: row.createdBy
+        ? (authorNames.get(row.createdBy) ?? null)
+        : null,
+    }));
 
     // Phien ban DANG HIEU LUC: effective_from lon nhat ma van <= hom nay. Ngay
     // hom nay nam TRUOC moi phien ban -> `null`, KHONG lui ve phien ban gan

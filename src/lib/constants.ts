@@ -961,6 +961,9 @@ export const EMPLOYEE_OVERTIME_RATE_LABEL = {
   columnValue: "Giá trị",
   columnCreatedBy: "Người khai",
   unknownAuthor: "—",
+  // Tra cứu ra id nhưng không ra tên (người khai không có hồ sơ nhân viên,
+  // ví dụ chủ doanh nghiệp). Vẫn phải nói là CÓ người khai — khác hẳn "—".
+  unresolvedAuthor: "Một quản trị viên",
   declareAction: "Khai mức riêng",
   appendOnlyNote:
     "Không có nút sửa và không có nút xoá: mỗi lần đổi là một phiên bản mới, nhờ vậy tiền tăng ca của kỳ đã trả không đổi theo.",
@@ -1004,6 +1007,8 @@ export const PAY_RATE_LABEL = {
   columnAmount: "Số tiền",
   columnCreatedBy: "Người khai",
   unknownAuthor: "—",
+  // Cùng quy ước với EMPLOYEE_OVERTIME_RATE_LABEL.unresolvedAuthor.
+  unresolvedAuthor: "Một quản trị viên",
   declareAction: "Khai mức lương mới",
   appendOnlyNote:
     "Không có nút sửa và không có nút xoá ở đây: mỗi lần đổi lương là một phiên bản mới. Nhờ vậy bảng lương của kỳ đã trả không đổi theo khi lương hôm nay thay đổi.",

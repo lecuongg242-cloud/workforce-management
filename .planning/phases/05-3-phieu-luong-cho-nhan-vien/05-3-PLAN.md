@@ -7,6 +7,20 @@
 > đều đã có trong repo.
 > **Requirement:** PAY-05 (`.planning/REQUIREMENTS.md:148`) — hiện đang nằm ở nhóm V3.
 > Kéo về v1 thì phải sửa REQUIREMENTS.md và ROADMAP.md như Phase 5.1/5.2 đã làm.
+> **Trạng thái:** ĐÃ THỰC THI ngày 2026-08-07. Migration 0029 đã áp lên database dev.
+> **Requirement:** PAY-05 (`.planning/REQUIREMENTS.md:148`) — **vẫn đang ghi ở nhóm V3**.
+> REQUIREMENTS.md và ROADMAP.md **chưa được sửa** để phản ánh việc kéo về v1; đó là
+> quyết định của chủ dự án, không phải việc của bản thực thi này.
+
+## Sai khác so với bản dự thảo
+
+| Điểm | Dự thảo | Thực tế | Vì sao |
+|---|---|---|---|
+| pgTAP | `16_payslip_rls.sql` | `19_payslip_rls.sql` | số 16 đã là `16_employee_pay_rates.sql` |
+| Helper RLS | chỉ `tf_is_company_admin` | thêm `tf_owns_payroll_line` | điều kiện "dòng của chính mình" bị nhắc ở cả ba policy — tách ra để không sửa ở hai chỗ |
+| Cổng quyền | viết thẳng trong route | tách `src/lib/payroll/payslip-access.ts` | hai route dùng chung, một bản sao thứ hai là một bản sao sẽ lệch |
+| `/api/requests` | ghi ở "việc phát sinh" | **đã vá luôn** | cùng một lớp lỗi (`sessionEmployeeId` null → không lọc), một dòng |
+| `mobile-bottom-nav` | không nhắc | `grid-cols-4` → suy từ độ dài mảng | số cột viết cứng, thêm mục nav sẽ vỡ bố cục mà không chỗ nào báo lỗi |
 
 ## Mục tiêu
 
