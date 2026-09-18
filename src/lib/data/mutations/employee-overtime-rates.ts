@@ -7,6 +7,7 @@ import {
   employeeOvertimeRateInputSchema,
   employeeOvertimeRateRowSchema,
 } from "@/lib/validation/api/overtime-rates";
+import { rateVoidInputSchema } from "@/lib/validation/api/pay-rates";
 import type {
   EmployeeOvertimeRate,
   EmployeeOvertimeRateInput,
@@ -25,15 +26,15 @@ import type {
  */
 
 const OVERTIME_RATE_COLUMNS =
-  "id, company_id, employee_id, value_type, value, effective_from, created_at, created_by";
+  "id, company_id, employee_id, value_type, value, effective_from, created_at, created_by, voided_at, voided_by, void_reason";
 
 /** Ma loi Postgres cho vi pham rang buoc unique. */
 const UNIQUE_VIOLATION = "23505";
 
-/** Khong kem `createdByName` — cung quy uoc voi `createPayRate`. */
+/** Khong kem hai truong ten — cung quy uoc voi `createPayRate`. */
 export async function createEmployeeOvertimeRate(
   input: EmployeeOvertimeRateInput,
-): Promise<Omit<EmployeeOvertimeRate, "createdByName">> {
+): Promise<Omit<EmployeeOvertimeRate, "createdByName" | "voidedByName">> {
   const { companyId, userId, role } = await getSessionContext();
   // D-44: `owner` VA `admin` — khong siet rieng ve `owner`, de khong them mot
   // chieu phan quyen thu hai chi cho mot man hinh (AUTH-03 da ve xong ranh
@@ -102,4 +103,69 @@ export async function createEmployeeOvertimeRate(
   });
 
   return overtimeRate;
+}
+
+/**
+ * HUY MOT DONG KHAI NHAM cua muc tang ca rieng (D-57) — cung khuon, cung ly
+ * do voi `voidPayRate()`; xem khoi comment o do.
+ *
+ * Huy dong cuoi cung con hieu luc dua nguoi do ve "khong co muc rieng", tuc la
+ * an theo he so tang ca cua doanh nghiep — KHONG phai "tang ca bang 0".
+ */
+export async function voidEmployeeOvertimeRate(
+  id: string,
+  reason: string,
+): Promise<void> {
+  const { companyId, userId, role } = await getSessionContext();
+  requireRole(role, ["owner", "admin"]);
+
+  const input = rateVoidInputSchema.parse({ id, reason });
+
+  const supabase = await createServerSupabase();
+
+  const { data: before } = await supabase
+    .from("employee_overtime_rates")
+    .select(OVERTIME_RATE_COLUMNS)
+    .eq("company_id", companyId)
+    .eq("id", input.id)
+    .maybeSingle();
+
+  if (!before) {
+    throw new Error("Không tìm thấy dòng mức tăng ca này.");
+  }
+  if ((before as { voided_at: string | null }).voided_at !== null) {
+    throw new Error("Dòng này đã được huỷ trước đó.");
+  }
+
+  const { data: serverNow, error: nowError } = await supabase.rpc("tf_server_now");
+  if (nowError || !serverNow) {
+    throw new Error("Không đọc được thời gian máy chủ.");
+  }
+
+  const { data: after, error } = await supabase
+    .from("employee_overtime_rates")
+    .update({
+      voided_at: serverNow as string,
+      voided_by: userId,
+      void_reason: input.reason,
+    })
+    .eq("company_id", companyId)
+    .eq("id", input.id)
+    .select(OVERTIME_RATE_COLUMNS)
+    .single();
+
+  if (error || !after) {
+    throw new Error("Không thể huỷ dòng mức tăng ca này.");
+  }
+
+  await logMutation({
+    companyId,
+    actorUserId: userId,
+    action: "update",
+    entityTable: "employee_overtime_rates",
+    entityId: input.id,
+    before,
+    after,
+    reason: input.reason,
+  });
 }

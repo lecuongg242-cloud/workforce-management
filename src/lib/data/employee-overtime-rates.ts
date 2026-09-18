@@ -18,4 +18,7 @@ export async function getEmployeeOvertimeRateHistory(
   );
 }
 
-export { createEmployeeOvertimeRate } from "@/lib/data/mutations/employee-overtime-rates";
+export {
+  createEmployeeOvertimeRate,
+  voidEmployeeOvertimeRate,
+} from "@/lib/data/mutations/employee-overtime-rates";

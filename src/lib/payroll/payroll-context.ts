@@ -80,6 +80,10 @@ export async function loadPayrollContext({
       .select("employee_id, unit, amount, effective_from")
       .eq("company_id", companyId)
       .lte("effective_from", periodEnd)
+      // Dong da HUY khong con la mot muc luong (D-57) — cung dieu kien voi
+      // `tf_pay_rate_at()` cua migration 0038. Hai phep chon nay phai luon
+      // cho cung ket qua.
+      .is("voided_at", null)
       .order("effective_from", { ascending: true }),
     // Cung khuon voi muc luong: doc moi phien ban <= `periodEnd` roi chon
     // phien ban moi nhat o tang ung dung.
@@ -88,6 +92,7 @@ export async function loadPayrollContext({
       .select("employee_id, value_type, value, effective_from")
       .eq("company_id", companyId)
       .lte("effective_from", periodEnd)
+      .is("voided_at", null)
       .order("effective_from", { ascending: true }),
     supabase
       .from("pay_adjustments")

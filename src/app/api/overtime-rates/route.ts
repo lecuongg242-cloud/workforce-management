@@ -9,6 +9,7 @@ import {
   canReadCompanyData,
 } from "@/lib/auth/session-context";
 import { resolveActorNames } from "@/lib/data/actor-names";
+import { daysInMonth } from "@/lib/format";
 import { createServerSupabase } from "@/lib/supabase/server";
 import {
   employeeOvertimeRateHistorySchema,
@@ -31,7 +32,7 @@ import {
 export const dynamic = "force-dynamic";
 
 const OVERTIME_RATE_COLUMNS =
-  "id, company_id, employee_id, value_type, value, effective_from, created_at, created_by";
+  "id, company_id, employee_id, value_type, value, effective_from, created_at, created_by, voided_at, voided_by, void_reason";
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
@@ -83,27 +84,52 @@ export async function GET(request: Request): Promise<NextResponse> {
       employeeOvertimeRateRowSchema.parse(row),
     );
 
-    // Ten nguoi khai thay cho `created_by` — cung ly do voi `/api/pay-rates`.
-    const authorNames = await resolveActorNames(
-      supabase,
-      companyId,
-      rows.map((row) => row.createdBy),
-    );
+    // Ten NGUOI KHAI va NGUOI HUY, tra mot lan cho ca hai tap id.
+    const actorNames = await resolveActorNames(supabase, companyId, [
+      ...rows.map((row) => row.createdBy),
+      ...rows.map((row) => row.voidedBy),
+    ]);
     const versions = rows.map((row) => ({
       ...row,
       createdByName: row.createdBy
-        ? (authorNames.get(row.createdBy) ?? null)
+        ? (actorNames.get(row.createdBy) ?? null)
         : null,
+      voidedByName: row.voidedBy ? (actorNames.get(row.voidedBy) ?? null) : null,
     }));
+
+    // Ky da chot luong gan nhat, de man hinh canh bao truoc khi huy: mot dong
+    // co hieu luc tu truoc moc nay da di vao mot bang luong da chot, va bang
+    // do KHONG duoc tinh lai (D-57). Day la mot canh bao, KHONG phai mot lenh
+    // cam — xem muc (2) cua migration 0038.
+    const { data: closedRun } = await supabase
+      .from("payroll_runs")
+      .select("period_start")
+      .eq("company_id", companyId)
+      .order("period_start", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const latestClosedPeriodStart =
+      (closedRun as { period_start: string } | null)?.period_start ?? null;
+    const latestClosedPeriodEnd = latestClosedPeriodStart
+      ? `${latestClosedPeriodStart.slice(0, 7)}-${daysInMonth(latestClosedPeriodStart.slice(0, 7))}`
+      : null;
 
     // Phien ban DANG HIEU LUC: effective_from lon nhat ma van <= hom nay. Ngay
     // hom nay nam TRUOC moi phien ban -> `null`, cung quy tac voi
     // `tf_employee_overtime_rate_at()` cua migration 0026.
     const current =
-      versions.find((version) => version.effectiveFrom <= (today as string)) ?? null;
+      versions.find(
+        (version) =>
+          version.voidedAt === null && version.effectiveFrom <= (today as string),
+      ) ?? null;
 
     return NextResponse.json(
-      employeeOvertimeRateHistorySchema.parse({ employeeId, current, versions }),
+      employeeOvertimeRateHistorySchema.parse({
+        employeeId,
+        current,
+        versions,
+        latestClosedPeriodEnd,
+      }),
     );
   } catch (cause) {
     if (cause instanceof UnauthenticatedError) {

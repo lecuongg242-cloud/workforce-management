@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, AlertTriangle, Plus, Timer } from "lucide-react";
+import { AlertCircle, AlertTriangle, Ban, Plus, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { ErrorState } from "@/components/common/error-state";
+import { RateVoidDialog } from "@/components/employees/rate-void-dialog";
 import { Field } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,14 +41,19 @@ import {
   EMPLOYEE_OVERTIME_RATE_LABEL as LABEL,
   OVERTIME_RATE_VALUE_TYPE_LABEL,
   OVERTIME_RATE_VALUE_TYPE_OPTIONS,
+  RATE_VOID_LABEL,
 } from "@/lib/constants";
 import {
   createEmployeeOvertimeRate,
   getEmployeeOvertimeRateHistory,
+  voidEmployeeOvertimeRate,
 } from "@/lib/data/employee-overtime-rates";
 import { useDataStore } from "@/lib/data/store";
 import { formatDate, formatNumber, formatVnd } from "@/lib/format";
-import type { OvertimeRateValueType } from "@/lib/types/domain";
+import type {
+  EmployeeOvertimeRate,
+  OvertimeRateValueType,
+} from "@/lib/types/domain";
 
 /**
  * TIEN TANG CA RIENG cua mot nhan vien (migration 0026) — o tab "Thong tin
@@ -75,6 +81,10 @@ export function OvertimeRatePanel({
 }): React.ReactElement {
   const { invalidate } = useDataStore();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  /** Dong dang cho xac nhan HUY (D-57). */
+  const [voidTarget, setVoidTarget] =
+    React.useState<EmployeeOvertimeRate | null>(null);
+  const [isVoiding, setIsVoiding] = React.useState(false);
 
   const { data: history, isLoading, error, reload } = useDataQuery(
     () => getEmployeeOvertimeRateHistory(employeeId),
@@ -90,6 +100,22 @@ export function OvertimeRatePanel({
       setIsDialogOpen(false);
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : LABEL.saveError);
+    }
+  };
+
+  const handleVoid = async (reason: string): Promise<void> => {
+    if (!voidTarget) return;
+    setIsVoiding(true);
+    try {
+      await voidEmployeeOvertimeRate(voidTarget.id, reason);
+      toast.success(RATE_VOID_LABEL.success);
+      invalidate();
+      reload();
+      setVoidTarget(null);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : RATE_VOID_LABEL.error);
+    } finally {
+      setIsVoiding(false);
     }
   };
 
@@ -111,6 +137,8 @@ export function OvertimeRatePanel({
 
   const versions = history?.versions ?? [];
   const current = history?.current ?? null;
+  const latestClosedPeriodEnd = history?.latestClosedPeriodEnd ?? null;
+  const activeCount = versions.filter((version) => version.voidedAt === null).length;
 
   return (
     <div className="grid gap-4">
@@ -189,29 +217,65 @@ export function OvertimeRatePanel({
                   <TableHead>{LABEL.columnValueType}</TableHead>
                   <TableHead className="text-right">{LABEL.columnValue}</TableHead>
                   <TableHead>{LABEL.columnCreatedBy}</TableHead>
+                  <TableHead className="w-[200px] text-right">
+                    <span className="sr-only">{RATE_VOID_LABEL.action}</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {versions.map((version) => (
-                  <TableRow key={version.id}>
-                    <TableCell className="num font-medium text-ink">
-                      {formatDate(version.effectiveFrom)}
-                    </TableCell>
-                    <TableCell>
-                      {OVERTIME_RATE_VALUE_TYPE_LABEL[version.valueType]}
-                    </TableCell>
-                    <TableCell className="num text-right font-medium text-ink">
-                      {version.valueType === "fixed_hourly"
-                        ? formatVnd(version.value)
-                        : `${formatNumber(version.value)}×`}
-                    </TableCell>
-                    <TableCell className="text-ink-muted">
-                      {version.createdBy
-                        ? (version.createdByName ?? LABEL.unresolvedAuthor)
-                        : LABEL.unknownAuthor}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {versions.map((version) => {
+                  const isVoided = version.voidedAt !== null;
+                  return (
+                    <TableRow
+                      key={version.id}
+                      className={isVoided ? "opacity-60" : undefined}
+                    >
+                      <TableCell
+                        className={
+                          isVoided
+                            ? "num text-ink-muted line-through"
+                            : "num font-medium text-ink"
+                        }
+                      >
+                        {formatDate(version.effectiveFrom)}
+                      </TableCell>
+                      <TableCell className={isVoided ? "line-through" : undefined}>
+                        {OVERTIME_RATE_VALUE_TYPE_LABEL[version.valueType]}
+                      </TableCell>
+                      <TableCell
+                        className={
+                          isVoided
+                            ? "num text-right text-ink-muted line-through"
+                            : "num text-right font-medium text-ink"
+                        }
+                      >
+                        {version.valueType === "fixed_hourly"
+                          ? formatVnd(version.value)
+                          : `${formatNumber(version.value)}×`}
+                      </TableCell>
+                      <TableCell className="text-ink-muted">
+                        {version.createdBy
+                          ? (version.createdByName ?? LABEL.unresolvedAuthor)
+                          : LABEL.unknownAuthor}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isVoided ? (
+                          <VoidedNote version={version} />
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={RATE_VOID_LABEL.actionHint}
+                            onClick={() => setVoidTarget(version)}
+                          >
+                            <Ban className="size-4" aria-hidden="true" />
+                            {RATE_VOID_LABEL.action}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -224,6 +288,41 @@ export function OvertimeRatePanel({
         today={today}
         onSubmit={handleSubmit}
       />
+
+      <RateVoidDialog
+        open={voidTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setVoidTarget(null);
+        }}
+        isInClosedPeriod={
+          voidTarget !== null &&
+          latestClosedPeriodEnd !== null &&
+          voidTarget.effectiveFrom <= latestClosedPeriodEnd
+        }
+        isLastActive={voidTarget !== null && activeCount === 1}
+        isPending={isVoiding}
+        onConfirm={handleVoid}
+      />
+    </div>
+  );
+}
+
+/** Nhan tren mot dong DA HUY — cung khuon voi `pay-rate-panel.tsx`. */
+function VoidedNote({
+  version,
+}: {
+  version: EmployeeOvertimeRate;
+}): React.ReactElement {
+  return (
+    <div className="flex flex-col items-end gap-0.5 text-right">
+      <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
+        <Ban className="size-3" aria-hidden="true" />
+        {RATE_VOID_LABEL.voidedBadge}
+      </span>
+      <span className="max-w-[184px] text-[11px] leading-snug whitespace-normal text-ink-muted">
+        {version.voidedByName ?? LABEL.unresolvedAuthor}
+        {version.voidReason ? " — " + version.voidReason : ""}
+      </span>
     </div>
   );
 }

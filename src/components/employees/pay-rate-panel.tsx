@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { AlertCircle, Plus, Wallet } from "lucide-react";
+import { AlertCircle, Ban, Plus, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { ErrorState } from "@/components/common/error-state";
+import { RateVoidDialog } from "@/components/employees/rate-void-dialog";
 import { Field } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,11 +42,16 @@ import {
   PAY_RATE_UNIT_LABEL,
   PAY_RATE_UNIT_OPTIONS,
   PAY_RATE_UNIT_SUFFIX,
+  RATE_VOID_LABEL,
 } from "@/lib/constants";
-import { createPayRate, getPayRateHistory } from "@/lib/data/pay-rates";
+import {
+  createPayRate,
+  getPayRateHistory,
+  voidPayRate,
+} from "@/lib/data/pay-rates";
 import { useDataStore } from "@/lib/data/store";
 import { formatDate, formatVnd } from "@/lib/format";
-import type { PayRateUnit } from "@/lib/types/domain";
+import type { PayRate, PayRateUnit } from "@/lib/types/domain";
 
 /**
  * Tab "Thong tin luong" cua `/admin/employees/[id]` (PAY-06, plan 05-2-01).
@@ -70,6 +76,9 @@ export function PayRatePanel({
 }): React.ReactElement {
   const { invalidate } = useDataStore();
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  /** Dong dang cho xac nhan HUY (D-57) — `null` la khong co hop thoai nao mo. */
+  const [voidTarget, setVoidTarget] = React.useState<PayRate | null>(null);
+  const [isVoiding, setIsVoiding] = React.useState(false);
 
   const { data: history, isLoading, error, reload } = useDataQuery(
     () => getPayRateHistory(employeeId),
@@ -85,6 +94,22 @@ export function PayRatePanel({
       setIsDialogOpen(false);
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : PAY_RATE_LABEL.saveError);
+    }
+  };
+
+  const handleVoid = async (reason: string): Promise<void> => {
+    if (!voidTarget) return;
+    setIsVoiding(true);
+    try {
+      await voidPayRate(voidTarget.id, reason);
+      toast.success(RATE_VOID_LABEL.success);
+      invalidate();
+      reload();
+      setVoidTarget(null);
+    } catch (cause) {
+      toast.error(cause instanceof Error ? cause.message : RATE_VOID_LABEL.error);
+    } finally {
+      setIsVoiding(false);
     }
   };
 
@@ -107,6 +132,9 @@ export function PayRatePanel({
 
   const versions = history?.versions ?? [];
   const current = history?.current ?? null;
+  const latestClosedPeriodEnd = history?.latestClosedPeriodEnd ?? null;
+  /** Chi cac dong CHUA huy moi la mot muc luong. */
+  const activeCount = versions.filter((version) => version.voidedAt === null).length;
 
   return (
     <div className="grid gap-4">
@@ -189,26 +217,64 @@ export function PayRatePanel({
                     {PAY_RATE_LABEL.columnAmount}
                   </TableHead>
                   <TableHead>{PAY_RATE_LABEL.columnCreatedBy}</TableHead>
+                  <TableHead className="w-[200px] text-right">
+                    <span className="sr-only">{RATE_VOID_LABEL.action}</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {versions.map((version) => (
-                  <TableRow key={version.id}>
-                    <TableCell className="num font-medium text-ink">
-                      {formatDate(version.effectiveFrom)}
-                    </TableCell>
-                    <TableCell>{PAY_RATE_UNIT_LABEL[version.unit]}</TableCell>
-                    <TableCell className="num text-right font-medium text-ink">
-                      {formatVnd(version.amount)}
-                    </TableCell>
-                    <TableCell className="text-ink-muted">
-                      {version.createdBy
-                        ? (version.createdByName ??
-                          PAY_RATE_LABEL.unresolvedAuthor)
-                        : PAY_RATE_LABEL.unknownAuthor}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {versions.map((version) => {
+                  const isVoided = version.voidedAt !== null;
+                  return (
+                    <TableRow
+                      key={version.id}
+                      className={isVoided ? "opacity-60" : undefined}
+                    >
+                      <TableCell
+                        className={
+                          isVoided
+                            ? "num text-ink-muted line-through"
+                            : "num font-medium text-ink"
+                        }
+                      >
+                        {formatDate(version.effectiveFrom)}
+                      </TableCell>
+                      <TableCell className={isVoided ? "line-through" : undefined}>
+                        {PAY_RATE_UNIT_LABEL[version.unit]}
+                      </TableCell>
+                      <TableCell
+                        className={
+                          isVoided
+                            ? "num text-right text-ink-muted line-through"
+                            : "num text-right font-medium text-ink"
+                        }
+                      >
+                        {formatVnd(version.amount)}
+                      </TableCell>
+                      <TableCell className="text-ink-muted">
+                        {version.createdBy
+                          ? (version.createdByName ??
+                            PAY_RATE_LABEL.unresolvedAuthor)
+                          : PAY_RATE_LABEL.unknownAuthor}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isVoided ? (
+                          <VoidedNote version={version} />
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={RATE_VOID_LABEL.actionHint}
+                            onClick={() => setVoidTarget(version)}
+                          >
+                            <Ban className="size-4" aria-hidden="true" />
+                            {RATE_VOID_LABEL.action}
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -221,6 +287,38 @@ export function PayRatePanel({
         today={today}
         onSubmit={handleSubmit}
       />
+
+      <RateVoidDialog
+        open={voidTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setVoidTarget(null);
+        }}
+        // Ky da chot KHONG chan thao tac — man hinh chi noi truoc he qua (D-57).
+        isInClosedPeriod={
+          voidTarget !== null &&
+          latestClosedPeriodEnd !== null &&
+          voidTarget.effectiveFrom <= latestClosedPeriodEnd
+        }
+        isLastActive={voidTarget !== null && activeCount === 1}
+        isPending={isVoiding}
+        onConfirm={handleVoid}
+      />
+    </div>
+  );
+}
+
+/** Nhan tren mot dong DA HUY: noi ai huy va vi sao, ngay trong bang. */
+function VoidedNote({ version }: { version: PayRate }): React.ReactElement {
+  return (
+    <div className="flex flex-col items-end gap-0.5 text-right">
+      <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-medium text-warning">
+        <Ban className="size-3" aria-hidden="true" />
+        {RATE_VOID_LABEL.voidedBadge}
+      </span>
+      <span className="max-w-[184px] text-[11px] leading-snug whitespace-normal text-ink-muted">
+        {version.voidedByName ?? PAY_RATE_LABEL.unresolvedAuthor}
+        {version.voidReason ? " — " + version.voidReason : ""}
+      </span>
     </div>
   );
 }

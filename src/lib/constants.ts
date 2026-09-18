@@ -966,7 +966,7 @@ export const EMPLOYEE_OVERTIME_RATE_LABEL = {
   unresolvedAuthor: "Một quản trị viên",
   declareAction: "Khai mức riêng",
   appendOnlyNote:
-    "Không có nút sửa và không có nút xoá: mỗi lần đổi là một phiên bản mới, nhờ vậy tiền tăng ca của kỳ đã trả không đổi theo.",
+    "Không có nút sửa và không có nút xoá: mỗi lần đổi là một phiên bản mới, nhờ vậy tiền tăng ca của kỳ đã trả không đổi theo. Gõ nhầm thì huỷ dòng đó kèm lý do — dòng vẫn nằm lại trong lịch sử.",
   dialogTitle: "Khai mức tăng ca riêng",
   dialogDescription:
     "Mức này áp dụng từ ngày hiệu lực trở đi và thay cho hệ số chung của doanh nghiệp.",
@@ -992,6 +992,36 @@ export const EMPLOYEE_OVERTIME_RATE_LABEL = {
   suffixMultiplier: "× đơn giá giờ",
 } as const;
 
+/**
+ * Nhãn dùng chung cho việc HUỶ MỘT DÒNG KHAI NHẦM (D-57) ở cả mức lương và
+ * mức tăng ca riêng. Hai màn hình nói cùng một chuyện nên phải nói cùng một
+ * câu — hai bản chữ khác nhau cho cùng một hành động là cách nhanh nhất để
+ * một trong hai bản nói sai.
+ */
+export const RATE_VOID_LABEL = {
+  action: "Huỷ dòng",
+  actionHint: "Huỷ dòng khai nhầm này",
+  dialogTitle: "Huỷ dòng khai nhầm?",
+  dialogBody:
+    "Dòng này sẽ không còn được tính vào lương nữa, nhưng vẫn nằm lại trong lịch sử kèm lý do. Đây là chỗ dành cho dòng gõ nhầm — nếu lương thật sự thay đổi thì hãy khai một phiên bản mới thay vì huỷ dòng cũ.",
+  oneWayNote: "Huỷ rồi không gỡ lại được. Nếu mức này là đúng, hãy khai lại nó như một phiên bản mới.",
+  // Câu này mang toàn bộ D-57: phần mềm không chặn, nên màn hình phải nói.
+  closedPeriodWarning:
+    "Dòng này đã đi vào bảng lương của kỳ đã chốt. Huỷ nó KHÔNG làm bản chốt đó đổi và kỳ đó sẽ không được tính lại — chỉ các kỳ đang mở về sau là tính theo mức mới. Phần chênh lệch của kỳ đã trả, doanh nghiệp tự xử lý.",
+  lastActiveWarning:
+    "Đây là dòng còn hiệu lực duy nhất. Huỷ xong, người này trở về trạng thái chưa khai lương và bảng lương sẽ không tính ra được con số nào cho họ.",
+  reasonLabel: "Lý do huỷ",
+  reasonPlaceholder: "Ví dụ: gõ nhầm 24 thay vì 24.000",
+  reasonRequired: "Lý do là dấu vết duy nhất giải thích vì sao dòng này bị bỏ.",
+  confirm: "Huỷ dòng",
+  success: "Đã huỷ dòng khai nhầm.",
+  error: "Không thể huỷ dòng này.",
+  /** Nhãn trên chính dòng đã huỷ trong bảng lịch sử. */
+  voidedBadge: "Đã huỷ",
+  voidedBy: "Huỷ bởi",
+  voidedReason: "Lý do",
+} as const;
+
 export const PAY_RATE_LABEL = {
   sectionTitle: "Mức lương",
   currentTitle: "Đang hiệu lực hôm nay",
@@ -1011,7 +1041,7 @@ export const PAY_RATE_LABEL = {
   unresolvedAuthor: "Một quản trị viên",
   declareAction: "Khai mức lương mới",
   appendOnlyNote:
-    "Không có nút sửa và không có nút xoá ở đây: mỗi lần đổi lương là một phiên bản mới. Nhờ vậy bảng lương của kỳ đã trả không đổi theo khi lương hôm nay thay đổi.",
+    "Không có nút sửa và không có nút xoá ở đây: mỗi lần đổi lương là một phiên bản mới. Nhờ vậy bảng lương của kỳ đã trả không đổi theo khi lương hôm nay thay đổi. Gõ nhầm thì huỷ dòng đó kèm lý do — dòng vẫn nằm lại trong lịch sử.",
   dialogTitle: "Khai mức lương mới",
   dialogDescription:
     "Mức lương này áp dụng từ ngày hiệu lực trở đi. Phiên bản cũ được giữ nguyên.",
@@ -1298,8 +1328,13 @@ export const PAYROLL_LABEL = {
   reopenDialogTitle: "Huỷ chốt lương kỳ này?",
   reopenDialogBody:
     "Bản chốt của kỳ này sẽ bị xoá cả, và bảng lương quay về tính theo cấu hình hiện tại. Hệ thống KHÔNG biết tiền đã trả hay chưa, nên hãy chắc chắn trước khi huỷ.",
+  // D-57: kỳ đã chốt thì không tính lại, nên khai nhầm mức lương KHÔNG còn là
+  // lý do hợp lệ để huỷ chốt — nói thẳng ngay trong hộp thoại, vì trước đây
+  // chính câu gợi ý ở đây mời người dùng làm đúng việc đó.
+  reopenScopeNote:
+    "Khai nhầm mức lương không phải lý do để huỷ chốt: hãy huỷ dòng khai nhầm ở tab Thông tin lương của nhân viên đó. Bản chốt kỳ này giữ nguyên, phần chênh lệch doanh nghiệp tự xử lý.",
   reopenReasonLabel: "Lý do huỷ chốt",
-  reopenReasonPlaceholder: "Ví dụ: khai nhầm mức lương của một người",
+  reopenReasonPlaceholder: "Ví dụ: chốt nhầm kỳ",
   reopenReasonRequired:
     "Lý do là dấu vết duy nhất giải thích vì sao bản chốt bị bỏ đi.",
   reopenConfirm: "Huỷ chốt lương",

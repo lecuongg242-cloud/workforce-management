@@ -32,6 +32,9 @@ export const payRateRowSchema = z
     effective_from: z.string(),
     created_at: z.string(),
     created_by: z.string().nullable(),
+    voided_at: z.string().nullable(),
+    voided_by: z.string().nullable(),
+    void_reason: z.string().nullable(),
   })
   .transform((row) => ({
     id: row.id,
@@ -42,6 +45,9 @@ export const payRateRowSchema = z
     effectiveFrom: row.effective_from,
     createdAt: row.created_at,
     createdBy: row.created_by,
+    voidedAt: row.voided_at,
+    voidedBy: row.voided_by,
+    voidReason: row.void_reason,
   }));
 
 export const payRateSchema = z.object({
@@ -61,6 +67,15 @@ export const payRateSchema = z.object({
    * truong hop nay bang chinh `createdBy`.
    */
   createdByName: z.string().nullable(),
+  /**
+   * Dau HUY mot dong KHAI NHAM (D-57). `voidedAt` khac `null` nghia la dong
+   * nay KHONG con tinh vao muc luong nua — no o lai lich su de noi rang da co
+   * nguoi khai nham va da huy, chu khong bien mat.
+   */
+  voidedAt: z.string().nullable(),
+  voidedBy: z.string().nullable(),
+  voidedByName: z.string().nullable(),
+  voidReason: z.string().nullable(),
 });
 
 /**
@@ -72,10 +87,31 @@ export const payRateHistorySchema = z.object({
   employeeId: z.string(),
   current: payRateSchema.nullable(),
   versions: z.array(payRateSchema),
+  /**
+   * Ngay CUOI CUNG cua ky da chot luong gan nhat (`null` khi chua chot ky
+   * nao). Man hinh dung no de canh bao truoc khi huy: mot dong co hieu luc
+   * tu truoc moc nay da di vao mot bang luong da chot, va bang do se KHONG
+   * duoc tinh lai (D-57).
+   */
+  latestClosedPeriodEnd: z.string().nullable(),
 });
 
 export const payRateQuerySchema = z.object({
   employeeId: z.string().min(1),
+});
+
+/**
+ * Dau vao HUY mot dong khai nham (D-57). Ly do BAT BUOC va khong duoc de
+ * trong — huy mot con so tien ma khong noi vi sao la xoa mot su kien trong im
+ * lang, cung lap luan da dat ra `reason` bat buoc cua `reopenPayroll` (D-45).
+ */
+export const rateVoidInputSchema = z.object({
+  id: z.string().min(1),
+  reason: z
+    .string()
+    .trim()
+    .min(1, "Vui lòng nêu lý do huỷ — đây là dấu vết duy nhất giải thích vì sao dòng này bị bỏ.")
+    .max(500, "Lý do quá dài."),
 });
 
 /**

@@ -20,4 +20,4 @@ export async function getPayRateHistory(
   );
 }
 
-export { createPayRate } from "@/lib/data/mutations/pay-rates";
+export { createPayRate, voidPayRate } from "@/lib/data/mutations/pay-rates";

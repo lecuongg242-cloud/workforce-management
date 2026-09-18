@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/pay-rates/route";
 import { ForbiddenError, getSessionContext } from "@/lib/auth/session-context";
 import { resolveActorNames } from "@/lib/data/actor-names";
-import { createPayRate } from "@/lib/data/mutations/pay-rates";
+import { createPayRate, voidPayRate } from "@/lib/data/mutations/pay-rates";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { payRateInputSchema } from "@/lib/validation/api/pay-rates";
 import type { PayRateHistory } from "@/lib/types/domain";
@@ -46,6 +46,16 @@ const COMPANY_ID = "cty-02";
 const EMPLOYEE_ID = "nv-02a";
 /** Nhan vien cua cty-01 — dung lam id CHEO doanh nghiep. */
 const FOREIGN_EMPLOYEE_ID = "nv-01a";
+
+/**
+ * Moc hieu luc rieng cho nhom bai HUY (D-57). Nam SAU ca hai moc fixture o
+ * tren VA sau moc "truoc moi phien ban" cua bai 4 (2018-12-31) — mot fixture
+ * khong don dep duoc thi phai khong duoc lam doi ket qua cua bai khac.
+ */
+const VOID_DATE = "2019-09-01";
+/** So tien "go nham" se bi huy, va so tien khai lai dung sau do. */
+const VOID_WRONG_AMOUNT = 111;
+const VOID_FIXED_AMOUNT = 7000000;
 
 /** Bo fixture co dinh — xem khoi comment o tren ve tinh idempotent. */
 const RATE_OLD = {
@@ -353,6 +363,167 @@ describe("Mức lương append-only theo effective_from (PAY-06)", () => {
     expect(data?.work_mode).toBe("shift");
   });
 
+  /* ==========================================================================
+     HUY MOT DONG KHAI NHAM (D-57, migration 0038)
+     ======================================================================== */
+
+  /**
+   * Dua VOID_DATE ve dung mot trang thai: MOT dong da huy + MOT dong khai lai
+   * con hieu luc. Lan chay dau tao ra trang thai do, cac lan sau nhan ra no da
+   * co va khong ghi them gi — cung yeu cau idempotent voi `ensureVersion()`,
+   * va o day con bat buoc hon vi dau huy la MOT CHIEU.
+   */
+  async function ensureVoidFixture(): Promise<void> {
+    const { data } = await admin
+      .from("employee_pay_rates")
+      .select("id, amount, voided_at")
+      .eq("employee_id", EMPLOYEE_ID)
+      .eq("effective_from", VOID_DATE);
+
+    const rows = (data ?? []) as {
+      id: string;
+      amount: string | number;
+      voided_at: string | null;
+    }[];
+    const active = rows.find((row) => row.voided_at === null);
+    const voided = rows.find((row) => row.voided_at !== null);
+
+    if (rows.length === 0) {
+      const wrong = await createPayRate({
+        employeeId: EMPLOYEE_ID,
+        unit: "month",
+        amount: VOID_WRONG_AMOUNT,
+        effectiveFrom: VOID_DATE,
+      });
+      createdThisRun.push(wrong.id);
+      await voidPayRate(wrong.id, "gõ nhầm 111 thay vì 7.000.000");
+      const fixed = await createPayRate({
+        employeeId: EMPLOYEE_ID,
+        unit: "month",
+        amount: VOID_FIXED_AMOUNT,
+        effectiveFrom: VOID_DATE,
+      });
+      createdThisRun.push(fixed.id);
+      return;
+    }
+
+    if (active && !voided) {
+      await voidPayRate(active.id, "gõ nhầm 111 thay vì 7.000.000");
+      const fixed = await createPayRate({
+        employeeId: EMPLOYEE_ID,
+        unit: "month",
+        amount: VOID_FIXED_AMOUNT,
+        effectiveFrom: VOID_DATE,
+      });
+      createdThisRun.push(fixed.id);
+    }
+  }
+
+  it("14. huỷ một dòng khai nhầm: dòng Ở LẠI lịch sử kèm lý do, và khai lại được ĐÚNG ngày cũ", async () => {
+    await ensureVoidFixture();
+
+    const history = (await (await readHistory(EMPLOYEE_ID)).json()) as PayRateHistory;
+    const atDate = history.versions.filter((v) => v.effectiveFrom === VOID_DATE);
+
+    // Ca hai dong deu con — huy KHONG phai xoa.
+    expect(atDate.length).toBe(2);
+
+    const voided = atDate.filter((v) => v.voidedAt !== null);
+    const active = atDate.filter((v) => v.voidedAt === null);
+    expect(voided.length).toBe(1);
+    expect(active.length).toBe(1);
+
+    // Dau huy phai tu ke duoc cau chuyen. KHONG khang dinh `voidedBy`: khoa
+    // ngoai cua no la `on delete set null`, nen id nguoi huy bien thanh `null`
+    // khi tai khoan do bi xoa — dung nhu chuyen xay ra voi actor cua lan chay
+    // truoc. LY DO va DAU THOI GIAN moi la vet ben lau.
+    expect(voided[0].voidReason).toContain("gõ nhầm");
+    expect(voided[0].voidedAt).toBeTruthy();
+
+    // Va dong khai lai — dieu ma partial unique index cua 0038 mo ra.
+    expect(active[0].amount).toBe(VOID_FIXED_AMOUNT);
+  });
+
+  it("15. mọi đường đọc mức lương đều bỏ qua dòng đã huỷ — và hai tầng đồng ý với nhau", async () => {
+    await ensureVoidFixture();
+
+    // Tang SQL.
+    const { data: fromDb } = await admin.rpc("tf_pay_rate_at", {
+      p_employee_id: EMPLOYEE_ID,
+      p_date: "2019-10-15",
+    });
+    expect(Number((fromDb as { amount: string }).amount)).toBe(VOID_FIXED_AMOUNT);
+
+    // Tang ung dung: `current` cua GET khong bao gio la mot dong da huy.
+    const history = (await (await readHistory(EMPLOYEE_ID)).json()) as PayRateHistory;
+    expect(history.current?.voidedAt ?? null).toBeNull();
+  });
+
+  it("16. huỷ lần hai bị từ chối — dấu huỷ là MỘT CHIỀU", async () => {
+    await ensureVoidFixture();
+
+    const { data } = await admin
+      .from("employee_pay_rates")
+      .select("id")
+      .eq("employee_id", EMPLOYEE_ID)
+      .eq("effective_from", VOID_DATE)
+      .not("voided_at", "is", null)
+      .limit(1)
+      .single();
+
+    await expect(
+      voidPayRate((data as { id: string }).id, "thử huỷ lại"),
+    ).rejects.toThrow(/đã được huỷ/i);
+  });
+
+  it("17. huỷ không kèm lý do bị chặn ở tầng schema, trước khi chạm database", async () => {
+    await expect(
+      voidPayRate("11111111-1111-1111-1111-111111111111", "   "),
+    ).rejects.toThrow(/lý do/i);
+  });
+
+  it("18. vai trò employee không huỷ được dòng nào (D-44)", async () => {
+    vi.mocked(getSessionContext).mockResolvedValue(session("employee"));
+    await expect(
+      voidPayRate("11111111-1111-1111-1111-111111111111", "thử"),
+    ).rejects.toThrow(ForbiddenError);
+    vi.mocked(getSessionContext).mockResolvedValue(session("owner"));
+  });
+
+  it("19. id của doanh nghiệp khác không huỷ được — và không ghi dòng nào", async () => {
+    // Mot dong that cua cty-01, hoi bang phien cua cty-02.
+    const { data: foreign } = await admin
+      .from("employee_pay_rates")
+      .select("id, voided_at")
+      .eq("employee_id", FOREIGN_EMPLOYEE_ID)
+      .is("voided_at", null)
+      .limit(1)
+      .maybeSingle();
+
+    if (!foreign) return; // khong co du lieu doi chieu thi khong khang dinh bua
+
+    await expect(
+      voidPayRate(foreign.id as string, "thử huỷ chéo doanh nghiệp"),
+    ).rejects.toThrow(/Không tìm thấy/i);
+
+    const { data: after } = await admin
+      .from("employee_pay_rates")
+      .select("voided_at")
+      .eq("id", foreign.id as string)
+      .single();
+    expect((after as { voided_at: string | null }).voided_at).toBeNull();
+  });
+
+  it("20. GET trả mốc kỳ đã chốt lương gần nhất để màn hình cảnh báo trước khi huỷ", async () => {
+    const history = (await (await readHistory(EMPLOYEE_ID)).json()) as PayRateHistory;
+
+    expect(history).toHaveProperty("latestClosedPeriodEnd");
+    if (history.latestClosedPeriodEnd !== null) {
+      // Luon la ngay CUOI CUNG cua mot thang.
+      expect(history.latestClosedPeriodEnd).toMatch(/^\d{4}-\d{2}-(28|29|30|31)$/);
+    }
+  });
+
   it("12. GET không bao giờ trả id thay cho tên ở 'Người khai'", async () => {
     // Man hinh tung do 8 ky tu dau cua uuid ra cot nay. Khang dinh o day la
     // ve HINH DANG cua du lieu: `createdByName` hoac la mot cai ten, hoac la
@@ -363,9 +534,10 @@ describe("Mức lương append-only theo effective_from (PAY-06)", () => {
     expect(history.versions.length).toBeGreaterThan(0);
     for (const version of history.versions) {
       expect(version).toHaveProperty("createdByName");
-      expect(version.createdByName).not.toBe(version.createdBy);
       if (version.createdBy === null) {
         expect(version.createdByName).toBeNull();
+      } else {
+        expect(version.createdByName).not.toBe(version.createdBy);
       }
     }
   });

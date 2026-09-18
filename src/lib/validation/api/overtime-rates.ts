@@ -31,6 +31,9 @@ export const employeeOvertimeRateRowSchema = z
     effective_from: z.string(),
     created_at: z.string(),
     created_by: z.string().nullable(),
+    voided_at: z.string().nullable(),
+    voided_by: z.string().nullable(),
+    void_reason: z.string().nullable(),
   })
   .transform((row) => ({
     id: row.id,
@@ -41,6 +44,9 @@ export const employeeOvertimeRateRowSchema = z
     effectiveFrom: row.effective_from,
     createdAt: row.created_at,
     createdBy: row.created_by,
+    voidedAt: row.voided_at,
+    voidedBy: row.voided_by,
+    voidReason: row.void_reason,
   }));
 
 export const employeeOvertimeRateSchema = z.object({
@@ -54,6 +60,11 @@ export const employeeOvertimeRateSchema = z.object({
   createdBy: z.string().nullable(),
   /** Ten nguoi khai, ghep tu `employees.user_id` — cung quy uoc voi `payRateSchema`. */
   createdByName: z.string().nullable(),
+  /** Dau HUY mot dong khai nham (D-57) — cung quy uoc voi `payRateSchema`. */
+  voidedAt: z.string().nullable(),
+  voidedBy: z.string().nullable(),
+  voidedByName: z.string().nullable(),
+  voidReason: z.string().nullable(),
 });
 
 /**
@@ -65,6 +76,8 @@ export const employeeOvertimeRateHistorySchema = z.object({
   employeeId: z.string(),
   current: employeeOvertimeRateSchema.nullable(),
   versions: z.array(employeeOvertimeRateSchema),
+  /** Xem `payRateHistorySchema.latestClosedPeriodEnd`. */
+  latestClosedPeriodEnd: z.string().nullable(),
 });
 
 export const employeeOvertimeRateQuerySchema = z.object({

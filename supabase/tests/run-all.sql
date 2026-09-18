@@ -28,3 +28,4 @@
 \ir 18_payroll_runs.sql
 \ir 19_payslip_rls.sql
 \ir 20_support_sessions.sql
+\ir 21_rate_void.sql

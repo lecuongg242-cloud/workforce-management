@@ -250,6 +250,24 @@ Quyết định của Phase 6 (lập kế hoạch và thực thi 2026-08-10; chi
   nên được phép nhìn xuyên doanh nghiệp mà không cần phiên); hai đường ghi trắng nằm
   **ngoài** dữ liệu chấm công và lương
 
+Quyết định sau Phase 6 (2026-09-18):
+
+- **D-57: kỳ đã chốt lương thì KHÔNG tính lại.** Khai nhầm mức lương **không phải**
+  lý do hợp lệ để huỷ chốt — D-45 giữ nguyên cho sự cố khác, và hộp thoại huỷ chốt
+  nói thẳng điều đó. Chênh lệch của kỳ đã trả doanh nghiệp **tự xử lý ngoài hệ
+  thống**; TimeFlow không sinh khoản bù.
+
+  Đường sửa một dòng khai nhầm là **huỷ dòng đó** (`voided_at`/`voided_by`/
+  `void_reason`, migration 0038), không phải sửa và không phải xoá: dòng ở lại lịch
+  sử kèm lý do, mọi đường đọc mức lương bỏ qua nó, và `unique (employee_id,
+  effective_from)` thành partial nên khai lại được đúng ngày cũ. Huỷ là **một
+  chiều**.
+
+  Việc huỷ **không bị chặn** khi dòng đã đi vào một kỳ đã chốt, và đó là chủ đích:
+  bản chốt chép số tiền vào chính nó (`payroll_lines`, D-42) nên huỷ **không thể**
+  làm nó đổi; còn chặn thì sẽ khoá luôn đường sửa cho các kỳ đang mở, vì mức lương
+  mang theo về sau. Màn hình cảnh báo, database không cấm.
+
 Quyết định phát sinh **khi thực thi** Phase 6 (2026-08-10):
 
 - `getActiveSupportSession()` sống ở `session-context.ts` chứ không ở
@@ -285,6 +303,11 @@ hồi quy — ghi lại để sau này không phải dựng lại bối cảnh:
   `extensions` mà không ai đặt `search_path`; và `18_payroll_runs.sql` khai
   `plan(11)` trong khi chỉ có 10 khẳng định (sàn `check:assertions` vì thế thừa 1
   ngay từ đầu: 306 → **305**).
+
+**Bug có sẵn được sửa kèm D-57:** xoá một tài khoản đã từng khai lương/khai mức
+tăng ca luôn thất bại từ 0022/0026 — phép `on delete set null` của khoá ngoại
+`created_by` là một UPDATE và bị chính trigger append-only chặn. Trigger ở 0038 nới
+đúng khe đó.
 
 ### Pending Todos
 

@@ -28,6 +28,7 @@ export function ConfirmDialog({
   cancelLabel = "Hủy",
   tone = "default",
   isPending = false,
+  confirmDisabled = false,
   onConfirm,
 }: {
   open: boolean;
@@ -38,6 +39,16 @@ export function ConfirmDialog({
   cancelLabel?: string;
   tone?: "default" | "destructive";
   isPending?: boolean;
+  /**
+   * Chan nut xac nhan MA KHONG noi doi la dang chay.
+   *
+   * Dung `isPending` cho mot o nhap con trong se hien "Dang xu ly…" trong khi
+   * khong co gi chay ca — man hinh noi nguoc voi su that. Va no con khoa luon
+   * nut Huy, nen loi ra duy nhat con lai la phim Esc.
+   *
+   * `confirmDisabled` chi chan nut xac nhan; nut Huy van mo.
+   */
+  confirmDisabled?: boolean;
   onConfirm: () => void;
 }): React.ReactElement {
   return (
@@ -64,7 +75,7 @@ export function ConfirmDialog({
                 variant: tone === "destructive" ? "destructive" : "default",
               }),
             )}
-            disabled={isPending}
+            disabled={isPending || confirmDisabled}
             onClick={(event) => {
               event.preventDefault();
               onConfirm();

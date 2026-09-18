@@ -1179,6 +1179,12 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
         description={
           <div className="grid gap-3">
             <p>{PAYROLL_LABEL.reopenDialogBody}</p>
+            {/* D-57: khai nham muc luong KHONG phai ly do de huy chot. Cau nay
+                phai nam ngay trong hop thoai, vi day la cho nguoi dung dinh
+                lam dung viec do. */}
+            <p className="rounded-control border border-hairline bg-canvas-soft px-3 py-2.5 text-xs text-ink-secondary">
+              {PAYROLL_LABEL.reopenScopeNote}
+            </p>
             <div className="grid gap-1.5">
               <label
                 htmlFor="payroll-reopen-reason"
@@ -1204,8 +1210,9 @@ export function PayrollView({ today }: { today: string }): React.ReactElement {
         }
         confirmLabel={PAYROLL_LABEL.reopenConfirm}
         tone="destructive"
+        isPending={isPending}
         // Chan ngay tai nut: khong de nguoi dung bam roi moi nhan mot loi.
-        isPending={isPending || reopenReason.trim().length === 0}
+        confirmDisabled={reopenReason.trim().length === 0}
         onConfirm={handleReopen}
       />
     </div>

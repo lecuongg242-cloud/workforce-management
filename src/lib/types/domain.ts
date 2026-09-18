@@ -328,6 +328,18 @@ export interface PayRate {
    * cung `null`) HOAC khi nguoi khai khong co ho so nhan vien de tra ra ten.
    */
   createdByName: string | null;
+  /**
+   * Dau HUY mot dong KHAI NHAM (D-57). Khac `null` nghia la dong nay KHONG con
+   * tinh vao muc luong — no o lai trong lich su de noi rang da co nguoi khai
+   * nham va da huy, chu khong bien mat. Huy la MOT CHIEU.
+   *
+   * Huy mot dong KHONG lam bang luong da chot doi: ban chot chep so tien vao
+   * chinh no (`payroll_lines`), khong doc lai bang nay.
+   */
+  voidedAt: string | null;
+  voidedBy: string | null;
+  voidedByName: string | null;
+  voidReason: string | null;
 }
 
 /**
@@ -338,7 +350,14 @@ export interface PayRate {
 export interface PayRateHistory {
   employeeId: string;
   current: PayRate | null;
+  /** Ca dong da huy — man hinh hien chung gach ngang kem ly do. */
   versions: PayRate[];
+  /**
+   * Ngay CUOI CUNG cua ky da chot luong gan nhat (`null` khi chua chot ky nao).
+   * Mot dong co hieu luc tu truoc moc nay da di vao mot bang luong da chot, va
+   * bang do se KHONG duoc tinh lai (D-57).
+   */
+  latestClosedPeriodEnd: string | null;
 }
 
 /**
@@ -350,6 +369,8 @@ export interface EmployeeOvertimeRateHistory {
   employeeId: string;
   current: EmployeeOvertimeRate | null;
   versions: EmployeeOvertimeRate[];
+  /** Xem `PayRateHistory.latestClosedPeriodEnd`. */
+  latestClosedPeriodEnd: string | null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1238,6 +1259,11 @@ export interface EmployeeOvertimeRate {
   createdBy: string | null;
   /** Ten nguoi khai, ghep tu `employees.user_id` — cung quy uoc voi `PayRate`. */
   createdByName: string | null;
+  /** Dau HUY mot dong khai nham (D-57) — cung quy uoc voi `PayRate`. */
+  voidedAt: string | null;
+  voidedBy: string | null;
+  voidedByName: string | null;
+  voidReason: string | null;
 }
 
 export type ShiftInput = Omit<Shift, "id" | "companyId" | "breakMinutes">;
@@ -1255,13 +1281,13 @@ export type OvertimeRuleInput = Omit<OvertimeRule, "id" | "companyId">;
  */
 export type PayRateInput = Omit<
   PayRate,
-  "id" | "companyId" | "createdAt" | "createdBy" | "createdByName"
+  "id" | "companyId" | "createdAt" | "createdBy" | "createdByName" | "voidedAt" | "voidedBy" | "voidedByName" | "voidReason"
 >;
 
 /** Dau vao GHI muc tang ca rieng — cung quy uoc voi `PayRateInput`. */
 export type EmployeeOvertimeRateInput = Omit<
   EmployeeOvertimeRate,
-  "id" | "companyId" | "createdAt" | "createdBy" | "createdByName"
+  "id" | "companyId" | "createdAt" | "createdBy" | "createdByName" | "voidedAt" | "voidedBy" | "voidedByName" | "voidReason"
 >;
 
 /** MOT dong pham vi trong dau vao ghi — chua co `id`, chua gan vao khoan nao. */
