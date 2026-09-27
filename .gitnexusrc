@@ -1,0 +1,6 @@
+{
+  "analyze": {
+    "pdg": true,
+    "defaultBranch": "main"
+  }
+}
