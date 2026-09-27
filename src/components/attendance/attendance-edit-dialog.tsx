@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
+import { OvernightPunchWarning } from "@/components/attendance/overnight-punch-warning";
 import { Field } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +40,7 @@ export function AttendanceEditDialog({
   record,
   employeeName,
   shiftName,
+  isOvernightShift,
   open,
   onOpenChange,
   onSaved,
@@ -46,6 +48,8 @@ export function AttendanceEditDialog({
   record: AttendanceRecord | null;
   employeeName: string;
   shiftName: string;
+  /** Ca cua luot co phai ca qua dem — `null` khi khong tra duoc ca. */
+  isOvernightShift: boolean | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
@@ -56,6 +60,7 @@ export function AttendanceEditDialog({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<AttendanceTimesFormValues>({
     resolver: zodResolver(attendanceTimesSchema),
@@ -149,6 +154,13 @@ export function AttendanceEditDialog({
           <p className="text-xs text-ink-muted">
             {ATTENDANCE_EDIT_LABELS.overnightHint}
           </p>
+
+          <OvernightPunchWarning
+            date={record?.date ?? ""}
+            checkIn={watch("checkIn")}
+            checkOut={watch("checkOut")}
+            isOvernightShift={isOvernightShift}
+          />
 
           <DialogFooter>
             <Button

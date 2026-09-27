@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
+import { OvernightPunchWarning } from "@/components/attendance/overnight-punch-warning";
 import { Field } from "@/components/forms/field";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +64,7 @@ export function AttendanceCreateDialog({
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CreateAttendanceFormValues>({
     resolver: zodResolver(createAttendanceSchema),
@@ -224,6 +226,15 @@ export function AttendanceCreateDialog({
           <p className="text-xs text-ink-muted">
             {ATTENDANCE_EDIT_LABELS.overnightHint}
           </p>
+
+          <OvernightPunchWarning
+            date={watch("date")}
+            checkIn={watch("checkIn")}
+            checkOut={watch("checkOut")}
+            isOvernightShift={
+              shifts.find((shift) => shift.id === watch("shiftId"))?.overnight ?? null
+            }
+          />
 
           <DialogFooter>
             <Button

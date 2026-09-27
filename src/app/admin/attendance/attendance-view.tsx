@@ -428,6 +428,12 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
             ? (shiftNameById.get(editingRecord.shiftId) ?? "—")
             : "—"
         }
+        isOvernightShift={
+          editingRecord
+            ? ((data?.shifts ?? []).find((shift) => shift.id === editingRecord.shiftId)
+                ?.overnight ?? null)
+            : null
+        }
         open={editingRecord !== null}
         onOpenChange={(open) => {
           if (!open) setEditingRecord(null);
