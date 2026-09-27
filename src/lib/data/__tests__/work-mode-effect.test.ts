@@ -281,19 +281,21 @@ describe("Ba chế độ tính công trên cùng một tập chấm công (D-36/
     const { row } = await readWithMode("daily_hours");
 
     // Neu che do nay di qua nhanh cu voi `scheduledMinutes = 0`, tong tang ca
-    // se la 480 + 720 + 360 = 1560 phut — toan bo gio lam. O day chi ngay 12
-    // tieng vuot ngay chuan 10 tieng, tuc 120 phut.
-    expect(row.overtimeMinutes).toBe(120);
+    // se la 480 + 720 + 360 = 1560 phut — toan bo gio lam. Nhan vien CO CA 8
+    // tieng, nen mau so la do dai ca (khong phai 10 tieng chuan): chi ngay 12
+    // tieng vuot ca, tuc 240 phut.
+    expect(row.overtimeMinutes).toBe(240);
     expect(row.overtimeMinutes).not.toBe(1560);
   });
 
-  it("3. chế độ `daily_hours` — ngày 6/10 tiếng cho 0,6 ngày công (D-39: ngày công là số thập phân)", async () => {
+  it("3. chế độ `daily_hours` có ca 8 tiếng — ngày 6 tiếng cho 0,75 ngày công (mẫu số là độ dài ca)", async () => {
     const { prep, row } = await readWithMode("daily_hours");
 
     expect(prep.workMode).toBe("daily_hours");
-    // 480/600 = 0,8 | 600/600 = 1 (phan vuot la tang ca) | 360/600 = 0,6
-    // cong mot ngay `leave_paid` = 1  ->  3,4
-    expect(row.creditedDays).toBe(3.4);
+    // 480/480 = 1 | 480/480 = 1 (phan vuot ca la tang ca) | 360/480 = 0,75
+    // cong mot ngay `leave_paid` = 1  ->  3,75. So gio chuan 10 tieng KHONG
+    // duoc dung vi ngay nao cung gan voi ca.
+    expect(row.creditedDays).toBe(3.75);
     // `workedDays` GIU NGUYEN nghia cu (dem ngay co gio lam) — khong doi theo
     // che do, va do la co y: hai dai luong tra loi hai cau hoi khac nhau.
     expect(row.workedDays).toBe(3);
@@ -342,30 +344,30 @@ describe("Ba chế độ tính công trên cùng một tập chấm công (D-36/
     // `leave_unpaid` khong duoc cong vao. Neu no duoc tinh, con so se la 5.
     expect(shift.creditedDays).toBe(4);
     expect(shiftHourly.creditedDays).toBe(4);
-    // O `daily_hours`: 0,8 + 1 + 0,6 + 1 (leave_paid) = 3,4 — cung khong co
+    // O `daily_hours`: 1 + 1 + 0,75 + 1 (leave_paid) = 3,75 — cung khong co
     // dong gop nao cua `leave_unpaid`.
-    expect(dailyHours.creditedDays).toBe(3.4);
+    expect(dailyHours.creditedDays).toBe(3.75);
 
     // Hai ngay nghi van duoc DEM o `leaveDays` — chung khong bien mat khoi so
     // lieu, chung chi khong duoc tra.
     expect(shift.leaveDays).toBe(2);
   });
 
-  it("7. bỏ `standard_hours_per_day` rồi chọn `daily_hours` -> trả LÝ DO, không trả một con số bịa", async () => {
+  it("7. bỏ `standard_hours_per_day` -> nhân viên CÓ CA vẫn tính được theo độ dài ca, không báo thiếu", async () => {
     const { row } = await readWithMode("daily_hours", null);
 
-    expect(row.missingWorkModeInputs).toEqual(["standard_hours_per_day"]);
-    expect(row.creditedDays).toBeNull();
-    expect(row.regularMinutes).toBeNull();
-    // Va tang ca KHONG duoc bien thanh toan bo gio lam (D-36a) — thieu mau so
-    // nghia la khong tinh duoc, khong phai "mau so bang 0".
-    expect(row.overtimeMinutes).toBe(0);
+    // Moi ngay deu gan voi ca 8 tieng, nen khong ngay nao can den so gio
+    // chuan. Nhanh "thieu mau so" (ngay khong co ca) co bo test rieng o
+    // `work-mode.test.ts` — o day `shift_id` la NOT NULL nen khong dung duoc.
+    expect(row.missingWorkModeInputs).toEqual([]);
+    expect(row.creditedDays).toBe(3.75);
+    expect(row.overtimeMinutes).toBe(240);
   });
 
-  it("8. đặt lại mẫu số -> số liệu quay về đúng, chứng minh chế độ đọc cấu hình HIỆN HÀNH", async () => {
+  it("8. đặt lại mẫu số -> số liệu không đổi vì ca thắng số giờ chuẩn", async () => {
     const { row } = await readWithMode("daily_hours", STANDARD_HOURS_PER_DAY);
 
     expect(row.missingWorkModeInputs).toEqual([]);
-    expect(row.creditedDays).toBe(3.4);
+    expect(row.creditedDays).toBe(3.75);
   });
 });

@@ -50,9 +50,12 @@ import type { PayrollPrep, PayrollPrepRow, WorkMode } from "@/lib/types/domain";
  *   creditedDays   = 1 + 1 + 0,5 + 1 (leave_paid)        = 3,5
  *   overtime       = 240 phut (ngay 06/05 vuot 8 gio)
  *   gio quy doi    = 6 gio (nhu tren)
- *   luong goc      = 125.000 x 20                        = 2.500.000
+ *   luong goc      = 1.000.000 x (480+480+240)/480       = 2.500.000
+ *                  + 1.000.000 x 1 (leave_paid, D-43)    = 1.000.000
+ *                                                        = 3.500.000
  *   tien tang ca   = 125.000 x 6                         =   750.000
- *   THUC NHAN                                            = 3.250.000
+ *   THUC NHAN                                            = 4.250.000
+ *   (Mau so moi ngay la do dai CA — o bo so nay ca 8 tieng trung ngay chuan.)
  *
  * --- Che do `shift_hourly` ------------------------------------------------
  *   creditedDays  = 4 (nhu `shift`)
@@ -346,15 +349,16 @@ describe("Số tiền của bảng lương trên database thật (PAY-01)", () =
     expect(paid.missing).toEqual([]);
   });
 
-  it("2. chế độ `daily_hours` — trả theo GIỜ THỰC TẾ (D-39), số tiền khớp phép tính tay", async () => {
+  it("2. chế độ `daily_hours` — trả theo GIỜ THỰC TẾ (D-39), nghỉ có phép trả tròn một ngày (D-43)", async () => {
     const { paid } = await readWithMode("daily_hours");
 
-    // 1.200 phut thuong = 20 gio -> 125.000 x 20 = 2.500.000
+    // 1.200 phut thuong = 20 gio -> 125.000 x 20 = 2.500.000, cong 1.000.000
+    // cua ngay leave_paid.
     expect(paid.regularMinutes).toBe(1_200);
-    expect(paid.basePay).toBe(HOURLY_RATE * 20);
-    expect(paid.basePay).toBe(2_500_000);
+    expect(paid.basePay).toBe(HOURLY_RATE * 20 + DAILY_RATE);
+    expect(paid.basePay).toBe(3_500_000);
     expect(paid.creditedDays).toBe(3.5);
-    expect(paid.netPay).toBe(3_250_000);
+    expect(paid.netPay).toBe(4_250_000);
   });
 
   it("3. chế độ `shift_hourly` — số tiền khớp phép tính tay", async () => {
@@ -372,9 +376,9 @@ describe("Số tiền của bảng lương trên database thật (PAY-01)", () =
     const dailyHours = (await readWithMode("daily_hours")).paid;
 
     // `daily_hours` tra theo gio thuc te nen nguoi lam thieu gio nhan it hon
-    // 1,5 trieu — do la dung dinh nghia cua che do, khong phai mot loi.
+    // nua trieu — do la dung dinh nghia cua che do, khong phai mot loi.
     expect(shift.netPay).toBe(4_750_000);
-    expect(dailyHours.netPay).toBe(3_250_000);
+    expect(dailyHours.netPay).toBe(4_250_000);
     expect(shift.netPay).not.toBe(dailyHours.netPay);
   });
 
