@@ -23,13 +23,14 @@ import type { ShiftKind } from "@/lib/types/domain";
 
 /** Dung o MOI truy van `shifts` phuc vu tinh cong — cung mot danh sach cot. */
 export const SHIFT_CONTEXT_COLUMNS =
-  "id, kind, break_minutes, start_time, end_time, duration_minutes, working_days";
+  "id, kind, break_minutes, break_paid, start_time, end_time, duration_minutes, working_days";
 
 /** Dong tho tra ve tu `select(SHIFT_CONTEXT_COLUMNS)`. */
 export interface RawShiftContextRow {
   id: string;
   kind: ShiftKind;
   break_minutes: number;
+  break_paid: boolean;
   /** "HH:mm:ss" — `null` o ca linh hoat (migration 0027) */
   start_time: string | null;
   end_time: string | null;
@@ -48,6 +49,7 @@ export function buildShiftContext(rows: RawShiftContextRow[]): ShiftContext {
     id: row.id,
     kind: row.kind,
     breakMinutes: row.break_minutes,
+    breakPaid: row.break_paid,
     // `time` cua Postgres ve dang "HH:mm:ss" — cat con "HH:mm" cho khop quy uoc
     // gio cua tang ung dung.
     startTime: row.start_time?.slice(0, 5) ?? null,

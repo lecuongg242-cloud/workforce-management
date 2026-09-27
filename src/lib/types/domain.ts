@@ -161,6 +161,12 @@ export interface Shift {
    * khong noi goi nao dat rieng no.
    */
   breakMinutes: number;
+  /**
+   * Gio nghi DUOC TINH CONG (migration 0039): `true` thi `breakMinutes` chi de
+   * hien thi, khong bi tru o phep tinh nao. Doc qua `deductibleBreakMinutes()`
+   * (`src/lib/shifts/schedule.ts`) thay vi tu re nhanh.
+   */
+  breakPaid: boolean;
   /** So phut cho phep di muon ma van tinh dung gio */
   lateToleranceMinutes: number;
   /** Ca ket thuc vao ngay hom sau */

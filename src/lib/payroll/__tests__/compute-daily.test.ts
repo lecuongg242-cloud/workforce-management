@@ -26,6 +26,7 @@ const HOURLY_RATE = 62_500;
 function credit(overrides: Partial<DayCredit> = {}): DayCredit {
   return {
     creditedDays: 1,
+    scheduledMinutes: 480,
     regularMinutes: 480,
     overtimeMinutes: 0,
     hourDelta: 0,

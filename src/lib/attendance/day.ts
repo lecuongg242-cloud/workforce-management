@@ -1,5 +1,6 @@
 import { minutesBetween } from "@/lib/format";
 import {
+  deductibleBreakMinutes,
   shiftGrossMinutes,
   type ShiftScheduleInfo,
 } from "@/lib/shifts/schedule";
@@ -248,13 +249,16 @@ export function getAttendanceDay(
  * dung, khong ra so am — phep do nam trong chinh ham do.
  */
 export function shiftBreakInfoById(
-  shifts: Array<ShiftScheduleInfo & { id: string; breakMinutes: number }>,
+  shifts: Array<
+    ShiftScheduleInfo & { id: string; breakMinutes: number; breakPaid: boolean }
+  >,
 ): Record<string, ShiftBreakInfo> {
   return Object.fromEntries(
     shifts.map((shift) => [
       shift.id,
       {
-        breakMinutes: shift.breakMinutes,
+        // Ca tinh cong gio nghi (0039) -> 0 phut phai tru.
+        breakMinutes: deductibleBreakMinutes(shift),
         shiftMinutes: shiftGrossMinutes(shift),
       },
     ]),

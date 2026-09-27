@@ -15,7 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -57,6 +59,7 @@ const EMPTY_SHIFT_FORM: ShiftFormValues = {
   endTime: "17:30",
   breakStartTime: "12:00",
   breakEndTime: "13:00",
+  breakPaid: false,
   lateToleranceMinutes: 5,
   workingDays: [1, 2, 3, 4, 5],
   status: "active",
@@ -110,6 +113,7 @@ export function ShiftDialog({
             // cau nhac ben duoi noi ro no dang tru bao nhieu phut theo cach cu.
             breakStartTime: shift.breakStartTime ?? "",
             breakEndTime: shift.breakEndTime ?? "",
+            breakPaid: shift.breakPaid,
             lateToleranceMinutes: shift.lateToleranceMinutes,
             workingDays: shift.workingDays,
             status: shift.status,
@@ -124,6 +128,7 @@ export function ShiftDialog({
   const endTime = watch("endTime");
   const breakStartTime = watch("breakStartTime");
   const breakEndTime = watch("breakEndTime");
+  const breakPaid = watch("breakPaid");
   const workingDays = watch("workingDays");
 
   const isHours = kind === "hours";
@@ -139,9 +144,11 @@ export function ShiftDialog({
     : breakStartTime && breakEndTime
       ? breakWindowMinutes(breakStartTime, breakEndTime)
       : legacyBreakMinutes;
+  // Gio nghi tinh cong (0039) van hien khung gio, nhung khong tru khoi gio lam.
+  const deductedBreakMinutes = breakPaid ? 0 : breakMinutes;
   const workingMinutes = isHours
     ? hoursToMinutes(Number.isFinite(durationHours) ? durationHours : 0)
-    : Math.max(minutesBetween(startTime, endTime) - breakMinutes, 0);
+    : Math.max(minutesBetween(startTime, endTime) - deductedBreakMinutes, 0);
 
   const toggleDay = (day: WeekdayNumber): void => {
     const next = workingDays.includes(day)
@@ -273,6 +280,29 @@ export function ShiftDialog({
                   <Input type="time" className="num" {...register("breakEndTime")} />
                 </Field>
 
+                <div className="flex items-start gap-2 sm:col-span-2">
+                  <Checkbox
+                    id="shift-form-break-paid"
+                    checked={breakPaid}
+                    disabled={!(breakStartTime && breakEndTime)}
+                    onCheckedChange={(checked) =>
+                      setValue("breakPaid", checked === true, { shouldDirty: true })
+                    }
+                  />
+                  <div className="grid gap-0.5">
+                    <Label
+                      htmlFor="shift-form-break-paid"
+                      className="text-[13px] text-ink"
+                    >
+                      Giờ nghỉ được tính công
+                    </Label>
+                    <p className="text-xs text-ink-muted">
+                      Bật khi nhân viên vẫn được trả lương trong giờ nghỉ. Giờ
+                      nghỉ khi đó không bị trừ khỏi giờ làm và độ dài ca.
+                    </p>
+                  </div>
+                </div>
+
                 <Field
                   id="shift-form-late"
                   label="Cho phép đi muộn (phút)"
@@ -358,7 +388,9 @@ export function ShiftDialog({
                 <>
                   {" "}
                   <span className="text-ink-muted">
-                    (đã trừ {formatDuration(breakMinutes)} nghỉ)
+                    {breakPaid
+                      ? `(gồm ${formatDuration(breakMinutes)} nghỉ được tính công)`
+                      : `(đã trừ ${formatDuration(breakMinutes)} nghỉ)`}
                   </span>
                 </>
               ) : null}

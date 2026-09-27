@@ -43,11 +43,19 @@ import type {
  * VA MOT DIEU NUA: KHONG CO MAU SO DU PHONG
  * ======================================================================
  *
- * Che do `daily_hours` ma doanh nghiep chua khai `standard_hours_per_day` thi
- * ham nay tra `missing`, KHONG tra mot con so. Khong lui ve 8 gio (mot con so
- * nghiep vu chua ai khai, D-26), va tuyet doi khong lay do dai ca lam mau so:
- * che do nay nghia la khong co ca, nen lay so gio tu mot cai ca khong ton tai
- * la bia ra mot mau so.
+ * Che do `daily_hours` ma KHONG xac dinh duoc ca (hoac ca dai 0 phut) va doanh
+ * nghiep chua khai `standard_hours_per_day` thi ham nay tra `missing`, KHONG tra
+ * mot con so. Khong lui ve 8 gio (mot con so nghiep vu chua ai khai, D-26).
+ *
+ * ======================================================================
+ * UU TIEN DO DAI CA (thay doi 2026-09-27)
+ * ======================================================================
+ *
+ * Nhan vien CO ca (vd ca xuong 06:30-18:00) thi o `daily_hours` mot ngay cong
+ * bang DO DAI CA DO (da tru gio nghi phai tru), khong phai so gio chuan cua
+ * doanh nghiep. So gio chuan chi con la mau so cho ngay khong gan duoc voi ca
+ * nao. Ly do: doanh nghiep co nhieu ca dai khac nhau — ep ca 11,5 tieng va ca
+ * 8 tieng ve cung 9,5 tieng bien phan chenh thanh tang ca/thieu cong gia.
  */
 
 export type { WorkModeMissingInput };
@@ -81,6 +89,13 @@ export interface DayCredit {
    * `null` khi thieu dau vao (xem `missing`).
    */
   creditedDays: number | null;
+  /**
+   * MAU SO da dung cho ngay nay (phut) — do dai ca, hoac so gio chuan khi
+   * khong co ca. `null` o ngay nghi va khi thieu dau vao. Tien cua `daily_hours`
+   * tinh bang `don gia ngay x regularMinutes / scheduledMinutes` tu CHINH con so
+   * nay, khong tu `creditedDays` (da lam tron bon chu so — lech mot dong).
+   */
+  scheduledMinutes: number | null;
   /** So phut duoc tra theo don gia THUONG. `null` khi thieu dau vao. */
   regularMinutes: number | null;
   /** So phut tinh theo he so TANG CA. `null` khi thieu dau vao. */
@@ -116,6 +131,10 @@ export function effectiveScheduledMinutes({
   standardHoursPerDay: number | null;
 }): number | null {
   if (mode === "daily_hours") {
+    // Uu tien do dai ca cua CHINH ngay do (xem khoi "UU TIEN DO DAI CA").
+    if (shift !== undefined && shift.scheduledMinutes > 0) {
+      return shift.scheduledMinutes;
+    }
     if (standardHoursPerDay === null) return null;
     return Math.round(standardHoursPerDay * 60);
   }
@@ -152,6 +171,7 @@ export function resolveDayCredit({
   if (day.status === "leave_unpaid") {
     return {
       creditedDays: 0,
+      scheduledMinutes: null,
       regularMinutes: 0,
       overtimeMinutes: 0,
       hourDelta: 0,
@@ -165,6 +185,7 @@ export function resolveDayCredit({
   if (day.status === "leave_paid") {
     return {
       creditedDays: 1,
+      scheduledMinutes: null,
       regularMinutes: 0,
       overtimeMinutes: 0,
       hourDelta: 0,
@@ -176,6 +197,7 @@ export function resolveDayCredit({
   if (scheduled === null) {
     return {
       creditedDays: null,
+      scheduledMinutes: null,
       regularMinutes: null,
       overtimeMinutes: null,
       hourDelta: 0,
@@ -199,6 +221,7 @@ export function resolveDayCredit({
 
   return {
     creditedDays: creditedDaysOf({ mode, regularMinutes: regular, scheduled }),
+    scheduledMinutes: scheduled,
     regularMinutes: regular,
     overtimeMinutes: overtime,
     hourDelta,

@@ -55,13 +55,26 @@ export function shiftGrossMinutes(shift: ShiftScheduleInfo): number {
 }
 
 /**
- * Do dai ca THEO KE HOACH da tru gio nghi, phut — mau so cua phep tinh tang ca
- * (`work-mode.ts`) va cua ty le tru gio nghi (`day.ts`).
+ * So phut gio nghi PHAI TRU cua mot ca — 0 khi ca khai gio nghi duoc tinh
+ * cong (migration 0039). NOI DUY NHAT re nhanh theo `breakPaid`: moi phep tinh
+ * cong (do dai ca, phan gio nghi tru khoi ngay) doc qua day, nen khong phep
+ * nao co the tru gio nghi cua mot ca da khai la tinh cong.
+ */
+export function deductibleBreakMinutes(shift: {
+  breakMinutes: number;
+  breakPaid: boolean;
+}): number {
+  return shift.breakPaid ? 0 : shift.breakMinutes;
+}
+
+/**
+ * Do dai ca THEO KE HOACH da tru gio nghi phai tru, phut — mau so cua phep
+ * tinh tang ca (`work-mode.ts`).
  */
 export function shiftScheduledMinutes(
-  shift: ShiftScheduleInfo & { breakMinutes: number },
+  shift: ShiftScheduleInfo & { breakMinutes: number; breakPaid: boolean },
 ): number {
-  return Math.max(shiftGrossMinutes(shift) - shift.breakMinutes, 0);
+  return Math.max(shiftGrossMinutes(shift) - deductibleBreakMinutes(shift), 0);
 }
 
 /**

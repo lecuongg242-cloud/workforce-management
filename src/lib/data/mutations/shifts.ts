@@ -9,7 +9,7 @@ import { shiftInputSchema, shiftRowSchema } from "@/lib/validation/api/shifts";
 import type { Shift, ShiftInput } from "@/lib/types/domain";
 
 const SHIFT_COLUMNS =
-  "id, company_id, name, code, kind, start_time, end_time, duration_minutes, break_start_time, break_end_time, break_minutes, late_tolerance_minutes, overnight, working_days, status";
+  "id, company_id, name, code, kind, start_time, end_time, duration_minutes, break_start_time, break_end_time, break_minutes, break_paid, late_tolerance_minutes, overnight, working_days, status";
 
 /**
  * Ba ham nay giu NGUYEN chu ky cu tu `mock/service.ts` (call site khong
@@ -113,6 +113,8 @@ export async function updateShift(
       "breakEndTime" in patch
         ? (patch.breakEndTime as string | null)
         : before.breakEndTime,
+    breakPaid:
+      "breakPaid" in patch ? (patch.breakPaid as boolean) : before.breakPaid,
     lateToleranceMinutes:
       "lateToleranceMinutes" in patch
         ? (patch.lateToleranceMinutes as number)

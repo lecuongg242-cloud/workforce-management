@@ -156,6 +156,7 @@ export function AttendanceView({ today }: { today: string }): React.ReactElement
           id: shift.id,
           kind: shift.kind,
           breakMinutes: shift.breakMinutes,
+          breakPaid: shift.breakPaid,
           startTime: shift.startTime,
           endTime: shift.endTime,
           durationMinutes: shift.durationMinutes,

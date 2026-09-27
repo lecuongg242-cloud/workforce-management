@@ -62,6 +62,7 @@ export function ShiftsView(): React.ReactElement {
               durationMinutes: hoursToMinutes(values.durationHours),
               breakStartTime: null,
               breakEndTime: null,
+              breakPaid: false,
               lateToleranceMinutes: 0,
               workingDays: values.workingDays,
               status: values.status,
@@ -78,6 +79,7 @@ export function ShiftsView(): React.ReactElement {
               // domain dung `null` cho "ca khong co gio nghi".
               breakStartTime: values.breakStartTime || null,
               breakEndTime: values.breakEndTime || null,
+              breakPaid: values.breakPaid,
               lateToleranceMinutes: values.lateToleranceMinutes,
               workingDays: values.workingDays,
               status: values.status,

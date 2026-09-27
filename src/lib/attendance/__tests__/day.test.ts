@@ -157,7 +157,7 @@ describe("tru gio nghi — mot lan cho ca ngay, theo ty le thoi gian co mat", ()
     {
       id: "sft-01",
       kind: "fixed",
-      breakMinutes: 60,
+      breakMinutes: 60, breakPaid: false,
       startTime: "08:00",
       endTime: "17:00",
       durationMinutes: null,
@@ -266,7 +266,7 @@ describe("tru gio nghi — mot lan cho ca ngay, theo ty le thoi gian co mat", ()
       {
         id: "sft-01",
         kind: "fixed",
-        breakMinutes: 60,
+        breakMinutes: 60, breakPaid: false,
         startTime: "22:00",
         endTime: "06:00",
         durationMinutes: null,

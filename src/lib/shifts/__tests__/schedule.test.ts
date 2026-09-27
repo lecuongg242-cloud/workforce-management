@@ -32,7 +32,7 @@ const FIXED_8H = {
   startTime: "08:00",
   endTime: "17:00",
   durationMinutes: null,
-  breakMinutes: 60,
+  breakMinutes: 60, breakPaid: false,
 };
 
 const FLEX_10H = {
@@ -40,7 +40,7 @@ const FLEX_10H = {
   startTime: null,
   endTime: null,
   durationMinutes: 600,
-  breakMinutes: 0,
+  breakMinutes: 0, breakPaid: false,
 };
 
 describe("shiftGrossMinutes / shiftScheduledMinutes — một nơi duy nhất biết cả hai loại ca", () => {
@@ -116,7 +116,7 @@ describe("buildShiftContext — ba đường đọc ca dùng chung một phép d
     {
       id: "sft-fixed",
       kind: "fixed" as const,
-      break_minutes: 60,
+      break_minutes: 60, break_paid: false,
       start_time: "08:00:00",
       end_time: "17:00:00",
       duration_minutes: null,
@@ -125,7 +125,7 @@ describe("buildShiftContext — ba đường đọc ca dùng chung một phép d
     {
       id: "sft-flex",
       kind: "hours" as const,
-      break_minutes: 0,
+      break_minutes: 0, break_paid: false,
       start_time: null,
       end_time: null,
       duration_minutes: 600,

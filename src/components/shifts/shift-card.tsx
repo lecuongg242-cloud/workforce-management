@@ -116,7 +116,7 @@ export function ShiftCard({
                 khong bia ra mot khung gio. */}
             <dd className="num">
               {shift.breakStartTime && shift.breakEndTime
-                ? `Nghỉ ${shift.breakStartTime}–${shift.breakEndTime}`
+                ? `Nghỉ ${shift.breakStartTime}–${shift.breakEndTime}${shift.breakPaid ? " (tính công)" : ""}`
                 : shift.breakMinutes > 0
                   ? `Nghỉ ${shift.breakMinutes} phút (chưa có khung giờ)`
                   : "Không có giờ nghỉ"}

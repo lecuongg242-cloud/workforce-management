@@ -72,6 +72,8 @@ function adjustment(overrides: Partial<PayAdjustment> = {}): PayAdjustment {
  */
 interface AggregateSummary {
   creditedDays: number | null;
+  /** Mau so cua ngay tong hop — chi `daily_hours` doc no. */
+  scheduledMinutes?: number | null;
   regularMinutes: number | null;
   hourDeltaMinutes: number;
   convertedOvertimeHours: number | null;
@@ -88,6 +90,7 @@ function aggregateDay(summary: AggregateSummary): DailyPaySource {
     hasOpenPunch: false,
     credit: {
       creditedDays: summary.creditedDays,
+      scheduledMinutes: summary.scheduledMinutes ?? null,
       regularMinutes: summary.regularMinutes,
       overtimeMinutes: summary.overtimeMinutes,
       hourDelta: summary.hourDeltaMinutes,
@@ -162,23 +165,26 @@ describe("Lương gốc theo từng chế độ tính công", () => {
     expect(result.netPay).toBe(11_000_000);
   });
 
-  it("2. `daily_hours` — đơn giá GIỜ × số giờ thường thực tế (D-39)", () => {
-    // Lam 6 tieng x 20 ngay = 7.200 phut = 120 gio; 62.500 x 120 = 7.500.000
+  it("2. `daily_hours` — đơn giá NGÀY × giờ thường / mẫu số của ngày (D-39)", () => {
+    // Lam 6 tieng x 20 ngay = 7.200 phut; mau so 8 tieng = 480 phut
+    // -> 15 ngay cong x 500.000 = 7.500.000 (bang dung don gia gio x 120 gio).
     const result = line({
       workMode: "daily_hours",
-      summary: { regularMinutes: 7_200, creditedDays: 12 },
+      summary: { regularMinutes: 7_200, creditedDays: 12, scheduledMinutes: 480 },
     });
 
     expect(result.basePay).toBe(HOURLY_RATE * 120);
     expect(result.basePay).toBe(7_500_000);
   });
 
-  it("3. `daily_hours` KHÔNG dùng `creditedDays` để tính lương gốc", () => {
-    // Doi `creditedDays` ma khong doi `regularMinutes` -> luong goc khong doi.
-    const a = line({ workMode: "daily_hours", summary: { regularMinutes: 7_200, creditedDays: 12 } });
-    const b = line({ workMode: "daily_hours", summary: { regularMinutes: 7_200, creditedDays: 26 } });
+  it("3. `daily_hours` — mẫu số là ĐỘ DÀI CA, không phải số giờ chuẩn doanh nghiệp", () => {
+    // Cung 7.200 phut: ca 8 tieng -> 15 ngay cong, ca 12 tieng -> 10 ngay cong.
+    // So gio chuan (8) khong doi giua hai lan — chi do dai ca doi.
+    const shift8 = line({ workMode: "daily_hours", summary: { regularMinutes: 7_200, creditedDays: 0, scheduledMinutes: 480 } });
+    const shift12 = line({ workMode: "daily_hours", summary: { regularMinutes: 7_200, creditedDays: 0, scheduledMinutes: 720 } });
 
-    expect(a.basePay).toBe(b.basePay);
+    expect(shift8.basePay).toBe(DAILY_RATE * 15);
+    expect(shift12.basePay).toBe(DAILY_RATE * 10);
   });
 
   it("4. `shift_hourly` — đơn giá NGÀY × ngày công, CỘNG thêm phần lệch giờ", () => {
@@ -670,6 +676,7 @@ describe("Tổng kỳ bằng đúng tổng các dòng ngày", () => {
       hasOpenPunch: false,
       credit: {
         creditedDays: 1,
+        scheduledMinutes: 480,
         regularMinutes: 480,
         overtimeMinutes: 0,
         hourDelta: 0,
@@ -695,6 +702,7 @@ describe("Tổng kỳ bằng đúng tổng các dòng ngày", () => {
       hasOpenPunch: true,
       credit: {
         creditedDays: 0,
+        scheduledMinutes: null,
         regularMinutes: 0,
         overtimeMinutes: 0,
         hourDelta: 0,

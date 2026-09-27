@@ -61,6 +61,17 @@ const capturedAtFormatter = new Intl.DateTimeFormat("vi-VN", {
   hour12: false,
 });
 
+/**
+ * Lan cham nay co thuoc dien "cho xem xet" khong? `review_status` mac dinh la
+ * `pending` cho MOI dong (0005), ke ca lan cham trong nguong — dong do chi con
+ * giu toa do de doi chieu (0032). Khong co anh nghia la server da xac dinh lan
+ * cham nam trong nguong (`requiresPunchPhoto()` tra `false`), nen `pending` o
+ * day KHONG co nghia la dang cho ai xem.
+ */
+function isAwaitingReview(photo: AttendancePhoto): boolean {
+  return photo.reviewStatus === "pending" && photo.hasPhoto;
+}
+
 function formatCapturedAt(isoDateTime: string): string {
   return capturedAtFormatter.format(new Date(isoDateTime));
 }
@@ -92,6 +103,7 @@ export function AttendancePhotoDialog({
   }, [photos]);
 
   const hasAnyPhoto = photoByKind.size > 0;
+  const hasPendingReview = (photos ?? []).some(isAwaitingReview);
 
   async function handleMarkReviewed(): Promise<void> {
     if (!photos || photos.length === 0) return;
@@ -215,11 +227,13 @@ export function AttendancePhotoDialog({
               {ATTENDANCE_PHOTO_DIALOG_LABEL.scopeNote}
             </p>
 
-            <DialogFooter>
-              <Button onClick={handleMarkReviewed} disabled={isReviewing}>
-                {ATTENDANCE_REVIEW_LABEL.reviewAction}
-              </Button>
-            </DialogFooter>
+            {hasPendingReview ? (
+              <DialogFooter>
+                <Button onClick={handleMarkReviewed} disabled={isReviewing}>
+                  {ATTENDANCE_REVIEW_LABEL.reviewAction}
+                </Button>
+              </DialogFooter>
+            ) : null}
           </>
         ) : null}
       </DialogContent>
@@ -317,7 +331,15 @@ function PhotoMetadata({
     <div className="grid gap-1.5 rounded-panel border border-hairline p-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-ink-secondary">{kindLabel}</p>
-        {photo ? (
+        {photo && photo.reviewStatus === "pending" && !photo.hasPhoto ? (
+          <StatusBadge
+            kind="custom"
+            label={ATTENDANCE_PHOTO_DIALOG_LABEL.withinThresholdBadge}
+            tone="success"
+            icon={MapPin}
+            size="sm"
+          />
+        ) : photo ? (
           <StatusBadge
             kind="custom"
             label={PHOTO_REVIEW_STATUS_LABEL[photo.reviewStatus]}

@@ -695,6 +695,7 @@ export const ATTENDANCE_PHOTO_DIALOG_LABEL = {
   // KHONG HOI anh — mot ket qua binh thuong, khong phai mot thieu sot. Nham
   // hai thu nay se khien quan tri di tim mot tam anh khong ton tai.
   noPhotoNeeded: "Không cần ảnh — chấm trong khu vực cho phép.",
+  withinThresholdBadge: "Trong khu vực",
   loadError: "Không tải được ảnh.",
   reload: "Tải lại ảnh",
   fetchErrorReload: "Thử lại",
@@ -790,7 +791,7 @@ export const SETTINGS_GENERAL_LABEL = {
     "Riêng người khai LƯƠNG GIỜ luôn được trả theo giờ làm thực tế, không phụ thuộc lựa chọn này — khai lương giờ tức là muốn trả theo giờ. Lựa chọn ở đây quyết định cách tính của người khai lương tháng hoặc lương ngày, và mốc tính tăng ca của tất cả.",
   standardHoursPerDayLabel: "Số giờ chuẩn một ngày công",
   standardHoursPerDayHelp:
-    "Mẫu số để quy đổi một ngày công ra giờ. Để trống nghĩa là chưa khai — hệ thống sẽ nói rõ là chưa khai chứ không tự đoán 8 giờ.",
+    "Dùng cho ngày không gắn với ca nào (nhân viên có ca thì một công bằng độ dài ca), và để quy lương tháng/ngày ra đơn giá giờ tăng ca. Để trống nghĩa là chưa khai — hệ thống sẽ nói rõ là chưa khai chứ không tự đoán 8 giờ.",
   standardDaysPerMonthLabel: "Số ngày công chuẩn một tháng",
   standardDaysPerMonthHelp:
     "Mẫu số để quy đổi lương tháng ra đơn giá ngày, rồi ra đơn giá giờ. 22 hay 26 là chuyện của từng doanh nghiệp, nên không có giá trị mặc định.",
@@ -816,7 +817,7 @@ export const WORK_MODE_HINT: Record<
   string
 > = {
   daily_hours:
-    "Không cần khai ca. Làm đủ số giờ chuẩn là một công; làm thiếu thì ngày công là một số thập phân và lương trả theo giờ thực tế; làm vượt thì phần vượt là tăng ca.",
+    "Nhân viên có ca: làm đủ độ dài ca (đã trừ giờ nghỉ không tính công) là một công. Không có ca: làm đủ số giờ chuẩn là một công. Làm thiếu thì ngày công là số thập phân và lương trả theo giờ thực tế; làm vượt thì phần vượt là tăng ca.",
   shift:
     "Cách hệ thống đang chạy. Ngày công đếm theo ngày, tăng ca là phần vượt độ dài ca theo kế hoạch. Nghỉ không phép tự trừ một ngày công.",
   shift_hourly:

@@ -516,6 +516,8 @@ export const shiftSchema = z
       .string()
       .regex(TIME_PATTERN, "Giờ kết thúc nghỉ không hợp lệ.")
       .or(z.literal("")),
+    // 0039: gio nghi duoc tinh cong (khong tru khoi gio lam).
+    breakPaid: z.boolean(),
     lateToleranceMinutes: z
       .number({ invalid_type_error: "Vui lòng nhập số phút cho phép đi muộn." })
       .int()

@@ -300,13 +300,27 @@ export function computeDailyPay({
   /* ------------------------------------------------------------------ */
   /* Luong goc — theo GIO THUC TE hay theo NGAY CONG                     */
   /* ------------------------------------------------------------------ */
+  // `daily_hours` (khong khai luong gio): ngay cong la TY LE gio thuong / mau
+  // so cua CHINH ngay do (do dai ca, hoac so gio chuan khi khong co ca). Nhan
+  // tu hai so nguyen phut thay vi tu `creditedDays` da lam tron. Ngay nghi
+  // (`scheduledMinutes` null) roi ve nhanh ngay cong ben duoi.
+  const dailyHoursScheduled =
+    workMode === "daily_hours" &&
+    credit.scheduledMinutes !== null &&
+    credit.scheduledMinutes > 0
+      ? credit.scheduledMinutes
+      : null;
   const basePayExact = paysByActualHours
     ? hourlyRate !== null && credit.regularMinutes !== null
       ? hourlyRate * (credit.regularMinutes / 60)
       : null
-    : dailyRate !== null && credit.creditedDays !== null
-      ? dailyRate * credit.creditedDays
-      : null;
+    : dailyRate === null
+      ? null
+      : dailyHoursScheduled !== null && credit.regularMinutes !== null
+        ? dailyRate * (credit.regularMinutes / dailyHoursScheduled)
+        : credit.creditedDays !== null
+          ? dailyRate * credit.creditedDays
+          : null;
 
   /* ------------------------------------------------------------------ */
   /* Lech gio — CHI o `shift_hourly`                                      */

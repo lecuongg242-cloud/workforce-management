@@ -208,19 +208,21 @@ export function computePayrollLine({
   /* Ba con so tien — CONG tu cac dong NGAY, khong nhan tu so tong        */
   /* ------------------------------------------------------------------ */
   /**
-   * HAI DUONG DAN TOI "tra theo gio thuc te", va ca hai deu la mot y dinh
-   * duoc khai ro chu khong phai suy doan:
-   *
-   *   1. Doanh nghiep chon che do `daily_hours` (D-39) — khong co ca, mot
-   *      cong tinh bang so gio chuan.
-   *   2. NGUOI NAY KHAI LUONG THEO GIO. Khai lương giờ nghĩa là "trả theo
+   * "Tra theo gio thuc te" la mot y dinh duoc khai ro chu khong phai suy
+   * doan: NGUOI NAY KHAI LUONG THEO GIO. Khai lương giờ nghĩa là "trả theo
    *      giờ" — nếu hệ thống vẫn trả theo ngày có mặt thì con số đơn giá giờ
    *      người dùng gõ vào không còn là thứ quyết định tiền của họ.
    *
    * Dieu kien nay khong doi trong mot ky, nen no duoc tinh MOT LAN o day roi
    * truyen xuong moi ngay — khong ngay nao tu suy lai no.
    */
-  const paysByActualHours = workMode === "daily_hours" || payRate.unit === "hour";
+  //
+  // Che do `daily_hours` KHONG con nam o day (2026-09-27): tu khi mot ngay cong
+  // uu tien do dai ca, ngay cong cua `daily_hours` da la TY LE gio thuc te /
+  // do dai ca (D-39), nen `don gia ngay x ngay cong` chinh la tra theo gio thuc
+  // te. Con `don gia gio x gio` thi don gia gio quy tu SO GIO CHUAN doanh
+  // nghiep — nguoi ca 11,5 tieng lam du ca se nhan 11,5/9,5 ngay luong.
+  const paysByActualHours = payRate.unit === "hour";
 
   // Ba phep nhan cu (don gia ngay x ngay cong, don gia gio x gio quy doi, don
   // gia gio x lech gio) da chuyen xuong `compute-daily.ts` va chay MOT LAN CHO

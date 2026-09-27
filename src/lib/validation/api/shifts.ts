@@ -65,6 +65,7 @@ export const shiftRowSchema = z
     break_start_time: z.string().transform(cutSeconds).nullable(),
     break_end_time: z.string().transform(cutSeconds).nullable(),
     break_minutes: z.number(),
+    break_paid: z.boolean(),
     late_tolerance_minutes: z.number(),
     overnight: z.boolean(),
     working_days: workingDaysSchema,
@@ -82,6 +83,7 @@ export const shiftRowSchema = z
     breakStartTime: row.break_start_time,
     breakEndTime: row.break_end_time,
     breakMinutes: row.break_minutes,
+    breakPaid: row.break_paid,
     lateToleranceMinutes: row.late_tolerance_minutes,
     overnight: row.overnight,
     workingDays: row.working_days,
@@ -105,6 +107,7 @@ export const shiftWithStatsSchema = z.object({
   breakStartTime: z.string().nullable(),
   breakEndTime: z.string().nullable(),
   breakMinutes: z.number(),
+  breakPaid: z.boolean(),
   lateToleranceMinutes: z.number(),
   overnight: z.boolean(),
   workingDays: workingDaysSchema,
@@ -144,6 +147,7 @@ export const shiftInputSchema = z
     durationMinutes: z.number().nullable().optional(),
     breakStartTime: z.string().nullable().optional(),
     breakEndTime: z.string().nullable().optional(),
+    breakPaid: z.boolean().optional(),
     lateToleranceMinutes: z.number().optional(),
     workingDays: workingDaysSchema,
     status: shiftStatusSchema,
@@ -228,6 +232,7 @@ export const shiftInputSchema = z
         break_start_time: null,
         break_end_time: null,
         break_minutes: 0,
+        break_paid: false,
         late_tolerance_minutes: 0,
         working_days: input.workingDays,
         status: input.status,
@@ -249,6 +254,9 @@ export const shiftInputSchema = z
       // no tu noi goi: hai gia tri lech nhau thi phep tinh cong se tru mot
       // khoang khong ai nhin thay o giao dien.
       break_minutes: breakWindowMinutes(breakStart, breakEnd),
+      // Khong co khung nghi thi co nay vo nghia — dong ve `false` de du lieu
+      // khong mang mot co "tinh cong gio nghi" cho mot khoang 0 phut.
+      break_paid: breakStart !== null && (input.breakPaid ?? false),
       late_tolerance_minutes: input.lateToleranceMinutes ?? 0,
       working_days: input.workingDays,
       status: input.status,

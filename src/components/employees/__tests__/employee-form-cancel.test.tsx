@@ -45,7 +45,7 @@ const SHIFT: Shift = {
   startTime: "08:00",
   endTime: "17:30",
   durationMinutes: null,
-  breakMinutes: 60,
+  breakMinutes: 60, breakPaid: false,
   breakStartTime: null,
   breakEndTime: null,
   lateToleranceMinutes: 5,

@@ -86,9 +86,12 @@ describe("Chế độ `shift` — hành vi Phase 4, không đổi một con số
   });
 });
 
+/** Ngay KHONG gan duoc voi ca nao — mau so lui ve so gio chuan. */
+const NO_SHIFT = { shift: undefined };
+
 describe("Chế độ `daily_hours` — một công = N giờ (D-36a, D-39)", () => {
   it("5. CÁI BẪY D-36a: 6 giờ làm KHÔNG sinh 360 phút tăng ca", () => {
-    const result = credit("daily_hours", 360);
+    const result = credit("daily_hours", 360, NO_SHIFT);
 
     // Neu che do nay di qua nhanh cu voi `scheduledMinutes = 0`, con so duoi
     // day se la 360 — toan bo gio lam thanh tang ca, va luong ra gap ruoi.
@@ -96,33 +99,38 @@ describe("Chế độ `daily_hours` — một công = N giờ (D-36a, D-39)", ()
     expect(result.regularMinutes).toBe(360);
   });
 
-  it("6. làm 6/10 tiếng -> ngày công là 0,6 (D-39: ngày công thành số thập phân)", () => {
-    const result = credit("daily_hours", 360);
+  it("6. không có ca, làm 6/10 tiếng -> ngày công là 0,6 (D-39: ngày công thành số thập phân)", () => {
+    const result = credit("daily_hours", 360, NO_SHIFT);
 
     expect(result.creditedDays).toBe(0.6);
+    expect(result.scheduledMinutes).toBe(600);
   });
 
-  it("7. làm 12 tiếng trong ngày chuẩn 10 tiếng -> 10 giờ thường + 2 giờ tăng ca, ngày công là 1", () => {
-    const result = credit("daily_hours", 720);
+  it("7. không có ca, làm 12 tiếng trong ngày chuẩn 10 tiếng -> 10 giờ thường + 2 giờ tăng ca, ngày công là 1", () => {
+    const result = credit("daily_hours", 720, NO_SHIFT);
 
     expect(result.regularMinutes).toBe(600);
     expect(result.overtimeMinutes).toBe(120);
     expect(result.creditedDays).toBe(1);
   });
 
-  it("8. ĐỘ DÀI CA BỊ BỎ QUA HOÀN TOÀN — chế độ này nghĩa là không có ca", () => {
-    const withShift = credit("daily_hours", 480, { shift: SHIFT_8H });
-    const withoutShift = credit("daily_hours", 480, { shift: undefined });
+  it("8. CÓ CA thì ĐỘ DÀI CA thắng số giờ chuẩn — ca 8 tiếng, chuẩn 10 tiếng", () => {
+    const fullShift = credit("daily_hours", 480, { shift: SHIFT_8H });
+    const overShift = credit("daily_hours", 600, { shift: SHIFT_8H });
+    const halfShift = credit("daily_hours", 240, { shift: SHIFT_8H });
 
-    // Ca 8 tieng co mat hay khong cung khong duoc lam doi ket qua: neu no lam
-    // doi, nghia la mau so dang bi lay tu mot cai ca ma che do nay khong dung.
-    expect(withShift).toEqual(withoutShift);
-    expect(withShift.overtimeMinutes).toBe(0);
-    expect(withShift.creditedDays).toBe(0.8);
+    // Lam du 8 tieng cua ca la DU cong, khong phai 0,8 cong.
+    expect(fullShift.creditedDays).toBe(1);
+    expect(fullShift.overtimeMinutes).toBe(0);
+    expect(fullShift.scheduledMinutes).toBe(480);
+    // Phan vuot CA (khong phai vuot 10 tieng chuan) la tang ca.
+    expect(overShift.regularMinutes).toBe(480);
+    expect(overShift.overtimeMinutes).toBe(120);
+    expect(halfShift.creditedDays).toBe(0.5);
   });
 
-  it("9. chưa khai `standard_hours_per_day` -> trả LÝ DO, không trả một con số đoán (D-26)", () => {
-    const result = credit("daily_hours", 480, { standardHoursPerDay: null });
+  it("9. không có ca và chưa khai `standard_hours_per_day` -> trả LÝ DO, không trả một con số đoán (D-26)", () => {
+    const result = credit("daily_hours", 480, { ...NO_SHIFT, standardHoursPerDay: null });
 
     expect(result.missing).toBe("standard_hours_per_day");
     expect(result.creditedDays).toBeNull();
@@ -130,19 +138,36 @@ describe("Chế độ `daily_hours` — một công = N giờ (D-36a, D-39)", ()
     expect(result.overtimeMinutes).toBeNull();
   });
 
-  it("10. chưa khai mẫu số thì KHÔNG lùi về 8 giờ và KHÔNG lấy độ dài ca", () => {
-    const missing = credit("daily_hours", 480, { standardHoursPerDay: null });
-    const eightHours = credit("daily_hours", 480, { standardHoursPerDay: 8 });
+  it("10. chưa khai mẫu số thì KHÔNG lùi về 8 giờ — nhưng có ca thì vẫn tính được theo ca", () => {
+    const missing = credit("daily_hours", 480, { ...NO_SHIFT, standardHoursPerDay: null });
+    const eightHours = credit("daily_hours", 480, { ...NO_SHIFT, standardHoursPerDay: 8 });
 
     // Neu co mot mau so du phong nao do, hai ket qua nay se giong nhau.
     expect(missing).not.toEqual(eightHours);
     expect(
       effectiveScheduledMinutes({
         mode: "daily_hours",
-        shift: SHIFT_8H,
+        shift: undefined,
         standardHoursPerDay: null,
       }),
     ).toBeNull();
+    expect(
+      effectiveScheduledMinutes({
+        mode: "daily_hours",
+        shift: SHIFT_8H,
+        standardHoursPerDay: null,
+      }),
+    ).toBe(480);
+  });
+
+  it("10b. ca dài 0 phút (dữ liệu hỏng) KHÔNG được làm mẫu số — lùi về số giờ chuẩn", () => {
+    expect(
+      effectiveScheduledMinutes({
+        mode: "daily_hours",
+        shift: { scheduledMinutes: 0 },
+        standardHoursPerDay: 10,
+      }),
+    ).toBe(600);
   });
 });
 
@@ -191,13 +216,14 @@ describe("Nghỉ phép và nghỉ không phép (D-43)", () => {
 });
 
 describe("Cùng một ngày qua ba chế độ ra ba kết quả khác nhau", () => {
-  it("16. 6 giờ làm trong ca 8 tiếng / ngày chuẩn 10 tiếng -> ba bộ số phân biệt được", () => {
+  it("16. 6 giờ làm trong ca 8 tiếng -> ba bộ số phân biệt được", () => {
     const shift = credit("shift", 360);
     const dailyHours = credit("daily_hours", 360);
     const shiftHourly = credit("shift_hourly", 360);
 
     expect(shift.creditedDays).toBe(1);
-    expect(dailyHours.creditedDays).toBe(0.6);
+    // `daily_hours` co ca -> 6/8 tieng cua ca.
+    expect(dailyHours.creditedDays).toBe(0.75);
     expect(shiftHourly.creditedDays).toBe(1);
 
     // `shift` va `shift_hourly` khac nhau o `hourDelta`, khong o ngay cong.
@@ -215,9 +241,9 @@ describe("Cùng một ngày qua ba chế độ ra ba kết quả khác nhau", ()
 describe("sumCreditedDays — tổng của một tháng", () => {
   it("17. cộng ngày công thập phân và độ lệch giờ", () => {
     const total = sumCreditedDays([
-      credit("daily_hours", 360),
-      credit("daily_hours", 600),
-      credit("daily_hours", 720),
+      credit("daily_hours", 360, NO_SHIFT),
+      credit("daily_hours", 600, NO_SHIFT),
+      credit("daily_hours", 720, NO_SHIFT),
     ]);
 
     // 0,6 + 1 + 1
@@ -228,8 +254,8 @@ describe("sumCreditedDays — tổng của một tháng", () => {
 
   it("18. một ngày thiếu mẫu số -> TỔNG trả `null`, không cộng bộ phận (D-26)", () => {
     const total = sumCreditedDays([
-      credit("daily_hours", 600),
-      credit("daily_hours", 480, { standardHoursPerDay: null }),
+      credit("daily_hours", 600, NO_SHIFT),
+      credit("daily_hours", 480, { ...NO_SHIFT, standardHoursPerDay: null }),
     ]);
 
     expect(total.creditedDays).toBeNull();
